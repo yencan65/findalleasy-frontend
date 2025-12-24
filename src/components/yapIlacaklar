@@ -1,0 +1,12 @@
+**Header’da bu component’i kullandığın yerde, çok basit bir modal state ile
+WalletPanel, InviteFriend, InviteTree’yi açarsın.
+(İstersen o header entegrasyonunu da sonraki adımda beraber yazarız.)
+**
+Kullanıcı herhangi bir karttaki “Git” butonuna tıkladığında:
+→ Biz backend'e “kullanıcı X, ürün Y, fiyat Z ile tıkladı” deriz
+→ Backend de “bu bir alışveriş başlangıcıdır” deyip ödül motorunu çalıştırır
+→ %1 / %0.5 / %0.1 ödüller otomatik cüzdana yazılır
+→ Kullanıcı ödeme platformuna yönlendirilir
+
+Bu gerçek bir sipariş onayı değil ama ilk faz için simüle edilmiş sipariş olarak gayet yeterlidir.
+Gerçek ödeme bağlandığında bu endpoint’i doğrudan Stripe/Iyzico webhook’una entegre edeceğiz.

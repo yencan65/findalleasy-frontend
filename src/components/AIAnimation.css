@@ -1,0 +1,123 @@
+/* === AI ANİMASYONLARI === */
+
+/* Parlayan göz efekti */
+@keyframes eyeGlow {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(2) drop-shadow(0 0 6px #d4af37); }
+}
+
+/* Hafif dönüş ve mimik */
+@keyframes spinWave {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(8deg) scale(1.05); }
+}
+
+/* Hafif zıplama efekti */
+@keyframes softBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.ai-robot {
+  position: fixed;
+  right: 40px;
+  bottom: 40px;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, #d4af37 0%, #b8860b 30%, #1b2429 90%);
+  box-shadow: 
+    0 0 25px rgba(212, 175, 55, 0.7),
+    0 0 60px rgba(212, 175, 55, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  animation: float 4s ease-in-out infinite, goldenGlow 5s ease-in-out infinite ! important;
+ 
+}
+
+/* Üzerine gelince parıltı güçlensin */
+.ai-robot:hover {
+  transform: scale(1.08);
+  box-shadow:
+    0 0 45px rgba(212, 175, 55, 0.9),
+    0 0 90px rgba(255, 223, 128, 0.5);
+}
+
+/* Hafif yukarı-aşağı süzülme hareketi */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* Altın ışığın yanıp sönme animasyonu */
+@keyframes goldenGlow {
+  0%, 100% {
+    box-shadow:
+      0 0 20px rgba(212, 175, 55, 0.6),
+      0 0 60px rgba(212, 175, 55, 0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 35px rgba(255, 223, 128, 0.9),
+      0 0 80px rgba(212, 175, 55, 0.7);
+  }
+}
+
+
+/* Slogandaki küçük AI yüzü (Sono Vite) */
+.sono-vite {
+  display: inline-block;
+  animation: softBounce 5s ease-in-out infinite;
+}
+
+.sono-vite:hover {
+  filter: brightness(1.4) drop-shadow(0 0 8px #d4af37);
+}
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 15px #d4af37cc; }
+  50% { box-shadow: 0 0 30px #e6c85bcc; }
+}
+
+@keyframes glow {
+  0%, 100% { opacity: 0.7; filter: blur(8px); }
+  50% { opacity: 1; filter: blur(12px); }
+}
+
+@keyframes halo {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes pulseGlow {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 10px #d4af37);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.07);
+    filter: drop-shadow(0 0 25px #d4af37);
+    opacity: 1;
+  }
+}
+@keyframes goldenGlow {
+  0% {
+    box-shadow: 0 0 12px rgba(212, 175, 55, 0.4),
+                0 0 24px rgba(212, 175, 55, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 28px rgba(212, 175, 55, 0.8),
+                0 0 40px rgba(212, 175, 55, 0.6);
+  }
+  100% {
+    box-shadow: 0 0 12px rgba(212, 175, 55, 0.4),
+                0 0 24px rgba(212, 175, 55, 0.3);
+  }
+}
+
+.golden-ring {
+  border: 2px solid #d4af37;
+  border-radius: 9999px;
+  animation: goldenGlow 3s ease-in-out infinite;
+}

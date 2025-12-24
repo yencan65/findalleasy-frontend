@@ -1,0 +1,20 @@
+{
+  "click": "Tıkla",
+  "hi": "Merhaba",
+  "what_to_find": "Hangi hizmet/ürünü bulmamı istersin?",
+  "search_placeholder_default": "Ürün veya hizmet ara...",
+  "search": "Ara",
+  "ai_assistant": "Sono AI Asistanı",
+  "ask_me": "Mesaj yaz...",
+  "good_morning": "Günaydın",
+  "good_afternoon": "İyi Günler",
+  "good_evening": "İyi Akşamlar",
+  "good_night": "İyi Geceler",
+  "best_and_trusted": "En uygun & en güvenilir",
+  "ai_recommendations": "AI önerileri",
+  "other_sellers": "Diğer satıcılar",
+  "install_app": "Uygulamayı yükle",
+  "offline": "Çevrimdışısın. Bağlantı gelince otomatik devam eder.",
+  "online": "Bağlantı geri geldi.",
+  "ding_tip": "\"Hey Sono\" deyip konuşabilirsiniz."
+}

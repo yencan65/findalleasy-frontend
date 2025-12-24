@@ -1,0 +1,14 @@
+// const { email, password } = req.body; // zaten var
+const user = await User.findOne({ email });
+if (!user) {
+  return res.status(401).json({ success: false, message: "E-posta kayıtlı değil." });
+}
+
+// kritik kısım:
+const isMatch = await bcrypt.compare(password, user.password);
+if (!isMatch) {
+  return res.status(401).json({ success: false, message: "Giriş başarısız. Şifre hatalı." });
+}
+
+// buradan sonrası token/response neyse aynı
+return res.json({ success: true, token: "...", userId: user._id, username: user.username });

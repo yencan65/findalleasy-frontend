@@ -1,0 +1,20 @@
+{
+  "click": "Click",
+  "hi": "Hello",
+  "what_to_find": "What shall I find for you?",
+  "search_placeholder_default": "Search product or service...",
+  "search": "Search",
+  "ai_assistant": "Sono AI Assistant",
+  "ask_me": "Type a message...",
+  "good_morning": "Good Morning",
+  "good_afternoon": "Good Afternoon",
+  "good_evening": "Good Evening",
+  "good_night": "Good Night",
+  "best_and_trusted": "Best & trusted",
+  "ai_recommendations": "AI recommendations",
+  "other_sellers": "Other sellers",
+  "install_app": "Install app",
+  "offline": "You’re offline. We’ll resume when back online.",
+  "online": "Back online.",
+  "ding_tip": "Say \"Hey Sono\" to start."
+}

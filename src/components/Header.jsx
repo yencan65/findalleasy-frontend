@@ -1,0 +1,323 @@
+// ========================================================
+//  🚀 HEADER — GÖRSEL OLARAK BİRİNCİ HEADER, BEYİN OLARAK İKİNCİ HEADER
+//  Hiçbir işlev/fonksiyon silinmedi. Bütün backend bağlantıları, event dispatch,
+//  güvenlik filtreleri ve kullanıcı yükleme mekanizması birebir korundu.
+// ========================================================
+
+import React, { useState, useEffect, useRef } from "react";
+import { Wallet, User, Globe } from "lucide-react";
+import WalletPanel from "./WalletPanel";
+import AuthModal from "./AuthModal";
+import { useTranslation } from "react-i18next";
+import { sanitizeName } from "../i18n";
+
+// ========================================================
+// ========================================================
+// GÜVENLİ USERNAME — email'den önceki kısmı kullan, XSS temizle
+function safeUserName(raw) {
+  if (!raw) return "";
+  const s = String(raw).trim();
+  if (!s) return "";
+
+  // Eğer e-posta ise, sadece @ öncesini al
+  const base = s.includes("@") ? s.split("@")[0] : s;
+
+  return base.replace(/[<>]/g, "").slice(0, 40);
+}
+
+
+// ========================================================
+// HEADER COMPONENT
+// ========================================================
+export default function Header() {
+  const { t, i18n } = useTranslation();
+
+  // STATE
+  const [openLang, setOpenLang] = useState(false);
+  const [userOpen, setUserOpen] = useState(false);
+  const [walletOpen, setWalletOpen] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
+
+  const [user, setUser] = useState({ name: "", points: 0 });
+
+  const langRef = useRef(null);
+
+  // ========================================================
+  // USER LOAD
+  // ========================================================
+  function loadUserFromStorage() {
+  try {
+    const rawName = localStorage.getItem("username") || "";
+    const points = Number(localStorage.getItem("points") || "0") || 0;
+
+    if (!rawName) return;
+
+    setUser({
+      name: safeUserName(rawName),
+      points: points,
+    });
+  } catch (e) {
+    console.warn("header loadUserFromStorage error:", e);
+    setUser({ name: "", points: 0 });
+  }
+}
+
+
+
+  useEffect(() => {
+    loadUserFromStorage();
+  }, []);
+
+  // Storage Senkronizasyonu
+  useEffect(() => {
+    const sync = () => loadUserFromStorage();
+
+    window.addEventListener("auth-changed", sync);
+    window.addEventListener("storage", sync);
+    window.addEventListener("user-updated", sync);
+
+    return () => {
+      window.removeEventListener("auth-changed", sync);
+      window.removeEventListener("storage", sync);
+      window.removeEventListener("user-updated", sync);
+    };
+  }, []);
+
+  // ========================================================
+  // CLICK OUTSIDE
+  // ========================================================
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (langRef.current && !langRef.current.contains(e.target)) {
+        setOpenLang(false);
+      }
+      if (!e.target.closest("#user-menu")) {
+        setUserOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // ========================================================
+  // LANGUAGE LABELS
+  // ========================================================
+  const LANG_LABELS = { tr: "TR", en: "EN", fr: "FR", ru: "RU", ar: "AR" };
+
+  function changeLanguage(lang) {
+    try {
+      i18n.changeLanguage(lang);
+      localStorage.setItem("i18nextLng", lang);
+      document.documentElement.lang = lang;
+      window.dispatchEvent(new Event("language-change"));
+      window.dispatchEvent(new Event("fae.vitrine.refresh"));
+      setOpenLang(false);
+    } catch (err) {
+      console.warn("Dil değişimi hatası:", err);
+    }
+  }
+
+  // ========================================================
+  // LOGOUT
+  // ========================================================
+  function handleLogout() {
+    try {
+      localStorage.removeItem("token");
+      localStorage.removeItem("userId");
+      localStorage.removeItem("username");
+      localStorage.removeItem("points");
+    } catch {}
+
+    setUser({ name: "", points: 0 });
+    window.dispatchEvent(new Event("auth-changed"));
+    window.dispatchEvent(new Event("fae.vitrine.refresh"));
+
+    setUserOpen(false);
+  }
+
+  const isLoggedIn = Boolean(localStorage.getItem("token"));
+
+  // ========================================================
+  //  RENDER (Birinci Header'ın tasarımı)
+  // ========================================================
+  return (
+    <header
+      className="
+        w-full flex justify-between items-center 
+        px-6 py-4 bg-transparent 
+        border-b border-[#d4af37]/20 
+        text-white font-sans backdrop-blur-xl
+      "
+      style={{
+        boxShadow: "0 8px 28px rgba(212,175,55,0.07)",
+      }}
+    >
+      {/* LOGO */}
+      <h1
+        className="text-xl font-semibold text-[#d4af37] select-none cursor-pointer whitespace-nowrap"
+        onClick={() => window.dispatchEvent(new Event("fae.vitrine.refresh"))}
+        style={{ textShadow: "0 0 6px rgba(212,175,55,0.4)" }}
+      >
+        FindAllEasy
+      </h1>
+
+      {/* RIGHT SIDE */}
+      <div className="flex items-center gap-4">
+
+        {/* 🌍 LANGUAGE PICKER */}
+        <div className="relative" ref={langRef}>
+
+          <button
+            onClick={() => setOpenLang(!openLang)}
+            className="
+              flex items-center gap-2 px-4 py-2 rounded-full
+              border border-[#d4af37]/40 text-[#d4af37]
+              bg-black/25 backdrop-blur-lg
+              shadow-[inset_0_0_10px_rgba(255,255,255,0.10),0_0_6px_rgba(212,175,55,0.25)]
+              transition-all duration-300
+              hover:scale-[1.08]
+              hover:shadow-[0_0_14px_rgba(212,175,55,0.45)]
+              hover:bg-[#d4af37]/20 hover:text-black
+              whitespace-nowrap
+            "
+          >
+            <Globe size={18} />
+            <span className="uppercase text-sm">
+              {LANG_LABELS[i18n.language] || "??"}
+            </span>
+          </button>
+
+          {openLang && (
+            <div
+              className="
+                absolute 
+                top-1/2 -translate-y-1/2 
+                right-full 
+                mr-3 
+                bg-black/45 backdrop-blur-2xl
+                border border-[#d4af37]/15
+                rounded-3xl 
+                px-3 py-2 
+                flex flex-row gap-2 
+                whitespace-nowrap 
+                z-50 animate-fadeIn
+              "
+            >
+              {Object.keys(LANG_LABELS).map((lng) => (
+                <button
+                  key={lng}
+                  onClick={() => changeLanguage(lng)}
+                  className={`
+                    px-3 py-1 rounded-full text-xs font-semibold
+                    border border-[#d4af37]/25 text-[#d4af37]
+                    hover:scale-[1.10]
+                    hover:bg-[#d4af37] hover:text-black
+                    transition-all
+                    ${
+                      i18n.language === lng
+                        ? "bg-[#d4af37]/35 text-black"
+                        : ""
+                    }
+                  `}
+                >
+                  {LANG_LABELS[lng]}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* 💰 WALLET */}
+        <button
+          onClick={() => setWalletOpen(true)}
+          className="
+            p-2 rounded-full border border-[#d4af37]/60 
+            text-[#d4af37] bg-black/20 backdrop-blur-lg
+            hover:bg-[#d4af37]/20 hover:text-black
+            transition-all
+          "
+        >
+          <Wallet size={20} />
+        </button>
+
+        {/* 👤 USER MENU */}
+        <div className="relative" id="user-menu">
+          <button
+            onClick={() => setUserOpen(!userOpen)}
+            className="
+              p-2 rounded-full 
+              border border-[#d4af37]/60 text-[#d4af37]
+              bg-black/20 backdrop-blur-lg
+              hover:bg-[#d4af37]/20 hover{text-black}
+              transition-all
+            "
+          >
+            <User size={20} />
+          </button>
+
+          {userOpen && (
+            <div
+              className="
+                absolute right-0 top-12 
+                bg-black/75 backdrop-blur-xl
+                border border-[#d4af37]/35 rounded-2xl
+                p-4 shadow-[0_0_18px_rgba(212,175,55,0.25)]
+                text-sm w-56 z-50 animate-fadeIn
+              "
+            >
+              {isLoggedIn ? (
+                <>
+                  <p className="text-[#d4af37] font-semibold mb-1">
+                    {sanitizeName(user.name) || t("username")}
+                  </p>
+                  <p className="text-gray-300 mb-3">
+                    {t("Puan")}: {user.points}
+                  </p>
+                  <button
+                    onClick={handleLogout}
+                    className="
+                      w-full border border-[#d4af37]/60 rounded-lg 
+                      text-[#d4af37] hover:bg-[#d4af37]/25 py-1 transition-all
+                    "
+                  >
+                    {t("auth.logout")}
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setShowAuth(true)}
+                  className="
+                    w-full border border-[#d4af37]/60 rounded-lg 
+                    text-[#d4af37] hover:bg-[#d4af37]/25 py-1 transition-all
+                  "
+                >
+                  {t("auth.login")}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* WALLET PANEL */}
+      {walletOpen && (
+        <WalletPanel
+          onClose={() => setWalletOpen(false)}
+          className="relative z-[9999] border-2 border-[#d4af37]/80 shadow-[0_0_14px_rgba(212,175,55,0.5)]"
+        />
+      )}
+
+      {/* LOGIN MODAL */}
+      {showAuth && (
+        <AuthModal
+          onClose={() => setShowAuth(false)}
+          onLoginSuccess={(name, points) => {
+            setUser({ name, points });
+            window.dispatchEvent(new Event("auth-changed"));
+          }}
+        />
+      )}
+    </header>
+  );
+}

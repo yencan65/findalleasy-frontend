@@ -1,0 +1,12 @@
+// const { username, email, password, referral } = req.body; // zaten var
+const salt = await bcrypt.genSalt(10);
+const hashedPassword = await bcrypt.hash(password, salt);
+
+// user oluştururken:
+const newUser = new User({
+  username,
+  email,
+  password: hashedPassword, // düz password DEĞİL
+  referralCode, // vs...
+});
+await newUser.save();
