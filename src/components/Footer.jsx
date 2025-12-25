@@ -14,7 +14,7 @@ export default function Footer() {
   }, []);
 
   return (
-    <footer className="py-8 px-3 w-full">
+    <footer className="py-4 sm:py-8 px-3 w-full">
       <hr className="footer-line" />
       <div className="phi-gap" />
       <p className="text-center text-sm text-mist">

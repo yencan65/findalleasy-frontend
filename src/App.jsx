@@ -370,11 +370,11 @@ group: "product",
   }, [i18n.language, t]);
 
   return (
-    <div className="min-h-[100dvh] flex flex-col text-white font-sans overflow-x-hidden">
+    <div className="min-h-[100svh] flex flex-col text-white font-sans overflow-x-hidden">
       <Header />
 
      <main
-        className="flex-1 flex flex-col items-center justify-start w-full px-4 pt-6 sm:pt-10 lg:pt-12 pb-24"
+        className="flex-1 flex flex-col items-center justify-center w-full px-4 pt-24 sm:pt-28 pb-6 sm:pb-10"
       >
         {/* ◆ SLOGAN */}
         <h2 className="flex flex-wrap justify-center items-center gap-x-2 gap-y-1 text-[18px] sm:text-[20px] md:text-[24px] lg:text-[29px] font-semibold text-center select-none px-2 leading-tight">
@@ -564,7 +564,7 @@ group: "product",
   />
 )}
   {/* ◆ SONO AI – region bilgisi burada gidiyor */}
-     <div className="fixed bottom-6 right-6">
+     <div className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-[9999]">
   <AIAssistant
     onSuggest={async (text) => {
       const q = String(text || value || "").trim();
