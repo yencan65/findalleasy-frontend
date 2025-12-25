@@ -16,21 +16,8 @@ export default function Footer() {
   return (
     <footer className="py-4 sm:py-8 px-3 w-full">
       <hr className="footer-line" />
-      <div className="phi-gap" />
-      <p className="text-center text-sm text-mist">
-        © 2025 <span className="text-gold font-medium">FindAllEasy</span> |{" "}
-        {t("footerFull.left", {
-          defaultValue: "Yapay zeka destekli global fiyat karşılaştırma asistanın.",
-        })}{" "}
-        {t("footerFull.mid", {
-          defaultValue: "Zaman ve paradan tasarruf için parmak şıklatman yeter,",
-        })}{" "}
-        <span className="text-gold">
-          {t("footerFull.right", { defaultValue: "gerisini O halleder." })}
-        </span>
-      </p>
-
-      {/* ✅ Info + Legal links (reviewers want these) */}
+      <div className="phi-gap text-[11px] md:text-sm" />
+{/* ✅ Info + Legal links (reviewers want these) */}
       <nav className="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-xs">
         <a
           href="/about"
