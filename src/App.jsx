@@ -403,72 +403,137 @@ group: "product",
 
         {/* ◆ Arama Çubuğu (Responsive: tasarım korunur, taşma yok) */}
         <div className="w-full max-w-[760px] mt-3 sm:mt-4 mb-3">
-          {/*
-            Hedef: Desktop/tablet görünümü korunur.
-            Mobilde: aynı stil, ama gerektiğinde otomatik wrap yapar.
-            (Asla ekran dışına taşmasın.)
-          */}
-          <div className="flex flex-wrap items-center gap-2">
-            <input
-              type="text"
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && doSearch()}
-              placeholder={placeholders_[currentPlaceholder]}
-              className="flex-1 min-w-[180px] sm:min-w-[320px] h-10 text-white placeholder:text-white/70 bg-transparent border border-white/40 rounded-md px-3 outline-none"
-            />
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+            {/* Input */}
+            <div className="relative flex-1 min-w-[180px] sm:min-w-[320px]">
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") doSearch(query);
+                }}
+                placeholder={t("search.placeholder", {
+                  defaultValue: "Elektroniği keşfet...",
+                })}
+                className="w-full bg-[#0b0f16] border border-white/10 rounded-2xl px-5 py-4 sm:py-4 text-white placeholder-white/45 outline-none focus:ring-2 focus:ring-[#d4af37]/50 text-[15px] sm:text-base shadow-[0_0_0_1px_rgba(212,175,55,0.05)] pr-[104px] sm:pr-[252px]"
+              />
 
-            {/* Görsel arama input (hidden) */}
+              {/* İç kontrol alanı: Mobile sadece 'Ara', Desktop/tablet tam set */}
+              <div className="absolute inset-y-0 right-1 flex items-center">
+                {/* Mobile: Ara butonu input içinde */}
+                <button
+                  onClick={() => doSearch(query)}
+                  className="sm:hidden h-9 px-3 rounded-xl bg-[#d4af37] text-[#111] shadow hover:brightness-110 active:scale-95 transition flex items-center justify-center gap-2"
+                  title={t("search.search", { defaultValue: "Ara" })}
+                  aria-label={t("search.search", { defaultValue: "Ara" })}
+                >
+                  <SearchIcon className="w-4 h-4 text-[#111]" />
+                  <span className="text-[13px] font-semibold">{t("search.search", { defaultValue: "Ara" })}</span>
+                </button>
+
+                {/* Desktop/Tablet: Ses + Kamera + QR + Ara input içinde */}
+                <div className="hidden sm:flex items-center gap-1">
+                  <button
+                    onClick={startVoice}
+                    className="w-8 h-8 rounded-xl bg-black/40 border border-white/10 hover:border-[#d4af37]/50 hover:bg-black/55 transition flex items-center justify-center"
+                    title={t("search.voice", { defaultValue: "Sesli" })}
+                    aria-label={t("search.voice", { defaultValue: "Sesli" })}
+                  >
+                    <MicIcon className="w-4 h-4 text-[#d4af37]" />
+                  </button>
+
+                  <button
+                    onClick={openCamera}
+                    className="w-8 h-8 rounded-xl bg-black/40 border border-white/10 hover:border-[#d4af37]/50 hover:bg-black/55 transition flex items-center justify-center"
+                    title={t("search.camera", { defaultValue: "Kamera" })}
+                    aria-label={t("search.camera", { defaultValue: "Kamera" })}
+                  >
+                    <CameraIcon className="w-4 h-4 text-[#d4af37]" />
+                  </button>
+
+                  <button
+                    onClick={openQrScanner}
+                    className="w-8 h-8 rounded-xl bg-black/40 border border-white/10 hover:border-[#d4af37]/50 hover:bg-black/55 transition flex items-center justify-center"
+                    title={t("search.qr", { defaultValue: "QR" })}
+                    aria-label={t("search.qr", { defaultValue: "QR" })}
+                  >
+                    <QrIcon className="w-4 h-4 text-[#d4af37]" />
+                  </button>
+
+                  <button
+                    onClick={() => doSearch(query)}
+                    className="ml-1 px-4 h-8 rounded-xl bg-[#d4af37] text-[#111] shadow hover:brightness-110 active:scale-95 transition flex items-center gap-2"
+                  >
+                    <SearchIcon className="w-4 h-4 text-[#111]" />
+                    {t("search.search", { defaultValue: "Ara" })}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile: Ses + Kamera + QR, 'Ara' butonunun yerine taşındı */}
+            <div className="flex justify-end gap-2 sm:hidden">
+              <button
+                onClick={startVoice}
+                className="w-9 h-9 rounded-xl bg-black/40 border border-white/10 hover:border-[#d4af37]/50 hover:bg-black/55 transition flex items-center justify-center"
+                title={t("search.voice", { defaultValue: "Sesli" })}
+                aria-label={t("search.voice", { defaultValue: "Sesli" })}
+              >
+                <MicIcon className="w-4 h-4 text-[#d4af37]" />
+              </button>
+
+              <button
+                onClick={openCamera}
+                className="w-9 h-9 rounded-xl bg-black/40 border border-white/10 hover:border-[#d4af37]/50 hover:bg-black/55 transition flex items-center justify-center"
+                title={t("search.camera", { defaultValue: "Kamera" })}
+                aria-label={t("search.camera", { defaultValue: "Kamera" })}
+              >
+                <CameraIcon className="w-4 h-4 text-[#d4af37]" />
+              </button>
+
+              <button
+                onClick={openQrScanner}
+                className="w-9 h-9 rounded-xl bg-black/40 border border-white/10 hover:border-[#d4af37]/50 hover:bg-black/55 transition flex items-center justify-center"
+                title={t("search.qr", { defaultValue: "QR" })}
+                aria-label={t("search.qr", { defaultValue: "QR" })}
+              >
+                <QrIcon className="w-4 h-4 text-[#d4af37]" />
+              </button>
+            </div>
+
+            {/* Kamera file picker */}
             <input
               ref={fileRef}
               type="file"
               accept="image/*"
-              onChange={onPickFile}
+              capture="environment"
               className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const ai = await import("./api/ai");
+                const guess = await ai.visionGuessQuery(file).catch(() => "");
+                const q = String(guess || "").trim();
+                if (q) {
+                  setQuery(q);
+                  // 🔥 TEK BEYİN: AI unified pipeline
+                  await runUnifiedSearch(q, { source: "camera" });
+
+                  // 🔥 Vitrin tetikleyicisi
+                  window.dispatchEvent(
+                    new CustomEvent("fae.vitrine.search", {
+                      detail: { query: q },
+                    })
+                  );
+                  window.dispatchEvent(new Event("fae.vitrine.refresh"));
+
+                  doSearch(q);
+                }
+              }}
             />
-
-            {/* Kontroller: tek satır dene, sığmazsa wrap */}
-            <div className="flex flex-wrap items-center justify-end gap-2 basis-full sm:basis-auto sm:ml-auto">
-              {/* Sesli arama */}
-              <button
-                onClick={startMic}
-                className="flex items-center justify-center w-10 h-10 rounded-md border border-[#d4af37]/60 hover:border-[#d4af37] transition"
-                title={t("voiceSearch")}
-              >
-                <img src={mic} alt="Mic" className="w-5 h-5" />
-              </button>
-
-              {/* Görsel arama */}
-              <button
-                onClick={openCamera}
-                className="flex items-center justify-center w-10 h-10 rounded-md border border-[#d4af37]/60 hover:border-[#d4af37] transition"
-                title={t("visualSearch")}
-              >
-                <img src={camera} alt="Camera" className="w-5 h-5" />
-              </button>
-
-              {/* QR */}
-              <button
-                onClick={startQRScanner}
-                className="flex items-center justify-center w-10 h-10 rounded-md border border-[#d4af37]/60 hover:border-[#d4af37] transition"
-                title={t("qrSearch")}
-              >
-                <QrCode size={20} className="text-[#d4af37]" />
-              </button>
-
-              {/* Ara */}
-              <button
-                onClick={() => doSearch()}
-                className="h-10 bg-[#d4af37] text-black font-semibold px-4 sm:px-5 rounded-md hover:bg-[#e6c85b] transition flex items-center justify-center gap-2 whitespace-nowrap"
-              >
-                <SearchIcon size={18} />
-                <span className="text-[14px] sm:text-[15px]">{t("search.search", { defaultValue: "Ara" })}</span>
-              </button>
-            </div>
           </div>
         </div>
 
-        {/* ◆ Akıllı Selam */}
         {(() => {
           let rawName = "";
           try {

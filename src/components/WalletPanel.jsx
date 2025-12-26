@@ -136,7 +136,7 @@ function WalletHistory({ userId, backend, t }) {
                   }`}
                 >
                   {h.amount >= 0 ? "+" : "-"}
-                  ₺{Math.abs(Number(h.amount || 0)).toFixed(2)}
+                  {Math.abs(Number(h.amount || 0)).toFixed(2)} {t("wallet.pointsUnit", { defaultValue: "puan" })}
                 </span>
               </div>
               <div className="flex justify-between items-center text-[10px] text-white/60">
@@ -375,8 +375,8 @@ export default function WalletPanel({ onClose }) {
 
     const amtStr = prompt(
       `${t("wallet.couponAmount", {
-        defaultValue: "Kupon tutarını gir",
-      })} ₺`,
+        defaultValue: "Kupon puanını gir",
+      })} puan`,
       "50"
     );
 
@@ -386,7 +386,7 @@ export default function WalletPanel({ onClose }) {
     if (amount > rewards) {
       setRedeemMsg(
         t("wallet.couponTooHigh", {
-          defaultValue: "Kupon tutarı bakiyeden yüksek olamaz.",
+          defaultValue: "Kupon puanı bakiyeden yüksek olamaz.",
         })
       );
       return;
@@ -477,7 +477,7 @@ export default function WalletPanel({ onClose }) {
 
       if (j.ok) {
         setRedeemMsg(
-          `✔ ${amt}₺ ${t("wallet.discountApplied", {
+          `✔ ${amt} puan ${t("wallet.discountApplied", {
             defaultValue: "indirim olarak uygulandı.",
           })}`
         );
@@ -560,25 +560,25 @@ export default function WalletPanel({ onClose }) {
             <p>
               {t("wallet.infoWallet", {
                 defaultValue:
-                  "Bu cüzdan, FindAllEasy üzerinden yaptığın alışverişlerden ve davet ödüllerinden biriken cashback (ödül bakiyesi) tutarını gösterir. Bu bakiye gerçek para transferi değildir ve IBAN'a çekilemez.",
+                  "Bu alan şu an beta. Burada gördüğün değerler ödül/puan göstergesidir; şu anda nakit ödeme veya IBAN'a çekim yoktur.",
               })}
             </p>
             <p>
               {t("wallet.infoCoupon", {
                 defaultValue:
-                  "İstersen bu bakiyenin bir kısmını kupona dönüştürebilirsin. Kupon, uygun bir alışverişe uyguladığında, sipariş tamamlandıktan sonra tutarın cashback olarak tekrar cüzdanına eklenmesini sağlar.",
+                  "Kupon oluşturma özelliği de beta. Şimdilik deneme amaçlıdır; kuponların nerede/ne zaman geçerli olacağı ve ödül kuralları lansmana yakın netleşir.",
               })}
             </p>
             <p>
               {t("wallet.infoDiscount", {
                 defaultValue:
-                  "Kupon, satıcıdaki ürün fiyatını düşürmez; indirim FindAllEasy tarafından sana ödül olarak yansıtılır. Tüm süreç şeffaf ve platform içi ödül mantığına dayanır.",
+                  "Kuponlar satıcı tarafındaki fiyatı doğrudan düşürmeyebilir. Bu bölüm, ileride devreye alınacak ödül/indirim sisteminin şeffaf bir ön izleme alanıdır.",
               })}
             </p>
             <p>
               {t("wallet.infoReferral", {
                 defaultValue:
-                  "Arkadaşlarını davet ettiğinde, onların ilk ve sonraki alışverişlerinden de belirli oranlarda ödül kazanırsın. Böylece hem onlar kazanır, hem senin cüzdanın büyür.",
+                  "Davet sistemi beta. Şu anda 'kazanım oranları' kesin değildir ve ödül dağıtımı aktif olmayabilir; amaç erken erişim + test geri bildirimi toplamaktır.",
               })}
             </p>
           </div>
@@ -590,7 +590,7 @@ export default function WalletPanel({ onClose }) {
           dangerouslySetInnerHTML={{
             __html: t("wallet.motto", {
               defaultValue:
-                "<span style='color:#FFD700;'>Davet et →</span> onlar alışveriş yapsın <span style='color:#FFD700;'>→ sen kazan.</span> Kazancını kupona dönüştür, her alışverişte anında indirime çevir.",
+                "<span style='color:#FFD700;'>Davet et →</span> topluluk büyüsün <span style='color:#FFD700;'>→ erken erişim aç.</span> Ödül/kupon sistemi kademeli olarak devreye alınacak.",
             }),
           }}
         />
@@ -636,7 +636,7 @@ export default function WalletPanel({ onClose }) {
               <>
                 {/* BALANCE */}
                 <div className="text-white text-2xl font-bold mb-4">
-                  💎 {Number(rewards || 0).toFixed(2)} ₺
+                  💎 {Number(rewards || 0).toFixed(2)} {t("wallet.pointsUnit", { defaultValue: "puan" })}
                 </div>
 
                 {/* LOCK STATE */}
@@ -647,11 +647,11 @@ export default function WalletPanel({ onClose }) {
                       {locked
                         ? t("wallet.locked", {
                             defaultValue:
-                              "Cüzdan kilitli – ilk alışveriş gerekli.",
+                              "Cüzdan (beta) kilitli – ilk alışverişten sonra erken erişim açılır.",
                           })
                         : t("wallet.unlockedText", {
                             defaultValue:
-                              "Cüzdan aktif – kazançlarını kullanabilirsin.",
+                              "Erken erişim açıldı – ödül/kupon özellikleri kademeli olarak aktifleşecek.",
                           })}
                     </span>
                   </div>
