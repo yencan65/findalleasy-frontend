@@ -937,7 +937,7 @@ export default function Vitrin() {
   return (
     <section className="w-full flex justify-center mt-0 mb-6 px-2 sm:px-3 lg:px-0">
       <div className="w-full max-w-6xl flex justify-center">
-        <div className="flex flex-col h-full -translate-y-[5%] transition-all duration-300">
+        <div className="flex flex-col h-full md:-translate-y-[5%] transition-all duration-300">
           <h2
             className={`
               text-sm sm:text-base font-semibold text-[#f9e7a5]

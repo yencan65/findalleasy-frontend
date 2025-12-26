@@ -145,8 +145,8 @@ export default function InviteFriend({ onClose }) {
   //   🔥 UI — Modern, sade, güçlü
   // =========================================================
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-[99999] flex items-center justify-center p-4">
-      <div className="w-[420px] max-w-[95vw] rounded-2xl bg-[#0a0a0f] border border-white/15 p-6 shadow-[0_0_30px_rgba(0,0,0,0.7)] text-white relative animate-scale-in">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-[99999] flex items-start justify-center p-3 sm:p-6 overflow-y-auto">
+      <div className="w-full max-w-[420px] rounded-2xl bg-[#0a0a0f] border border-white/15 p-4 sm:p-6 shadow-[0_0_30px_rgba(0,0,0,0.7)] text-white relative animate-scale-in mt-12 sm:mt-16 max-h-[92dvh] overflow-y-auto">
 
         {/* BAŞLIK */}
         <div className="flex items-center justify-between mb-4">

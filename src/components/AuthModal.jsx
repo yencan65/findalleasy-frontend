@@ -360,7 +360,7 @@ export default function AuthModal({ onClose, onLoggedIn, onLoginSuccess }) {
       className="
         fixed inset-0 bg-black/50 backdrop-blur-sm
         flex items-start justify-center 
-        z-[9999] pt-[1vh]
+        z-[9999] pt-6 p-3 sm:p-6 overflow-y-auto
       "
       onClick={(e) => {
         if (e.target.id === "auth-bg") onClose();
@@ -368,12 +368,11 @@ export default function AuthModal({ onClose, onLoggedIn, onLoginSuccess }) {
     >
       <div
         className="
-          relative w-[420px] max-w-[92vw]
+          relative w-full max-w-[420px]
           rounded-2xl border border-[#d4af37]/40 
-          bg-[#111] p-6 shadow-xl
-          animate-scale-in
+          bg-[#111] p-6 shadow-xl max-h-[92dvh] overflow-y-auto
+          animate-scale-in mt-6
         "
-        style={{ transform: "scale(0.85)", transformOrigin: "top center" }}
       >
         <button
           onClick={onClose}

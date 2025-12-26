@@ -163,6 +163,27 @@ function WalletHistory({ userId, backend, t }) {
 }
 
 export default function WalletPanel({ onClose }) {
+  // Modal açıkken body scroll'u kilitle (arkadaki sayfa kaymasın, scrollbar görünmesin).
+  // Not: Component sadece açıkken render ediliyor → cleanup otomatik.
+  useEffect(() => {
+    try {
+      const body = document.body;
+      const prevOverflow = body.style.overflow;
+      const prevPaddingRight = body.style.paddingRight;
+
+      const scrollBarWidth = window.innerWidth - document.documentElement.clientWidth;
+      body.style.overflow = "hidden";
+      if (scrollBarWidth > 0) body.style.paddingRight = `${scrollBarWidth}px`;
+
+      return () => {
+        body.style.overflow = prevOverflow;
+        body.style.paddingRight = prevPaddingRight;
+      };
+    } catch {
+      return undefined;
+    }
+  }, []);
+
   const { t } = useTranslation();
   const { user } = useAuth();
 
@@ -494,26 +515,22 @@ export default function WalletPanel({ onClose }) {
   // =================================================================
   return (
     <div
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999]"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-start justify-center p-3 sm:p-6 allow-scroll"
       onClick={handleOverlayClick}
     >
       <div
         onClick={(e) => e.stopPropagation()}
         className="
-          absolute animate-scale-in
+          relative animate-scale-in mt-12 sm:mt-16
           bg-[#0b0b0b]/85
           border border-[#d4af37]/40
-          rounded-2xl p-6
-          w-[360px]
-          max-w-[92vw]
+          rounded-2xl p-6 max-h-[92dvh] allow-scroll
+          w-full
+          max-w-[420px]
+          sm:max-w-[380px]
           shadow-[0_0_25px_rgba(212,175,55,0.35)]
           backdrop-blur-2xl
         "
-        style={{
-          top: "6%",
-          left: "50%",
-          transform: "translateX(-50%) scale(0.90)",
-        }}
       >
         {/* TITLE + INFO */}
         <div className="flex items-center justify-between mb-1 gap-2">

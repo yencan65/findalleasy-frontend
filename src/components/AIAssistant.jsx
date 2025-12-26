@@ -272,25 +272,20 @@ useEffect(() => {
 
       /* KONUMLANDIRMA */
       .sono-adjusted-position {
-            /* Keep the bubble inside the visible viewport and above the footer */
-            bottom: calc(env(safe-area-inset-bottom, 0px) + 2.25rem) !important;
-            right: 1.25rem !important;
-          }
-          @media (max-width: 768px) {
-            .sono-adjusted-position {
-              bottom: calc(env(safe-area-inset-bottom, 0px) + 5.75rem) !important;
-              right: 0.75rem !important;
-            }
-          }
-          @media (max-width: 480px) {
-            .sono-adjusted-position {
-              bottom: calc(env(safe-area-inset-bottom, 0px) + 6.25rem) !important;
-              right: 0.75rem !important;
-            }
-          }
-        .sono-chat-mobile {
-          width: 90vw !important;
-          max-width: none !important;
+        /* Bubble footer'ın üstünde kalsın (mobil safe-area dahil) */
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 2.25rem) !important;
+        right: 1.25rem !important;
+      }
+      @media (max-width: 768px) {
+        .sono-adjusted-position {
+          bottom: calc(env(safe-area-inset-bottom, 0px) + 5.75rem) !important;
+          right: 0.75rem !important;
+        }
+      }
+      @media (max-width: 480px) {
+        .sono-adjusted-position {
+          bottom: calc(env(safe-area-inset-bottom, 0px) + 6.25rem) !important;
+          right: 0.75rem !important;
         }
       }
 
@@ -762,8 +757,8 @@ triggerSearchFromAI(text);
       {/* CHAT PENCERESİ */}
       {open && (
         <div
-          className="mt-2 sono-chat-mobile bg-black/85 text-white border border-[#d4af37]/50 
-          rounded-2xl shadow-2xl backdrop-blur-md p-3 w-[86vw] max-w-[340px]"
+          className="mt-2 bg-black/85 text-white border border-[#d4af37]/50 
+          rounded-2xl shadow-2xl backdrop-blur-md p-3 w-[calc(100vw-32px)] max-w-[380px] md:w-[340px] md:max-w-[340px]"
         >
           <div className="overflow-auto max-h-[220px] my-2 space-y-2 pr-1 custom-scrollbar">
             {messages.map((m, i) => (

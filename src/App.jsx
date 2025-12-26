@@ -370,11 +370,11 @@ group: "product",
   }, [i18n.language, t]);
 
   return (
-    <div className="h-[100dvh] flex flex-col bg-[#0b0e14] text-white font-sans overflow-hidden">
+    <div className="min-h-[100dvh] flex flex-col bg-[#0b0e14] text-white font-sans overflow-x-hidden">
       <Header />
 
       <main
-        className="fae-fit-screen flex-1 min-h-0 flex flex-col items-center justify-center w-full px-4 pt-24 sm:pt-28 pb-6 sm:pb-10"
+        className="flex-1 flex flex-col items-center justify-start w-full px-4 pt-10 sm:pt-14 pb-24"
       >
         {/* ◆ SLOGAN */}
         <h2 className="flex flex-wrap justify-center items-center gap-x-2 gap-y-1 text-[18px] sm:text-[20px] md:text-[24px] lg:text-[29px] font-semibold text-center select-none px-2 leading-tight">
