@@ -370,19 +370,11 @@ group: "product",
   }, [i18n.language, t]);
 
   return (
-<<<<<<< HEAD
-    <div className="min-h-[100svh] flex flex-col text-white font-sans overflow-x-hidden">
-      <Header />
-
-     <main
-        className="flex-1 flex flex-col items-center justify-center w-full px-4 pt-24 sm:pt-28 pb-6 sm:pb-10"
-=======
     <div className="h-[100dvh] flex flex-col bg-[#0b0e14] text-white font-sans overflow-hidden">
       <Header />
 
-     <main
-        className="fae-fit-screen flex-1 min-h-0 flex flex-col items-center justify-center w-full px-4 pt-3 sm:pt-5 lg:pt-6 pb-2"
->>>>>>> 5677498 (fix: remove scrollbar on home + tame caching)
+      <main
+        className="fae-fit-screen flex-1 min-h-0 flex flex-col items-center justify-center w-full px-4 pt-24 sm:pt-28 pb-6 sm:pb-10"
       >
         {/* ◆ SLOGAN */}
         <h2 className="flex flex-wrap justify-center items-center gap-x-2 gap-y-1 text-[18px] sm:text-[20px] md:text-[24px] lg:text-[29px] font-semibold text-center select-none px-2 leading-tight">
@@ -572,11 +564,7 @@ group: "product",
   />
 )}
   {/* ◆ SONO AI – region bilgisi burada gidiyor */}
-<<<<<<< HEAD
      <div className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-[9999]">
-=======
-     <div className="fixed bottom-24 md:bottom-6 right-6">
->>>>>>> 5677498 (fix: remove scrollbar on home + tame caching)
   <AIAssistant
     onSuggest={async (text) => {
       const q = String(text || value || "").trim();
