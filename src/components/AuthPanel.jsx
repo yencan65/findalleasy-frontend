@@ -55,7 +55,7 @@ export default function AuthPanel({ visible, onClose, onLoginSuccess }) {
 
   if(!visible) return null;
   return (
-    <div className="fixed right-6 top-16 z-50 w-[340px] bg-black/95 border border-[#d4af37]/60 rounded-xl p-4 shadow-lg">
+    <div className="fixed right-3 sm:right-6 top-16 z-50 w-[340px] max-w-[92vw] bg-black/95 border border-[#d4af37]/60 rounded-xl p-4 shadow-lg">
       <div className="flex justify-between items-center mb-3">
         <h3 className="text-[#d4af37] font-semibold">{mode==="login"?"Giriş Yap":"Kayıt Ol"}</h3>
         <button onClick={onClose} className="text-sm text-white/70">Kapat</button>

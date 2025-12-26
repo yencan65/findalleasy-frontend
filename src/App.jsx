@@ -13,7 +13,7 @@ import camera from "/sono-assets/camera-apple.svg";
 import sonoFace from "/sono-assets/sono-face.svg";
 import { createUseRewards } from "./hooks/useRewards";
 import QRScanner from "./components/QRScanner.jsx";
-import { QrCode } from "lucide-react";
+import { QrCode, Search as SearchIcon } from "lucide-react";
 import TelemetryPanel from "./components/Admin/TelemetryPanel";
 import SystemTelemetryPanel from "./components/SystemTelemetryPanel";
 import { runUnifiedSearch } from "./utils/searchBridge";
@@ -370,27 +370,22 @@ group: "product",
   }, [i18n.language, t]);
 
   return (
-    <div
-      className="min-h-screen flex flex-col text-white font-sans"
-      style={{
-        height: "100vh",      // 🔥 sayfa yüksekliğini sabitle
-        overflow: "hidden",   // 🔥 global scroll bar yok
-        display: "flex",
-      }}
-    >
+<<<<<<< HEAD
+    <div className="min-h-[100svh] flex flex-col text-white font-sans overflow-x-hidden">
       <Header />
 
      <main
-  className="flex flex-col items-center justify-start px-4 w-full mt-10 sm:mt-12 lg:mt-14 mb-8"
-  style={{
-    flex: 1,
-    overflow: "hidden",   // 🔥 scroll bar KAPALI
-  }}
+        className="flex-1 flex flex-col items-center justify-center w-full px-4 pt-24 sm:pt-28 pb-6 sm:pb-10"
+=======
+    <div className="h-[100dvh] flex flex-col bg-[#0b0e14] text-white font-sans overflow-hidden">
+      <Header />
 
-
+     <main
+        className="fae-fit-screen flex-1 min-h-0 flex flex-col items-center justify-center w-full px-4 pt-3 sm:pt-5 lg:pt-6 pb-2"
+>>>>>>> 5677498 (fix: remove scrollbar on home + tame caching)
       >
         {/* ◆ SLOGAN */}
-        <h2 className="flex justify-center items-center gap-2 text-[20px] sm:text-[20px] md:text-[24px] lg:text-[29px] font-semibold text-center select-none">
+        <h2 className="flex flex-wrap justify-center items-center gap-x-2 gap-y-1 text-[18px] sm:text-[20px] md:text-[24px] lg:text-[29px] font-semibold text-center select-none px-2 leading-tight">
           <span className="text-white">{t("yazman yeterli,")}</span>
           <span className="text-[#d4af37]">{t("gerisini")}</span>
 
@@ -407,65 +402,78 @@ group: "product",
             <img
               src={sonoFace}
               alt="Sono"
-              className="relative w-[26px] h-[26px] rounded-full drop-shadow-[0_0_4px_#d4af37]"
+              className="relative w-[24px] h-[24px] sm:w-[26px] sm:h-[26px] rounded-full drop-shadow-[0_0_4px_#d4af37]"
             />
           </div>
 
           <span className="text-[#d4af37]">{t("halleder.")}</span>
         </h2>
 
-        {/* ◆ Arama Çubuğu */}
-        <div className="flex items-center justify-center gap-2 w-full mb-4">
-          <input
-            type="text"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && doSearch()}
-            placeholder={placeholders_[currentPlaceholder]}
-            className="flex-grow max-w-[600px] text-white placeholder:text-white/70 bg-transparent border border-white/40 rounded-md px-3 py-2 outline-none"
-          />
+        {/* ◆ Arama Çubuğu (Responsive: tasarım korunur, taşma yok) */}
+        <div className="w-full max-w-[760px] mt-3 sm:mt-4 mb-3">
+          {/*
+            Hedef: Desktop/tablet görünümü korunur.
+            Mobilde: aynı stil, ama gerektiğinde otomatik wrap yapar.
+            (Asla ekran dışına taşmasın.)
+          */}
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="text"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && doSearch()}
+              placeholder={placeholders_[currentPlaceholder]}
+              className="flex-1 min-w-[180px] sm:min-w-[320px] h-10 text-white placeholder:text-white/70 bg-transparent border border-white/40 rounded-md px-3 outline-none"
+            />
 
-          {/* Sesli arama */}
-          <button
-            onClick={startMic}
-            className="flex items-center justify-center w-10 h-10 rounded-md border border-[#d4af37]/60 hover:border-[#d4af37] transition"
-            title={t("voiceSearch")}
-          >
-            <img src={mic} alt="Mic" className="w-5 h-5" />
-          </button>
+            {/* Görsel arama input (hidden) */}
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              onChange={onPickFile}
+              className="hidden"
+            />
 
-          {/* Görsel arama */}
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            onChange={onPickFile}
-            className="hidden"
-          />
-          <button
-            onClick={openCamera}
-            className="flex items-center justify-center w-10 h-10 rounded-md border border-[#d4af37]/60 hover:border-[#d4af37] transition"
-            title={t("visualSearch")}
-          >
-            <img src={camera} alt="Camera" className="w-5 h-5" />
-          </button>
+            {/* Kontroller: tek satır dene, sığmazsa wrap */}
+            <div className="flex flex-wrap items-center justify-end gap-2 basis-full sm:basis-auto sm:ml-auto">
+              {/* Sesli arama */}
+              <button
+                onClick={startMic}
+                className="flex items-center justify-center w-10 h-10 rounded-md border border-[#d4af37]/60 hover:border-[#d4af37] transition"
+                title={t("voiceSearch")}
+              >
+                <img src={mic} alt="Mic" className="w-5 h-5" />
+              </button>
 
-          {/* QR */}
-          <button
-            onClick={startQRScanner}
-            className="flex items-center justify-center w-10 h-10 rounded-md border border-[#d4af37]/60 hover:border-[#d4af37] transition"
-            title={t("qrSearch")}
-          >
-            <QrCode size={20} className="text-[#d4af37]" />
-          </button>
+              {/* Görsel arama */}
+              <button
+                onClick={openCamera}
+                className="flex items-center justify-center w-10 h-10 rounded-md border border-[#d4af37]/60 hover:border-[#d4af37] transition"
+                title={t("visualSearch")}
+              >
+                <img src={camera} alt="Camera" className="w-5 h-5" />
+              </button>
 
-          {/* Ara */}
-          <button
-            onClick={() => doSearch()}
-            className="bg-[#d4af37] text-black font-semibold px-5 py-2 rounded-md hover:bg-[#e6c85b] transition"
-          >
-            {t("search.search", { defaultValue: "Ara" })}
-          </button>
+              {/* QR */}
+              <button
+                onClick={startQRScanner}
+                className="flex items-center justify-center w-10 h-10 rounded-md border border-[#d4af37]/60 hover:border-[#d4af37] transition"
+                title={t("qrSearch")}
+              >
+                <QrCode size={20} className="text-[#d4af37]" />
+              </button>
+
+              {/* Ara */}
+              <button
+                onClick={() => doSearch()}
+                className="h-10 bg-[#d4af37] text-black font-semibold px-4 sm:px-5 rounded-md hover:bg-[#e6c85b] transition flex items-center justify-center gap-2 whitespace-nowrap"
+              >
+                <SearchIcon size={18} />
+                <span className="text-[14px] sm:text-[15px]">{t("search.search", { defaultValue: "Ara" })}</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* ◆ Akıllı Selam */}
@@ -564,7 +572,11 @@ group: "product",
   />
 )}
   {/* ◆ SONO AI – region bilgisi burada gidiyor */}
-     <div className="fixed bottom-6 right-6">
+<<<<<<< HEAD
+     <div className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-[9999]">
+=======
+     <div className="fixed bottom-24 md:bottom-6 right-6">
+>>>>>>> 5677498 (fix: remove scrollbar on home + tame caching)
   <AIAssistant
     onSuggest={async (text) => {
       const q = String(text || value || "").trim();

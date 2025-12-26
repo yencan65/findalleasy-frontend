@@ -144,8 +144,8 @@ export default function Header() {
   return (
     <header
       className="
-        w-full flex justify-between items-center 
-        px-6 py-4 bg-transparent 
+        w-full flex justify-between items-center flex-wrap
+        px-3 sm:px-6 py-3 sm:py-4 bg-transparent 
         border-b border-[#d4af37]/20 
         text-white font-sans backdrop-blur-xl
       "
@@ -163,7 +163,7 @@ export default function Header() {
       </h1>
 
       {/* RIGHT SIDE */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
 
         {/* 🌍 LANGUAGE PICKER */}
         <div className="relative" ref={langRef}>
@@ -171,7 +171,7 @@ export default function Header() {
           <button
             onClick={() => setOpenLang(!openLang)}
             className="
-              flex items-center gap-2 px-4 py-2 rounded-full
+              flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full
               border border-[#d4af37]/40 text-[#d4af37]
               bg-black/25 backdrop-blur-lg
               shadow-[inset_0_0_10px_rgba(255,255,255,0.10),0_0_6px_rgba(212,175,55,0.25)]
@@ -192,9 +192,9 @@ export default function Header() {
             <div
               className="
                 absolute 
-                top-1/2 -translate-y-1/2 
-                right-full 
-                mr-3 
+                top-full mt-2 right-0
+                sm:top-1/2 sm:-translate-y-1/2
+                sm:right-full sm:mr-3 sm:mt-0
                 bg-black/45 backdrop-blur-2xl
                 border border-[#d4af37]/15
                 rounded-3xl 

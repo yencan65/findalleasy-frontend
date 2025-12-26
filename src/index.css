@@ -15,15 +15,41 @@ html, body {
   height: 100%;
   margin: 0;
   padding: 0;
-  overflow-x: hidden;
+<<<<<<< HEAD
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+=======
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+>>>>>>> 5677498 (fix: remove scrollbar on home + tame caching)
   -webkit-tap-highlight-color: transparent;
 }
 
-#root {
-  min-height: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+#root{height:100%; overflow:hidden;}
+
+/* === SCROLL OVERRIDE (legal pages etc.) === */
+.allow-scroll{
+  height: 100dvh;
+  overflow: auto !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+.allow-scroll::-webkit-scrollbar{width:0; height:0;}
+
+/* === ONE-SCREEN FIT (small heights) === */
+.fae-fit-screen{
+  width: 100%;
+}
+@media (max-height: 760px){
+  .fae-fit-screen{ transform: scale(0.94); transform-origin: top center; }
+}
+@media (max-height: 700px){
+  .fae-fit-screen{ transform: scale(0.90); }
+}
+@media (max-height: 640px){
+  .fae-fit-screen{ transform: scale(0.85); }
 }
 
 /* === HEADER === */
@@ -273,10 +299,31 @@ iframe {
     display: flex;
     justify-content: center;
   }
-  #root {
-    max-width: 1440px;
-    width: 100%;
-  }
+  #root{height:100%; overflow:hidden;}
+
+/* === SCROLL OVERRIDE (legal pages etc.) === */
+.allow-scroll{
+  height: 100dvh;
+  overflow: auto !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+.allow-scroll::-webkit-scrollbar{width:0; height:0;}
+
+/* === ONE-SCREEN FIT (small heights) === */
+.fae-fit-screen{
+  width: 100%;
+}
+@media (max-height: 760px){
+  .fae-fit-screen{ transform: scale(0.94); transform-origin: top center; }
+}
+@media (max-height: 700px){
+  .fae-fit-screen{ transform: scale(0.90); }
+}
+@media (max-height: 640px){
+  .fae-fit-screen{ transform: scale(0.85); }
+}
 }
 
 /* === VİTRİN SABİT YÜKSEKLİK === */

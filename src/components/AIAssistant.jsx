@@ -271,34 +271,23 @@ useEffect(() => {
       .speech-wave-3 { animation:speech-wave-3 1.5s ease-out .6s infinite; }
 
       /* KONUMLANDIRMA */
-      .sono-adjusted-position { 
-        bottom: 3.5rem !important;
-        right: 0.75rem !important;
-      }
-      
-      @media (max-width: 1024px) {
-        .sono-adjusted-position { 
-          bottom: 3rem !important;
-          right: 1rem !important;
-        }
-      }
-      
-      @media (max-width: 768px) {
-        .sono-adjusted-position { 
-          bottom: 2.5rem !important;
-          right: 0.5rem !important;
-        }
-        .sono-chat-mobile {
-          width: 86vw !important;
-          max-width: 340px !important;
-        }
-      }
-      
-      @media (max-width: 480px) {
-        .sono-adjusted-position { 
-          bottom: 2.25rem !important;
-          right: 0.25rem !important;
-        }
+      .sono-adjusted-position {
+            /* Keep the bubble inside the visible viewport and above the footer */
+            bottom: calc(env(safe-area-inset-bottom, 0px) + 2.25rem) !important;
+            right: 1.25rem !important;
+          }
+          @media (max-width: 768px) {
+            .sono-adjusted-position {
+              bottom: calc(env(safe-area-inset-bottom, 0px) + 5.75rem) !important;
+              right: 0.75rem !important;
+            }
+          }
+          @media (max-width: 480px) {
+            .sono-adjusted-position {
+              bottom: calc(env(safe-area-inset-bottom, 0px) + 6.25rem) !important;
+              right: 0.75rem !important;
+            }
+          }
         .sono-chat-mobile {
           width: 90vw !important;
           max-width: none !important;
