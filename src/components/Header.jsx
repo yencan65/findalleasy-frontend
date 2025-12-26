@@ -200,8 +200,7 @@ export default function Header() {
                 rounded-3xl 
                 px-3 py-2 
                 flex flex-row gap-2 
-                whitespace-nowrap 
-                max-w-[92vw] overflow-x-auto no-scrollbar 
+                whitespace-nowrap max-w-[calc(100vw-24px)] overflow-x-auto no-scrollbar 
                 z-50 animate-fadeIn
               "
             >

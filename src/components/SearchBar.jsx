@@ -1,225 +1,133 @@
-// src/components/SearchBar.jsx
-import React, { useEffect, useRef, useState, useMemo } from "react";
-import { Search, Mic, Camera, QrCode } from "lucide-react";
-import { triggerVitrineSearch } from "../utils/vitrineEvent";
-import { pushQueryToVitrine, runUnifiedSearch } from "../utils/searchBridge";
+import { useEffect, useRef } from "react";
+import { Mic, Camera, QrCode, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import QRScanner from "./QRScanner";
-import { detectCategory } from "../utils/categoryExtractor";
 
-export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
-  const { t, i18n } = useTranslation();
+export default function SearchBar({
+  query,
+  setQuery,
+  onSearch,
+  onVoiceSearch,
+  onCameraSearch,
+  onQRSearch,
+}) {
+  const { t } = useTranslation();
+  const inputRef = useRef(null);
 
-  const [value, setValue] = useState("");
-  const [index, setIndex] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [scannerOpen, setScannerOpen] = useState(false);
-  const [tick, setTick] = useState(0);
-
-  const fileRef = useRef(null);
-
-  // Dil değişiminde placeholder reset
   useEffect(() => {
-    const rerender = () => setTick((x) => x + 1);
-    window.addEventListener("language-change", rerender);
-    return () => window.removeEventListener("language-change", rerender);
+    setTimeout(() => inputRef.current?.focus?.(), 50);
   }, []);
 
-  const placeholders = useMemo(
-    () => [
-      t("placeholder.hotel"),
-      t("placeholder.car"),
-      t("placeholder.food"),
-      t("placeholder.tour"),
-      t("placeholder.insurance"),
-      t("placeholder.estate"),
-      t("placeholder.electronic"),
-    ],
-    [i18n.language]
-  );
+  const handleSearch = () => {
+    const trimmed = String(query || "").trim();
+    if (!trimmed) return;
+    onSearch?.(trimmed);
+  };
 
-  useEffect(() => setIndex(0), [i18n.language]);
+  const onKeyDown = (e) => {
+    if (e.key === "Enter") handleSearch();
+  };
 
-  useEffect(() => {
-    const id = setInterval(
-      () => setIndex((p) => (p + 1) % placeholders.length),
-      3000
-    );
-    return () => clearInterval(id);
-  }, [placeholders]);
+  const placeholder = t("searchPlaceholder", {
+    defaultValue: "Elektroniği keşfet...",
+  });
 
-  // ============================================================
-  // 🔥 MASTER SEARCH PIPELINE (Tekleştirilmiş + Stabil)
-  // ============================================================
- async function doSearch(q = value, source = "input") {
-  const cleaned = (q || "").trim();
-  if (!cleaned) return;
+  const ariaSearch = t("search", { defaultValue: "Ara" });
 
-  setLoading(true);
-
-  try {
-    // 🔥 1 — TEK BEYİN: AI Unified Search
-    await runUnifiedSearch(cleaned, { source });
-
-    // 🔥 2 — Vitrin tetikleyicisi
-    pushQueryToVitrine(cleaned);
-    triggerVitrineSearch(cleaned);
-
-  } catch (err) {
-    console.warn("UnifiedSearch Error:", err);
-  } finally {
-    setLoading(false);
-  }
-}
-
-
-  // 🔥 Voice Search
-  async function startMic() {
-    const Rec =
-      window.SpeechRecognition || window.webkitSpeechRecognition || null;
-
-    if (!Rec) return alert(t("search.voiceNotSupported"));
-
-    const rec = new Rec();
-
-    rec.lang =
-      i18n.language === "tr"
-        ? "tr-TR"
-        : i18n.language === "en"
-        ? "en-US"
-        : i18n.language === "fr"
-        ? "fr-FR"
-        : i18n.language === "ru"
-        ? "ru-RU"
-        : "en-US";
-
-    rec.interimResults = false;
-
-    rec.onresult = (e) => {
-  const text = e.results[0][0].transcript;
-  setValue(text);
-  doSearch(text, "mic");
-};
-
-
-    rec.start();
-  }
-
-  // 🔥 Camera Vision Search
-  function openCamera() {
-    fileRef.current?.click();
-  }
-
-  async function onPickFile(e) {
-    const f = e.target.files?.[0];
-    if (!f) return;
-
-    setLoading(true);
-
-    const b64 = await new Promise((ok) => {
-      const r = new FileReader();
-      r.onloadend = () => ok(r.result);
-      r.readAsDataURL(f);
-    });
-
-    try {
-      const r = await fetch("/api/vision", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64: b64, locale: i18n.language }),
-      });
-
-      const j = await r.json();
-      const finalQuery = j?.query?.trim() || "ürün";
-
-    setValue(finalQuery);
-doSearch(finalQuery, "camera");
-
-    } catch (e) {
-      console.error("Vision error:", e);
-     setValue("ürün");
-doSearch("ürün", "camera");
-
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // 🔥 QR Search
-  function handleQRDetect(result) {
-  if (!result) return;
-
-  localStorage.setItem("lastQuery", result);
-  setScannerOpen(false);
-
-  doSearch(result, "qr"); // sadece bu yeterli
-}
-
-
-  // ============================================================
-  // RENDER
-  // ============================================================
   return (
-    <>
-      <div
-        key={"searchbar-" + tick}
-        className="search-bar-wrapper flex justify-center w-full"
-      >
-        <div
-          className="flex items-center bg-[#0d1117]/60 border border-gold rounded-full px-4 py-2 
-                     w-[520px] max-w-[92%] sm:w-[420px] md:w-[500px] lg:w-[520px]
-                     transition-all duration-300 ease-in-out"
+    <div className="w-full max-w-3xl mx-auto">
+      {/* ✅ Desktop / Tablet (UNCHANGED) */}
+      <div className="hidden sm:flex justify-center gap-3 items-center">
+        <input
+          ref={inputRef}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder={placeholder}
+          className="flex-1 min-w-[260px] bg-black/50 border border-white/20 rounded-lg px-4 py-3 text-white text-base outline-none focus:border-yellow-400"
+        />
+
+        <button
+          onClick={onVoiceSearch}
+          className="bg-black/40 border border-yellow-500/40 rounded-lg px-4 py-3 text-yellow-300 hover:bg-yellow-500/10 transition"
+          title={t("voiceSearch", { defaultValue: "Sesli arama" })}
         >
+          <Mic />
+        </button>
+
+        <button
+          onClick={onCameraSearch}
+          className="bg-black/40 border border-yellow-500/40 rounded-lg px-4 py-3 text-yellow-300 hover:bg-yellow-500/10 transition"
+          title={t("cameraSearch", { defaultValue: "Kamera ile ara" })}
+        >
+          <Camera />
+        </button>
+
+        <button
+          onClick={onQRSearch}
+          className="bg-black/40 border border-yellow-500/40 rounded-lg px-4 py-3 text-yellow-300 hover:bg-yellow-500/10 transition"
+          title={t("qrSearch", { defaultValue: "QR ile ara" })}
+        >
+          <QrCode />
+        </button>
+
+        <button
+          onClick={handleSearch}
+          className="bg-yellow-500 hover:bg-yellow-400 text-black px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition"
+        >
+          <Search size={20} /> {ariaSearch}
+        </button>
+      </div>
+
+      {/* ✅ Mobile (ONLY) */}
+      <div className="sm:hidden flex flex-col gap-3 items-center">
+        <div className="relative w-full">
           <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            className="hidden"
-            onChange={onPickFile}
+            ref={inputRef}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={onKeyDown}
+            placeholder={placeholder}
+            className="w-full bg-black/50 border border-white/20 rounded-lg px-4 py-3 pr-14 text-white text-base outline-none focus:border-yellow-400"
           />
 
-          <input
-            key={"input-" + i18n.language}
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && doSearch()}
-            placeholder={placeholders[index]}
-            className="flex-grow bg-transparent outline-none text-white text-base px-3 min-w-[120px]"
-          />
+          {/* Ara butonu input içinde */}
+          <button
+            type="button"
+            onClick={handleSearch}
+            aria-label={ariaSearch}
+            className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-lg bg-yellow-500 text-black flex items-center justify-center shadow hover:bg-yellow-400 transition"
+          >
+            <Search size={18} />
+          </button>
+        </div>
 
-          <Mic
-            className="text-gold mx-1 cursor-pointer hover:scale-110 transition"
-            size={20}
-            onClick={startMic}
-          />
-
-          <Camera
-            className="text-gold mx-1 cursor-pointer hover:scale-110 transition"
-            size={20}
-            onClick={openCamera}
-          />
-
-          <QrCode
-            className="text-gold mx-1 cursor-pointer hover:scale-110 transition"
-            size={20}
-            onClick={() => setScannerOpen(true)}
-          />
+        {/* Ses/Kamera/QR: Ara butonunun eski satırında */}
+        <div className="flex items-center justify-center gap-3">
+          <button
+            onClick={onVoiceSearch}
+            className="bg-black/40 border border-yellow-500/40 rounded-lg h-11 w-11 flex items-center justify-center text-yellow-300 hover:bg-yellow-500/10 transition"
+            title={t("voiceSearch", { defaultValue: "Sesli arama" })}
+          >
+            <Mic size={18} />
+          </button>
 
           <button
-            onClick={() => doSearch()}
-            disabled={loading}
-            className="text-gold font-semibold px-3 hover:text-white transition flex items-center gap-1 disabled:opacity-60"
+            onClick={onCameraSearch}
+            className="bg-black/40 border border-yellow-500/40 rounded-lg h-11 w-11 flex items-center justify-center text-yellow-300 hover:bg-yellow-500/10 transition"
+            title={t("cameraSearch", { defaultValue: "Kamera ile ara" })}
           >
-            <Search size={16} />
-            {t("search.search")}
+            <Camera size={18} />
+          </button>
+
+          <button
+            onClick={onQRSearch}
+            className="bg-black/40 border border-yellow-500/40 rounded-lg h-11 w-11 flex items-center justify-center text-yellow-300 hover:bg-yellow-500/10 transition"
+            title={t("qrSearch", { defaultValue: "QR ile ara" })}
+          >
+            <QrCode size={18} />
           </button>
         </div>
       </div>
-
-      {scannerOpen && (
-        <QRScanner onDetect={handleQRDetect} onClose={() => setScannerOpen(false)} />
-      )}
-    </>
+    </div>
   );
 }
