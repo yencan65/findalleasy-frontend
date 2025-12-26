@@ -198,9 +198,13 @@ export default function Header() {
                 bg-black/45 backdrop-blur-2xl
                 border border-[#d4af37]/15
                 rounded-3xl 
-                px-3 py-2 
-                flex flex-row gap-2 
-                whitespace-nowrap 
+	                px-3 py-2 
+	                flex flex-nowrap gap-2
+	                max-w-[88vw] sm:max-w-none
+	                overflow-x-auto sm:overflow-visible
+	                whitespace-nowrap
+	                [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
+	                justify-start
                 z-50 animate-fadeIn
               "
             >
@@ -209,7 +213,7 @@ export default function Header() {
                   key={lng}
                   onClick={() => changeLanguage(lng)}
                   className={`
-                    px-3 py-1 rounded-full text-xs font-semibold
+                    px-2.5 py-1 rounded-full text-[11px] sm:px-3 sm:py-1.5 sm:text-xs font-semibold shrink-0
                     border border-[#d4af37]/25 text-[#d4af37]
                     hover:scale-[1.10]
                     hover:bg-[#d4af37] hover:text-black
@@ -249,7 +253,7 @@ export default function Header() {
               p-2 rounded-full 
               border border-[#d4af37]/60 text-[#d4af37]
               bg-black/20 backdrop-blur-lg
-              hover:bg-[#d4af37]/20 hover{text-black}
+              hover:bg-[#d4af37]/20 hover:text-black
               transition-all
             "
           >

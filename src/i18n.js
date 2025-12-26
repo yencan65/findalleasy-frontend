@@ -207,13 +207,13 @@ const resources = {
 
         infoTitle: "Bu cüzdan nasıl çalışır?",
         infoWallet:
-          "Bu cüzdan, FindAllEasy üzerinden yaptığın alışverişlerden ve davet ödüllerinden biriken cashback (ödül bakiyesi) tutarını gösterir. Bu bakiye gerçek para transferi değildir ve IBAN'a çekilemez.",
+          "Bu ekran cüzdan altyapısının önizlemesidir. Cashback/kupon dağıtımı şu an aktif değildir ve para çekimi (IBAN) yoktur.",
         infoCoupon:
-          "Bakiyenin bir kısmını kupona dönüştürebilirsin. Sipariş tamamlanınca cashback olarak iade edilir.",
+          "Kupon oluşturma/harcama özelliği (ve ödül dönüşümü) onaylar tamamlandıktan sonra açılacaktır.",
         infoDiscount:
-          "Kupon satıcı fiyatını düşürmez; indirim FindAllEasy tarafından sana ödül olarak yansıtılır.",
+          "Şu an yalnızca en iyi fiyatı bulma ve yönlendirme altyapısını test ediyoruz. Ödül/kupon kuralları aktif olduğunda burada net şekilde yayınlanacaktır.",
         infoReferral:
-          "Arkadaşlarını davet ederek ilk ve sonraki alışverişlerinden ödül kazanırsın.",
+          "Davet altyapısı hazır; ödüllendirme aktif olduğunda davet kazanımları bu ekranda görünecektir.",
 
         walletTabs: {
           wallet: "Cüzdan",
@@ -244,7 +244,7 @@ const resources = {
         shareWithFriends: "Linki Paylaş",
 
         motto:
-          "<span style='color:#FFD700;'>Davet et →</span> onlar alışveriş yapsın <span style='color:#FFD700;'>→ sen kazan.</span> Kazancını kupona dönüştür, her alışverişte anında indirime çevir."
+          "<span style='color:#FFD700;'>Yakında:</span> ödül/kupon/davet sistemi. Şimdilik en iyi fiyatı bul ve yönlendirme altyapısını test et."
       },
 
       orders: {
@@ -463,12 +463,12 @@ const resources = {
 
         infoTitle: "How does this wallet work?",
         infoWallet:
-          "This wallet displays cashback earned from purchases and referrals.",
+          "This wallet screen is a preview. Cashback/coupon distribution is not active yet, and there is no cash withdrawal (IBAN).",
         infoCoupon:
-          "You can convert part of your balance into coupons which return as cashback after the order is completed.",
+          "Coupon creation/spending (and reward conversion) will open after approvals are completed.",
         infoDiscount:
-          "Coupons do not lower seller prices; FindAllEasy rewards the discount as cashback.",
-        infoReferral: "You earn rewards from invited users’ purchases.",
+          "Right now we’re only testing the best-price search and click-out flow. When rewards go live, the rules will be published here.",
+        infoReferral: "Invites are ready; once rewards are enabled, referral earnings will appear here.",
 
         walletTabs: {
           wallet: "Wallet",
@@ -497,7 +497,7 @@ const resources = {
         shareWithFriends: "Share the Link",
 
         motto:
-          "<span style='color:#FFD700;'>Invite →</span> they shop <span style='color:#FFD700;'>→ you earn.</span> Convert your earnings into coupons and enjoy instant discounts."
+          "<span style='color:#FFD700;'>Coming soon:</span> rewards/coupons/referrals. For now, find the best price and test the routing."
       },
 
       orders: {
@@ -727,13 +727,13 @@ const resources = {
 
         infoTitle: "Comment fonctionne le portefeuille ?",
         infoWallet:
-          "Ce portefeuille affiche le cashback gagné grâce aux achats et aux invitations.",
+          "Cet écran de portefeuille est un aperçu. La distribution de cashback/coupons n’est pas encore active et il n’y a pas de retrait (IBAN).",
         infoCoupon:
-          "Convertissez une partie du solde en coupons, remboursés en cashback après l’achat.",
+          "La création/utilisation de coupons (et la conversion des récompenses) sera activée après validation.",
         infoDiscount:
-          "La réduction est fournie par FindAllEasy, pas par le vendeur.",
+          "Pour l’instant, nous testons seulement la recherche du meilleur prix et la redirection. Quand les récompenses seront actives, les règles seront publiées ici.",
         infoReferral:
-          "Gagnez des récompenses grâce aux achats de vos invités.",
+          "Le système d’invitation est prêt ; lorsque les récompenses seront activées, les gains apparaîtront ici.",
 
         walletTabs: {
           wallet: "Portefeuille",
@@ -765,7 +765,7 @@ const resources = {
         shareWithFriends: "Partager le lien",
 
         motto:
-          "<span style='color:#FFD700;'>Invite →</span> ils achètent <span style='color:#FFD700;'>→ tu gagnes.</span> Transforme tes gains en coupons et obtiens des remises instantanées."
+          "<span style='color:#FFD700;'>Bientôt :</span> récompenses/coupons/parrainage. Pour l’instant, trouve le meilleur prix et teste la redirection."
       },
 
       orders: {
@@ -996,13 +996,13 @@ const resources = {
 
         infoTitle: "Как работает кошелёк?",
         infoWallet:
-          "Кошелёк показывает кэшбэк, заработанный покупками и приглашениями.",
+          "Этот экран кошелька — предварительный просмотр. Начисление cashback/купонов пока не активно, вывода денег (IBAN) нет.",
         infoCoupon:
-          "Можно конвертировать часть баланса в купоны, возвращаемые как кэшбэк.",
+          "Создание/использование купонов (и конвертация наград) будет доступно после завершения проверок.",
         infoDiscount:
-          "Скидка предоставляется FindAllEasy, а не продавцом.",
+          "Сейчас мы тестируем только поиск лучшей цены и переходы. Когда награды будут включены, правила появятся здесь.",
         infoReferral:
-          "Зарабатывайте с покупок приглашённых пользователей.",
+          "Реферальная система готова; после включения наград доходы от приглашений будут отображаться здесь.",
 
         walletTabs: {
           wallet: "Кошелёк",
@@ -1033,7 +1033,7 @@ const resources = {
         shareWithFriends: "Поделиться ссылкой",
 
         motto:
-          "<span style='color:#FFD700;'>Пригласи →</span> они покупают <span style='color:#FFD700;'>→ ты зарабатываешь.</span> Превращай доход в купоны и получай мгновенные скидки."
+          "<span style='color:#FFD700;'>Скоро:</span> награды/купоны/рефералы. Пока — ищи лучшую цену и тестируй переходы."
       },
 
       orders: {
@@ -1260,13 +1260,13 @@ const resources = {
 
         infoTitle: "كيف تعمل هذه المحفظة؟",
         infoWallet:
-          "تعرض المحفظة المكافآت المكتسبة من المشتريات والدعوات.",
+          "هذه شاشة محفظة تجريبية. توزيع الكاشباك/القسائم غير مفعّل بعد، ولا يوجد سحب أموال (IBAN).",
         infoCoupon:
-          "يمكنك تحويل جزء من رصيدك إلى قسائم تعود كاسترداد نقدي.",
+          "إنشاء/استخدام القسائم (وتحويل المكافآت) سيتاح بعد اكتمال الموافقات.",
         infoDiscount:
-          "الخصم تقدمه FindAllEasy وليس البائع.",
+          "حالياً نختبر فقط البحث عن أفضل سعر وعملية التحويل. عند تفعيل المكافآت سيتم نشر القواعد هنا.",
         infoReferral:
-          "تكسب أرباحًا من مشتريات الأشخاص الذين دعوتهم.",
+          "نظام الدعوات جاهز؛ عند تفعيل المكافآت ستظهر أرباح الإحالات هنا.",
 
         walletTabs: {
           wallet: "المحفظة",
@@ -1298,7 +1298,7 @@ const resources = {
         shareWithFriends: "مشاركة الرابط",
 
         motto:
-          "<span style='color:#FFD700;'>ادعُ →</span> هم يشترون <span style='color:#FFD700;'>→ وأنت تربح.</span> حوّل أرباحك إلى قسائم لتحصل على خصومات فورية."
+          "<span style='color:#FFD700;'>قريباً:</span> المكافآت/القسائم/الإحالات. حالياً اعثر على أفضل سعر واختبر التحويل."
       },
 
       orders: {

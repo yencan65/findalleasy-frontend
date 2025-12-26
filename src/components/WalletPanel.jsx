@@ -450,7 +450,7 @@ export default function WalletPanel({ onClose }) {
       setRedeemMsg(
         t("wallet.lockedText", {
           defaultValue:
-            "İlk alışveriş tamamlanmadan indirim kullanamazsın.",
+            "Ödül sistemi henüz aktif değil. Şimdilik indirim/avantaj kullanımı kapalı.",
         })
       );
       return;
@@ -560,25 +560,25 @@ export default function WalletPanel({ onClose }) {
             <p>
               {t("wallet.infoWallet", {
                 defaultValue:
-                  "Bu cüzdan, FindAllEasy üzerinden yaptığın alışverişlerden ve davet ödüllerinden biriken cashback (ödül bakiyesi) tutarını gösterir. Bu bakiye gerçek para transferi değildir ve IBAN'a çekilemez.",
+                  "Bu ekran cüzdan altyapısının önizlemesidir. Cashback/kupon dağıtımı şu an aktif değildir ve para çekimi (IBAN) yoktur.",
               })}
             </p>
             <p>
               {t("wallet.infoCoupon", {
                 defaultValue:
-                  "İstersen bu bakiyenin bir kısmını kupona dönüştürebilirsin. Kupon, uygun bir alışverişe uyguladığında, sipariş tamamlandıktan sonra tutarın cashback olarak tekrar cüzdanına eklenmesini sağlar.",
+                  "Kupon oluşturma/harcama özelliği (ve ödül dönüşümü) onaylar tamamlandıktan sonra açılacaktır.",
               })}
             </p>
             <p>
               {t("wallet.infoDiscount", {
                 defaultValue:
-                  "Kupon, satıcıdaki ürün fiyatını düşürmez; indirim FindAllEasy tarafından sana ödül olarak yansıtılır. Tüm süreç şeffaf ve platform içi ödül mantığına dayanır.",
+                  "Şu an yalnızca en iyi fiyatı bulma ve yönlendirme altyapısını test ediyoruz. Ödül/kupon kuralları aktif olduğunda burada net şekilde yayınlanacaktır.",
               })}
             </p>
             <p>
               {t("wallet.infoReferral", {
                 defaultValue:
-                  "Arkadaşlarını davet ettiğinde, onların ilk ve sonraki alışverişlerinden de belirli oranlarda ödül kazanırsın. Böylece hem onlar kazanır, hem senin cüzdanın büyür.",
+                  "Davet altyapısı hazır; ödüllendirme aktif olduğunda davet kazanımları bu ekranda görünecektir.",
               })}
             </p>
           </div>
@@ -590,7 +590,7 @@ export default function WalletPanel({ onClose }) {
           dangerouslySetInnerHTML={{
             __html: t("wallet.motto", {
               defaultValue:
-                "<span style='color:#FFD700;'>Davet et →</span> onlar alışveriş yapsın <span style='color:#FFD700;'>→ sen kazan.</span> Kazancını kupona dönüştür, her alışverişte anında indirime çevir.",
+                "<span style='color:#FFD700;'>Yakında:</span> ödül/kupon/davet sistemi. Şimdilik en iyi fiyatı bul ve yönlendirme altyapısını test et.",
             }),
           }}
         />
@@ -635,9 +635,14 @@ export default function WalletPanel({ onClose }) {
             {activeTab === "wallet" && (
               <>
                 {/* BALANCE */}
-                <div className="text-white text-2xl font-bold mb-4">
-                  💎 {Number(rewards || 0).toFixed(2)} ₺
-                </div>
+        <div className="text-white text-2xl font-bold mb-1">
+          💎 {Math.round(Number(rewards || 0))} Puan
+        </div>
+        <div className="text-white/50 text-xs mb-4">
+          {t("wallet.pointsHint", {
+            defaultValue: "Puanlar bilgilendirme amaçlıdır; cashback/çekim henüz yok.",
+          })}
+        </div>
 
                 {/* LOCK STATE */}
                 <div className="flex items-center justify-between mb-4 gap-2">
@@ -647,28 +652,24 @@ export default function WalletPanel({ onClose }) {
                       {locked
                         ? t("wallet.locked", {
                             defaultValue:
-                              "Cüzdan kilitli – ilk alışveriş gerekli.",
+                              "Ödül sistemi şu an kapalı/erken aşamada.",
                           })
                         : t("wallet.unlockedText", {
                             defaultValue:
-                              "Cüzdan aktif – kazançlarını kullanabilirsin.",
+                              "Cüzdan beta: özellikler kademeli açılacak.",
                           })}
                     </span>
                   </div>
 
-                  <button
-                    onClick={handleRedeem}
-                    disabled={locked || rewards <= 0}
-                    className={`px-3 py-1 rounded-md border text-xs sm:text-sm ${
-                      locked || rewards <= 0
-                        ? "border-white/20 text-white/30 cursor-not-allowed"
-                        : "border-[#d4af37] bg-[#d4af37] text-black hover:opacity-90"
-                    }`}
-                  >
-                    {t("wallet.useDiscount", {
-                      defaultValue: "İndirimi Kullan",
-                    })}
-                  </button>
+	                  <button
+	                    onClick={handleRedeem}
+	                    disabled={true}
+	                    className="px-3 py-1 rounded-md border border-white/20 text-white/30 cursor-not-allowed text-xs sm:text-sm"
+	                  >
+	                    {t("wallet.useDiscount", {
+	                      defaultValue: "Yakında",
+	                    })}
+	                  </button>
                 </div>
 
                 {/* ACTION BUTTONS */}

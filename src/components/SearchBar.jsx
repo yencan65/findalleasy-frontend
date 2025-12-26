@@ -166,7 +166,7 @@ doSearch("ürün", "camera");
         className="search-bar-wrapper flex justify-center w-full"
       >
         <div
-          className="flex items-center bg-[#0d1117]/60 border border-gold rounded-full px-4 py-2 
+          className="flex items-center bg-[#0d1117]/60 border border-gold rounded-full px-3 sm:px-4 py-2 
                      w-[520px] max-w-[92%] sm:w-[420px] md:w-[500px] lg:w-[520px]
                      transition-all duration-300 ease-in-out"
         >
@@ -179,37 +179,63 @@ doSearch("ürün", "camera");
             onChange={onPickFile}
           />
 
-          <input
-            key={"input-" + i18n.language}
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && doSearch()}
-            placeholder={placeholders[index]}
-            className="flex-grow bg-transparent outline-none text-white text-base px-3 min-w-[120px]"
-          />
+          {/* ✅ MOBILE: "Ara" butonu inputun içinde.  SM+ ekranda eski düzen korunur. */}
+          <div className="relative flex-grow min-w-[120px]">
+            <input
+              key={"input-" + i18n.language}
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && doSearch()}
+              placeholder={placeholders[index]}
+              className="w-full bg-transparent outline-none text-white text-base px-3 pr-24 sm:pr-3 min-w-[120px]"
+            />
 
-          <Mic
-            className="text-gold mx-1 cursor-pointer hover:scale-110 transition"
-            size={20}
+
+            <button
+              type="button"
+              onClick={() => doSearch()}
+              disabled={loading}
+              className="sm:hidden absolute right-2 top-1/2 -translate-y-1/2 bg-gold text-black font-semibold px-3 py-1.5 rounded-full flex items-center gap-1 shadow-md hover:opacity-95 transition disabled:opacity-60"
+              aria-label={t("search.search")}
+            >
+              <Search size={16} />
+              <span className="text-[12px] font-semibold leading-none">{t("search.search")}</span>
+            </button>
+          </div>
+
+          {/* ✅ MOBILE: Mic/Camera/QR, eskiden Ara'nın durduğu yere kayar */}
+          <button
+            type="button"
             onClick={startMic}
-          />
+            className="ml-1 text-gold hover:text-white transition p-2 rounded-full"
+            aria-label={t("search.voice", { defaultValue: "Sesli arama" })}
+          >
+            <Mic className="w-5 h-5" />
+          </button>
 
-          <Camera
-            className="text-gold mx-1 cursor-pointer hover:scale-110 transition"
-            size={20}
+          <button
+            type="button"
             onClick={openCamera}
-          />
+            className="text-gold hover:text-white transition p-2 rounded-full"
+            aria-label={t("cameraSearch", { defaultValue: "Kamera ile ara" })}
+          >
+            <Camera className="w-5 h-5" />
+          </button>
 
-          <QrCode
-            className="text-gold mx-1 cursor-pointer hover:scale-110 transition"
-            size={20}
+          <button
+            type="button"
             onClick={() => setScannerOpen(true)}
-          />
+            className="text-gold hover:text-white transition p-2 rounded-full"
+            aria-label={t("qrSearch", { defaultValue: "QR ile ara" })}
+          >
+            <QrCode className="w-5 h-5" />
+          </button>
 
+          {/* ✅ SM+ ekranda klasik Ara butonu (input dışı) */}
           <button
             onClick={() => doSearch()}
             disabled={loading}
-            className="text-gold font-semibold px-3 hover:text-white transition flex items-center gap-1 disabled:opacity-60"
+            className="hidden sm:flex text-gold font-semibold px-3 hover:text-white transition items-center gap-1 disabled:opacity-60"
           >
             <Search size={16} />
             {t("search.search")}

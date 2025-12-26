@@ -8,7 +8,7 @@ import Footer from "./components/Footer.jsx";
 import { useTranslation } from "react-i18next";
 import * as ai from "./api/ai";
 import "./components/AIAnimation.css";
-import mic from "/sono-assets/mic.svg";
+import micIcon from "/sono-assets/mic.svg";
 import camera from "/sono-assets/camera-apple.svg";
 import sonoFace from "/sono-assets/sono-face.svg";
 import { createUseRewards } from "./hooks/useRewards";
@@ -402,71 +402,100 @@ group: "product",
         </h2>
 
         {/* ◆ Arama Çubuğu (Responsive: tasarım korunur, taşma yok) */}
-        <div className="w-full max-w-[760px] mt-3 sm:mt-4 mb-3">
-          {/*
-            Hedef: Desktop/tablet görünümü korunur.
-            Mobilde: aynı stil, ama gerektiğinde otomatik wrap yapar.
-            (Asla ekran dışına taşmasın.)
-          */}
-          <div className="flex flex-wrap items-center gap-2">
+    <div className="w-full max-w-[760px] mt-3 sm:mt-4 mb-3">
+        <div className="w-full sm:flex sm:items-center sm:gap-3">
+          {/* Input */}
+          <div className="relative flex-1">
             <input
-              type="text"
               value={value}
               onChange={(e) => setValue(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && doSearch()}
-              placeholder={placeholders_[currentPlaceholder]}
-              className="flex-1 min-w-[180px] sm:min-w-[320px] h-10 text-white placeholder:text-white/70 bg-transparent border border-white/40 rounded-md px-3 outline-none"
+              placeholder={t("search_placeholder")}
+              className="w-full h-10 text-white placeholder:text-white/40 rounded-md pl-3 pr-14 sm:pr-4 outline-none border border-white/10 bg-[#0B0E12]/45 backdrop-blur"
             />
 
-            {/* Görsel arama input (hidden) */}
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              onChange={onPickFile}
-              className="hidden"
-            />
+            {/* Mobile: Search button inside the input */}
+            <button
+              onClick={doSearch}
+              className="sm:hidden absolute right-1.5 top-1/2 -translate-y-1/2 h-8 px-3 rounded-md bg-[#D9A441] text-[#0B0E12] font-semibold flex items-center gap-2 shadow hover:brightness-105 transition"
+              aria-label={t("search")}
+              title={t("search")}
+            >
+              <span className="text-[13px]">{t("search")}</span>
+            </button>
+          </div>
 
-            {/* Kontroller: tek satır dene, sığmazsa wrap */}
-            <div className="flex flex-wrap items-center justify-end gap-2 basis-full sm:basis-auto sm:ml-auto">
-              {/* Sesli arama */}
-              <button
-                onClick={startMic}
-                className="flex items-center justify-center w-10 h-10 rounded-md border border-[#d4af37]/60 hover:border-[#d4af37] transition"
-                title={t("voiceSearch")}
-              >
-                <img src={mic} alt="Mic" className="w-5 h-5" />
-              </button>
+          {/* Desktop/Tablet: Controls OUTSIDE the input (PC/tablet unchanged) */}
+          <div className="hidden sm:flex items-center gap-2">
+            <button
+              onClick={startMic}
+              className="w-9 h-9 rounded-xl border border-[#D9A441]/35 hover:border-[#D9A441]/70 bg-[#0B0E12]/55 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
+              title={t("voice")}
+              aria-label={t("voice")}
+            >
+              <img src={micIcon} alt="Mic" className="w-4.5 h-4.5 opacity-90" />
+            </button>
 
-              {/* Görsel arama */}
-              <button
-                onClick={openCamera}
-                className="flex items-center justify-center w-10 h-10 rounded-md border border-[#d4af37]/60 hover:border-[#d4af37] transition"
-                title={t("visualSearch")}
-              >
-                <img src={camera} alt="Camera" className="w-5 h-5" />
-              </button>
+            <button
+              onClick={openCamera}
+              className="w-9 h-9 rounded-xl border border-[#D9A441]/35 hover:border-[#D9A441]/70 bg-[#0B0E12]/55 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
+              title={t("camera")}
+              aria-label={t("camera")}
+            >
+              <img src={cameraApple} alt="Camera" className="w-4.5 h-4.5 opacity-90" />
+            </button>
 
-              {/* QR */}
-              <button
-                onClick={startQRScanner}
-                className="flex items-center justify-center w-10 h-10 rounded-md border border-[#d4af37]/60 hover:border-[#d4af37] transition"
-                title={t("qrSearch")}
-              >
-                <QrCode size={20} className="text-[#d4af37]" />
-              </button>
+            <button
+              onClick={openQR}
+              className="w-9 h-9 rounded-xl border border-[#D9A441]/35 hover:border-[#D9A441]/70 bg-[#0B0E12]/55 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
+              title={t("qr")}
+              aria-label={t("qr")}
+            >
+              <AiOutlineQrcode className="text-[#D9A441] text-[20px]" />
+            </button>
 
-              {/* Ara */}
-              <button
-                onClick={() => doSearch()}
-                className="h-10 bg-[#d4af37] text-black font-semibold px-4 sm:px-5 rounded-md hover:bg-[#e6c85b] transition flex items-center justify-center gap-2 whitespace-nowrap"
-              >
-                <SearchIcon size={18} />
-                <span className="text-[14px] sm:text-[15px]">{t("search.search", { defaultValue: "Ara" })}</span>
-              </button>
-            </div>
+            <button
+              onClick={doSearch}
+              className="h-10 px-5 rounded-xl bg-[#D9A441] text-[#0B0E12] font-bold flex items-center gap-2 shadow hover:brightness-105 transition"
+              aria-label={t("search")}
+              title={t("search")}
+            >
+              <AiOutlineSearch className="text-[20px]" />
+              <span>{t("search")}</span>
+            </button>
           </div>
         </div>
+
+        {/* Mobile: Voice/Camera/QR replace the old big Search button row */}
+        <div className="sm:hidden mt-3 flex items-center justify-center gap-3">
+          <button
+            onClick={startMic}
+            className="w-11 h-11 rounded-xl border border-[#D9A441]/35 hover:border-[#D9A441]/70 bg-[#0B0E12]/55 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
+            title={t("voice")}
+            aria-label={t("voice")}
+          >
+            <img src={micIcon} alt="Mic" className="w-5 h-5 opacity-90" />
+          </button>
+
+          <button
+            onClick={openCamera}
+            className="w-11 h-11 rounded-xl border border-[#D9A441]/35 hover:border-[#D9A441]/70 bg-[#0B0E12]/55 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
+            title={t("camera")}
+            aria-label={t("camera")}
+          >
+            <img src={cameraApple} alt="Camera" className="w-5 h-5 opacity-90" />
+          </button>
+
+          <button
+            onClick={openQR}
+            className="w-11 h-11 rounded-xl border border-[#D9A441]/35 hover:border-[#D9A441]/70 bg-[#0B0E12]/55 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
+            title={t("qr")}
+            aria-label={t("qr")}
+          >
+            <AiOutlineQrcode className="text-[#D9A441] text-[22px]" />
+          </button>
+        </div>
+      </div>      </div>
 
         {/* ◆ Akıllı Selam */}
         {(() => {
