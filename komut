@@ -1,0 +1,5 @@
+git pull --rebase
+npm run build
+git add -A
+git commit -m "feat: <ne yaptıysan>"
+git push

@@ -651,7 +651,7 @@ export default function WalletPanel({ onClose }) {
                           })
                         : t("wallet.unlockedText", {
                             defaultValue:
-                              "Cüzdan aktif – ödül durumunu görüntüleyebilirsin.",
+                              "Cüzdan aktif – kazançlarını kullanabilirsin.",
                           })}
                     </span>
                   </div>
@@ -685,7 +685,7 @@ export default function WalletPanel({ onClose }) {
                     className="flex-1 py-2 rounded-xl border border-emerald-400/50 text-emerald-300 hover:bg-emerald-300/20 text-xs transition"
                   >
                     {t("wallet.createCoupon", {
-                      defaultValue: "Kupon (Yakında)",
+                      defaultValue: "Kupon Oluştur",
                     })}
                   </button>
                 </div>

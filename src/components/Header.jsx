@@ -200,7 +200,7 @@ export default function Header() {
                 rounded-3xl 
                 px-3 py-2 
                 flex flex-row gap-2 
-                whitespace-nowrap max-w-[calc(100vw-24px)] overflow-x-auto no-scrollbar 
+                whitespace-nowrap 
                 z-50 animate-fadeIn
               "
             >
@@ -209,7 +209,7 @@ export default function Header() {
                   key={lng}
                   onClick={() => changeLanguage(lng)}
                   className={`
-                    px-2.5 py-1 rounded-full text-[11px] sm:px-3 sm:py-1.5 sm:text-xs font-semibold shrink-0
+                    px-3 py-1 rounded-full text-xs font-semibold
                     border border-[#d4af37]/25 text-[#d4af37]
                     hover:scale-[1.10]
                     hover:bg-[#d4af37] hover:text-black

@@ -234,7 +234,7 @@ const resources = {
         txType: {
           deposit: "Yükleme",
           reward: "Ödül",
-          cashback: "Ödül",
+          cashback: "Cashback",
           coupon: "Kupon",
           order: "Sipariş",
           referral: "Davet Ödülü",
@@ -487,7 +487,7 @@ const resources = {
         txType: {
           deposit: "Deposit",
           reward: "Reward",
-          cashback: "Reward",
+          cashback: "Cashback",
           coupon: "Coupon",
           order: "Order",
           referral: "Referral Reward",
@@ -755,7 +755,7 @@ const resources = {
         txType: {
           deposit: "Dépôt",
           reward: "Récompense",
-          cashback: "Récompense",
+          cashback: "Cashback",
           coupon: "Coupon",
           order: "Commande",
           referral: "Récompense d’invitation",
@@ -1023,7 +1023,7 @@ const resources = {
         txType: {
           deposit: "Пополнение",
           reward: "Награда",
-          cashback: "Награда",
+          cashback: "Кэшбэк",
           coupon: "Купон",
           order: "Заказ",
           referral: "Приглашение",
@@ -1288,7 +1288,7 @@ const resources = {
         txType: {
           deposit: "إيداع",
           reward: "مكافأة",
-          cashback: "مكافأة",
+          cashback: "استرداد",
           coupon: "قسيمة",
           order: "طلب",
           referral: "دعوة",

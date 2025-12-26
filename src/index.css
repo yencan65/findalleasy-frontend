@@ -329,8 +329,3 @@ iframe {
 .fae-page * {
   min-width: 0;
 }
-
-
-/* === NO-SCROLLBAR (horizontal scrollers) === */
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

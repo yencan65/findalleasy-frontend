@@ -1,33 +1,114 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="tr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0b0d12" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="manifest" href="/manifest.json" />
-
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap"
-      rel="stylesheet"
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
     />
+    <title>FindAllEasy — Yapay Zeka Destekli Fiyat Kıyaslama</title>
 
-    <title>FindAllEasy</title>
+    <!-- SEO & OpenGraph -->
+    <meta
+      name="description"
+      content="FindAllEasy (Sono): tek tıkla en uygun ve en güvenilir ürün/hizmetleri kıyasla. Sesli, görsel arama ve yapay zeka asistanı Sono ile hızlı, akıllı ve global alışveriş deneyimi."
+    />
+    <meta
+      name="keywords"
+      content="FindAllEasy, Sono, yapay zeka, fiyat karşılaştırma, en ucuz, en uygun, güvenilir alışveriş, ürün kıyaslama, otel, uçak bileti, global comparison, e-ticaret, AI assistant, tek tıkla bul"
+    />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://findalleasy.com/" />
 
-    <script>
-      // Basit tema bayrağı: (kullanılıyorsa) ilk paint öncesi body class'ı
-      try {
-        const saved = localStorage.getItem("findalleasy:theme");
-        if (saved) document.documentElement.dataset.theme = saved;
-      } catch (e) {}
-    </script>
-  </head>
-  <body>
+    <meta property="og:title" content="FindAllEasy — Yapay zeka destekli fiyat kıyaslama" />
+    <meta
+      property="og:description"
+      content="Sono AI ile yaz, konuş, foto çek — vitrine en iyi seçenekler gelsin. Global akıllı fiyat kıyaslama platformu."
+    />
+    <meta property="og:url" content="https://findalleasy.com/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/logo.png" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="FindAllEasy — Global Akıllı Fiyat Kıyaslama" />
+    <meta
+      name="twitter:description"
+      content="Yazman yeterli, gerisini O halleder. Sesli, görsel ve metin arama tek platformda."
+    />
+    <meta name="twitter:image" content="/logo.png" />
+
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <meta name="theme-color" content="#000000" />
+  
+<script>
+(function(){
+  function applyTheme(){
+    const h = new Date().getHours();
+    let theme = 'day';
+    if(h>=20 || h<6) theme='night'; else if(h>=17) theme='evening';
+    document.documentElement.setAttribute('data-fae-theme', theme);
+  }
+  applyTheme(); setInterval(applyTheme, 10*60*1000);
+  // optional ambient music (user opt-in via localStorage flag)
+  if(localStorage.getItem('fae_ambient')==='1'){
+    const a = document.createElement('audio'); a.src='/ambient.mp3'; a.loop=true; a.volume=0.15; a.autoplay=true; document.body.appendChild(a);
+  }
+})();
+</script>
+<style>
+  :root[data-fae-theme=day]    { --fae-bg:#0a0a0a; }
+  :root[data-fae-theme=evening]{ --fae-bg:#080808; }
+  :root[data-fae-theme=night]  { --fae-bg:#050505; }
+  body { background: var(--fae-bg, #000); }
+</style>
+
+</head>
+
+  <body class="bg-darkblue text-white">
+    <!-- React uygulaması burada render edilir -->
     <div id="root"></div>
 
+    <!-- React ana dosyası -->
     <script type="module" src="/src/main.jsx"></script>
-    <script type="module" src="/src/main-boost.js"></script>
-  </body>
+
+    <!-- Çevrimdışı ve çevrimiçi uyarı -->
+    <script>
+      window.addEventListener("offline", () => {
+        const popup = document.createElement("div");
+        popup.innerText = "📡 Bağlantı gitti — çevrimdışı mod!";
+        Object.assign(popup.style, {
+          position: "fixed",
+          bottom: "20px",
+          right: "20px",
+          background: "rgba(0,0,0,0.8)",
+          color: "#d4af37",
+          padding: "10px 16px",
+          borderRadius: "10px",
+          fontSize: "14px",
+          zIndex: "9999",
+        });
+        document.body.appendChild(popup);
+        setTimeout(() => popup.remove(), 4000);
+      });
+
+      window.addEventListener("online", () => {
+        const popup = document.createElement("div");
+        popup.innerText = "✅ İnternet bağlantısı geri geldi";
+        Object.assign(popup.style, {
+          position: "fixed",
+          bottom: "20px",
+          right: "20px",
+          background: "rgba(0,0,0,0.8)",
+          color: "#4ade80",
+          padding: "10px 16px",
+          borderRadius: "10px",
+          fontSize: "14px",
+          zIndex: "9999",
+        });
+        document.body.appendChild(popup);
+        setTimeout(() => popup.remove(), 4000);
+      });
+    </script>
+  <script> if('serviceWorker' in navigator){ navigator.serviceWorker.register('/service-worker.js'); } </script></body>
 </html>
+<script type="module" src="/src/main-boost.js"></script>
