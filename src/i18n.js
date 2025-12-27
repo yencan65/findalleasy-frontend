@@ -15,6 +15,22 @@ const resources = {
       username: "Kullanıcı",
       Puan: "Puan",
 
+      loading: "Yükleniyor…",
+      cameraSearch: "Kamera ile ara",
+      sloganFull: "Yazman yeterli, gerisini Sono halleder.",
+
+      site: {
+        about: "Hakkımızda",
+        how: "Nasıl Çalışır?",
+        contact: "İletişim"
+      },
+
+      legal: {
+        privacy: "Gizlilik",
+        cookies: "Çerezler",
+        affiliate: "Affiliate Açıklaması"
+      },
+
       fillAllFields: "Lütfen tüm alanları doldurun.",
       networkError: "Ağ hatası. Lütfen tekrar deneyin.",
       processFailed: "İşlem başarısız.",
@@ -108,6 +124,7 @@ const resources = {
         forgotPassword: "Şifremi unuttum",
 
         email: "E-posta",
+        emailRequired: "E-posta gerekli.",
         password: "Şifre",
         nameSurname: "Ad Soyad",
         inviteCode: "Davet Kodu",
@@ -159,6 +176,17 @@ const resources = {
         right: "gerisini O halleder."
       },
 
+      legal: {
+        badge: "Legal",
+        home: "← Ana sayfa",
+        updatedAt: "Güncelleme",
+        privacy: "Gizlilik",
+        cookies: "Çerezler",
+        affiliate: "Affiliate Açıklaması",
+
+      },
+
+
       ai: {
         sono: "Sono AI",
         listen: "Dinle",
@@ -171,11 +199,13 @@ const resources = {
         thanks: "Rica ederim 🌸",
         talk: "Konuş",
         error: "Bir hata oluştu.",
+        noAnswer: "Şu an cevap alamadım.",
         noSpeech: "Tarayıcın ses tanımayı desteklemiyor!",
         thanksReply: "Rica ederim, her zaman buradayım."
       },
 
       wallet: {
+        statusNote: "Bu panel şu an yalnızca davet linki ve geçmiş içindir.",
         title: "Cüzdanım",
         howTo: "Nasıl kazanırım?",
         invite: "Davet et",
@@ -205,15 +235,27 @@ const resources = {
         mustLoginCoupon: "Kupon oluşturmak için giriş yapmalısın.",
         mustLoginRedeem: "İndirim kullanmak için giriş yapmalısın.",
 
+        enterCoupon: "Lütfen bir kupon kodu gir.",
+        couponInvalid: "Kupon geçersiz veya kullanılamaz.",
+        couponAppliedCashback:
+          "Kupon uygulandı (önizleme). Ödül/cashback şu an aktif değildir.",
+        couponError: "Kupon doğrulanırken bir hata oluştu.",
+        relatedOrder: "İlişkili sipariş:",
+        inviteError: "Davet linki oluşturulamadı.",
+        noRewardsForCoupon: "Bu işlem için kullanılabilir bir bakiye yok.",
+        couponTooHigh: "Girilen tutar çok yüksek.",
+        redeemError: "İndirim uygulanamadı.",
+        infoAria: "Cüzdan hakkında bilgi",
+
         infoTitle: "Bu cüzdan nasıl çalışır?",
         infoWallet:
-          "Bu ekran cüzdan altyapısının önizlemesidir. Cashback/kupon dağıtımı şu an aktif değildir ve para çekimi (IBAN) yoktur.",
+          "Bu ekran cüzdan altyapısının önizlemesidir. Şu an ödül/cashback/kupon dağıtımı yoktur; para çekimi (IBAN) de yoktur.",
         infoCoupon:
-          "Kupon oluşturma/harcama özelliği (ve ödül dönüşümü) onaylar tamamlandıktan sonra açılacaktır.",
+          "Cüzdan özellikleri ileride açılabilir. Şimdilik bu panel bilgilendirme ve davet linki içindir.",
         infoDiscount:
-          "Şu an yalnızca en iyi fiyatı bulma ve yönlendirme altyapısını test ediyoruz. Ödül/kupon kuralları aktif olduğunda burada net şekilde yayınlanacaktır.",
+          "Şu an yalnızca en iyi fiyatı bulma ve yönlendirme altyapısını test ediyoruz. Cüzdan/ödüllendirme aktif olduğunda burada net şekilde duyurulacaktır.",
         infoReferral:
-          "Davet altyapısı hazır; ödüllendirme aktif olduğunda davet kazanımları bu ekranda görünecektir.",
+          "Davet altyapısı hazır; ileride aktif olursa davet kazanımları bu ekranda görünecektir.",
 
         walletTabs: {
           wallet: "Cüzdan",
@@ -243,8 +285,16 @@ const resources = {
 
         shareWithFriends: "Linki Paylaş",
 
+        share: {
+          whatsapp: "WhatsApp",
+          telegram: "Telegram",
+          x: "X",
+          facebook: "Facebook",
+          instagram: "Instagram",
+        },
+
         motto:
-          "<span style='color:#FFD700;'>Yakında:</span> ödül/kupon/davet sistemi. Şimdilik en iyi fiyatı bul ve yönlendirme altyapısını test et."
+          "<span style='color:#FFD700;'>Not:</span> Ödül, cashback ve kupon şu an aktif değil. Şimdilik en iyi fiyatı bulup yönlendirme altyapısını test ediyoruz."
       },
 
       orders: {
@@ -271,6 +321,22 @@ const resources = {
 
       username: "User",
       Puan: "Points",
+
+      loading: "Loading…",
+      cameraSearch: "Search with camera",
+      sloganFull: "Just type — Sono will handle the rest.",
+
+      site: {
+        about: "About",
+        how: "How it works",
+        contact: "Contact"
+      },
+
+      legal: {
+        privacy: "Privacy",
+        cookies: "Cookies",
+        affiliate: "Affiliate Disclosure"
+      },
 
       fillAllFields: "Please fill all fields.",
       networkError: "Network error. Please try again.",
@@ -364,6 +430,7 @@ const resources = {
         forgotPassword: "Forgot Password",
 
         email: "Email",
+        emailRequired: "Email is required.",
         password: "Password",
         nameSurname: "Full Name",
         inviteCode: "Referral Code",
@@ -415,6 +482,17 @@ const resources = {
         right: "it handles the rest."
       },
 
+      legal: {
+        badge: "Legal",
+        home: "← Home",
+        updatedAt: "Updated",
+        privacy: "Privacy",
+        cookies: "Cookies",
+        affiliate: "Affiliate Disclosure",
+
+      },
+
+
       ai: {
         sono: "Sono AI",
         listen: "Listen",
@@ -427,11 +505,13 @@ const resources = {
         thanks: "You're welcome 🌸",
         talk: "Talk",
         error: "Something went wrong.",
+        noAnswer: "I couldn't get an answer right now.",
         noSpeech: "Your browser does not support speech recognition!",
         thanksReply: "You're welcome, always here for you."
       },
 
       wallet: {
+        statusNote: "This panel is currently only for your invite link and history.",
         title: "My Wallet",
         howTo: "How do I earn?",
         invite: "Invite",
@@ -461,14 +541,26 @@ const resources = {
         mustLoginCoupon: "You must sign in to create a coupon.",
         mustLoginRedeem: "You must sign in to use a discount.",
 
+        enterCoupon: "Please enter a coupon code.",
+        couponInvalid: "Coupon is invalid or cannot be used.",
+        couponAppliedCashback:
+          "Coupon applied (preview). Rewards/cashback are not active yet.",
+        couponError: "An error occurred while validating the coupon.",
+        relatedOrder: "Related order:",
+        inviteError: "Could not create the invite link.",
+        noRewardsForCoupon: "No available balance for this action.",
+        couponTooHigh: "The amount is too high.",
+        redeemError: "Discount could not be applied.",
+        infoAria: "Wallet info",
+
         infoTitle: "How does this wallet work?",
         infoWallet:
-          "This wallet screen is a preview. Cashback/coupon distribution is not active yet, and there is no cash withdrawal (IBAN).",
+          "This wallet screen is a preview. Rewards/cashback/coupons are not active yet, and there is no cash withdrawal (IBAN).",
         infoCoupon:
-          "Coupon creation/spending (and reward conversion) will open after approvals are completed.",
+          "Wallet features may open later. For now, this panel is for info and your invite link.",
         infoDiscount:
-          "Right now we’re only testing the best-price search and click-out flow. When rewards go live, the rules will be published here.",
-        infoReferral: "Invites are ready; once rewards are enabled, referral earnings will appear here.",
+          "Right now we’re only testing the best-price search and click-out flow. When wallet/rewards go live, details will be published here.",
+        infoReferral: "Invites are ready; if rewards become active later, referral earnings will appear here.",
 
         walletTabs: {
           wallet: "Wallet",
@@ -496,8 +588,16 @@ const resources = {
 
         shareWithFriends: "Share the Link",
 
+        share: {
+          whatsapp: "WhatsApp",
+          telegram: "Telegram",
+          x: "X",
+          facebook: "Facebook",
+          instagram: "Instagram",
+        },
+
         motto:
-          "<span style='color:#FFD700;'>Coming soon:</span> rewards/coupons/referrals. For now, find the best price and test the routing."
+          "<span style='color:#FFD700;'>Note:</span> Rewards, cashback and coupons are not active yet. For now, find the best price and test the routing."
       },
 
       orders: {
@@ -524,6 +624,22 @@ const resources = {
 
       username: "Utilisateur",
       Puan: "Points",
+
+      loading: "Chargement…",
+      cameraSearch: "Rechercher avec la caméra",
+      sloganFull: "Tapez simplement — Sono s’occupe du reste.",
+
+      site: {
+        about: "À propos",
+        how: "Comment ça marche ?",
+        contact: "Contact"
+      },
+
+      legal: {
+        privacy: "Confidentialité",
+        cookies: "Cookies",
+        affiliate: "Mention d’affiliation"
+      },
 
       fillAllFields: "Veuillez remplir tous les champs.",
       networkError: "Erreur réseau. Veuillez réessayer.",
@@ -619,6 +735,7 @@ const resources = {
         forgotPassword: "Mot de passe oublié",
 
         email: "E-mail",
+        emailRequired: "E-mail requis.",
         password: "Mot de passe",
         nameSurname: "Nom & Prénom",
         inviteCode: "Code d’invitation",
@@ -674,6 +791,17 @@ const resources = {
         right: "je m'occupe du reste."
       },
 
+      legal: {
+        badge: "Légal",
+        home: "← Accueil",
+        updatedAt: "Mise à jour",
+        privacy: "Confidentialité",
+        cookies: "Cookies",
+        affiliate: "Mention d’affiliation",
+
+      },
+
+
       ai: {
         sono: "Sono AI",
         listen: "Écouter",
@@ -686,12 +814,14 @@ const resources = {
         thanks: "Avec plaisir 🌸",
         talk: "Parler",
         error: "Une erreur s'est produite.",
+        noAnswer: "Je n'ai pas pu obtenir de réponse pour le moment.",
         noSpeech:
           "Votre navigateur ne supporte pas la reconnaissance vocale.",
         thanksReply: "Avec plaisir, je suis toujours là."
       },
 
       wallet: {
+        statusNote: "Ce panneau est actuellement uniquement destiné à votre lien d\'invitation et à l\'historique.",
         title: "Mon portefeuille",
         howTo: "Comment gagner ?",
         invite: "Inviter",
@@ -724,6 +854,18 @@ const resources = {
           "Connexion requise pour créer un coupon.",
         mustLoginRedeem:
           "Connexion requise pour utiliser une réduction.",
+
+        enterCoupon: "Veuillez saisir un code coupon.",
+        couponInvalid: "Coupon invalide ou inutilisable.",
+        couponAppliedCashback:
+          "Coupon appliqué (aperçu). Les récompenses/cashback ne sont pas encore actifs.",
+        couponError: "Erreur lors de la vérification du coupon.",
+        relatedOrder: "Commande associée :",
+        inviteError: "Impossible de créer le lien d'invitation.",
+        noRewardsForCoupon: "Aucun solde disponible pour cette action.",
+        couponTooHigh: "Le montant est trop élevé.",
+        redeemError: "Impossible d'appliquer la réduction.",
+        infoAria: "Infos du portefeuille",
 
         infoTitle: "Comment fonctionne le portefeuille ?",
         infoWallet:
@@ -764,6 +906,14 @@ const resources = {
 
         shareWithFriends: "Partager le lien",
 
+        share: {
+          whatsapp: "WhatsApp",
+          telegram: "Telegram",
+          x: "X",
+          facebook: "Facebook",
+          instagram: "Instagram",
+        },
+
         motto:
           "<span style='color:#FFD700;'>Bientôt :</span> récompenses/coupons/parrainage. Pour l’instant, trouve le meilleur prix et teste la redirection."
       },
@@ -793,6 +943,22 @@ const resources = {
 
       username: "Пользователь",
       Puan: "Баллы",
+
+      loading: "Загрузка…",
+      cameraSearch: "Поиск по камере",
+      sloganFull: "Просто напишите — остальное сделает Sono.",
+
+      site: {
+        about: "О нас",
+        how: "Как это работает?",
+        contact: "Контакты"
+      },
+
+      legal: {
+        privacy: "Конфиденциальность",
+        cookies: "Cookies",
+        affiliate: "Affiliate-раскрытие"
+      },
 
       fillAllFields: "Заполните все поля.",
       networkError: "Ошибка сети. Попробуйте ещё раз.",
@@ -888,6 +1054,7 @@ const resources = {
         forgotPassword: "Забыли пароль?",
 
         email: "E-mail",
+        emailRequired: "Требуется email.",
         password: "Пароль",
         nameSurname: "Имя и фамилия",
         inviteCode: "Код приглашения",
@@ -944,6 +1111,17 @@ const resources = {
         right: "остальное я сделаю."
       },
 
+      legal: {
+        badge: "Правовые",
+        home: "← На главную",
+        updatedAt: "Обновлено",
+        privacy: "Конфиденциальность",
+        cookies: "Cookies",
+        affiliate: "Affiliate-раскрытие",
+
+      },
+
+
       ai: {
         sono: "Sono AI",
         listen: "Слушать",
@@ -956,12 +1134,14 @@ const resources = {
         thanks: "Пожалуйста 🌸",
         talk: "Говорить",
         error: "Произошла ошибка.",
+        noAnswer: "Сейчас не удалось получить ответ.",
         noSpeech:
           "Браузер не поддерживает распознавание речи.",
         thanksReply: "Пожалуйста, я всегда рядом."
       },
 
       wallet: {
+        statusNote: "Этот раздел сейчас предназначен только для ссылки приглашения и истории.",
         title: "Кошелёк",
         howTo: "Как заработать?",
         invite: "Пригласить",
@@ -993,6 +1173,18 @@ const resources = {
           "Войдите, чтобы создать купон.",
         mustLoginRedeem:
           "Войдите, чтобы использовать скидку.",
+
+        enterCoupon: "Введите код купона.",
+        couponInvalid: "Купон недействителен или недоступен.",
+        couponAppliedCashback:
+          "Купон применён (предпросмотр). Награды/кэшбэк пока не активны.",
+        couponError: "Ошибка при проверке купона.",
+        relatedOrder: "Связанный заказ:",
+        inviteError: "Не удалось создать ссылку приглашения.",
+        noRewardsForCoupon: "Нет доступного баланса для этого действия.",
+        couponTooHigh: "Сумма слишком большая.",
+        redeemError: "Не удалось применить скидку.",
+        infoAria: "Информация о кошельке",
 
         infoTitle: "Как работает кошелёк?",
         infoWallet:
@@ -1032,6 +1224,14 @@ const resources = {
 
         shareWithFriends: "Поделиться ссылкой",
 
+        share: {
+          whatsapp: "WhatsApp",
+          telegram: "Telegram",
+          x: "X",
+          facebook: "Facebook",
+          instagram: "Instagram",
+        },
+
         motto:
           "<span style='color:#FFD700;'>Скоро:</span> награды/купоны/рефералы. Пока — ищи лучшую цену и тестируй переходы."
       },
@@ -1060,6 +1260,22 @@ const resources = {
 
       username: "المستخدم",
       Puan: "النقاط",
+
+      loading: "جارٍ التحميل…",
+      cameraSearch: "بحث بالكاميرا",
+      sloganFull: "اكتب فقط — وسيتكفّل Sono بالباقي.",
+
+      site: {
+        about: "من نحن",
+        how: "كيف يعمل؟",
+        contact: "تواصل معنا"
+      },
+
+      legal: {
+        privacy: "الخصوصية",
+        cookies: "ملفات تعريف الارتباط",
+        affiliate: "إفصاح الإحالة"
+      },
 
       fillAllFields: "يرجى تعبئة جميع الحقول.",
       networkError: "حدث خطأ في الشبكة. حاول مرة أخرى.",
@@ -1153,6 +1369,7 @@ const resources = {
         forgotPassword: "نسيت كلمة المرور",
 
         email: "البريد الإلكتروني",
+        emailRequired: "البريد الإلكتروني مطلوب.",
         password: "كلمة المرور",
         nameSurname: "الاسم الكامل",
         inviteCode: "رمز الدعوة",
@@ -1208,6 +1425,17 @@ const resources = {
         right: "وسأتولى الباقي."
       },
 
+      legal: {
+        badge: "قانوني",
+        home: "← الرئيسية",
+        updatedAt: "تم التحديث",
+        privacy: "الخصوصية",
+        cookies: "ملفات تعريف الارتباط",
+        affiliate: "إفصاح الإحالة",
+
+      },
+
+
       ai: {
         sono: "Sono AI",
         listen: "استمع",
@@ -1220,11 +1448,13 @@ const resources = {
         thanks: "على الرحب والسعة 🌸",
         talk: "تحدث",
         error: "حدث خطأ.",
+        noAnswer: "تعذّر الحصول على إجابة الآن.",
         noSpeech: "المتصفح لا يدعم التعرف على الصوت.",
         thanksReply: "على الرحب والسعة، أنا دائمًا هنا."
       },
 
       wallet: {
+        statusNote: "هذا القسم مخصص حاليًا فقط لرابط الدعوة والسجل.",
         title: "محفظتي",
         howTo: "كيف أكسب؟",
         invite: "دعوة",
@@ -1257,6 +1487,18 @@ const resources = {
           "يجب تسجيل الدخول لإنشاء قسيمة.",
         mustLoginRedeem:
           "يجب تسجيل الدخول لاستخدام الخصم.",
+
+        enterCoupon: "يرجى إدخال رمز القسيمة.",
+        couponInvalid: "القسيمة غير صالحة أو لا يمكن استخدامها.",
+        couponAppliedCashback:
+          "تم تطبيق القسيمة (معاينة). المكافآت/الكاش باك غير مفعّلة بعد.",
+        couponError: "حدث خطأ أثناء التحقق من القسيمة.",
+        relatedOrder: "الطلب المرتبط:",
+        inviteError: "تعذر إنشاء رابط الدعوة.",
+        noRewardsForCoupon: "لا يوجد رصيد متاح لهذا الإجراء.",
+        couponTooHigh: "المبلغ كبير جدًا.",
+        redeemError: "تعذر تطبيق الخصم.",
+        infoAria: "معلومات المحفظة",
 
         infoTitle: "كيف تعمل هذه المحفظة؟",
         infoWallet:
@@ -1297,8 +1539,16 @@ const resources = {
 
         shareWithFriends: "مشاركة الرابط",
 
+        share: {
+          whatsapp: "WhatsApp",
+          telegram: "Telegram",
+          x: "X",
+          facebook: "Facebook",
+          instagram: "Instagram",
+        },
+
         motto:
-          "<span style='color:#FFD700;'>قريباً:</span> المكافآت/القسائم/الإحالات. حالياً اعثر على أفضل سعر واختبر التحويل."
+          "<span style='color:#FFD700;'>ملاحظة:</span> المكافآت والكاش باك والقسائم غير مفعّلة بعد. حالياً اعثر على أفضل سعر واختبر التحويل."
       },
 
       orders: {

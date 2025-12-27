@@ -402,102 +402,113 @@ group: "product",
         </h2>
 
         {/* ◆ Arama Çubuğu (Responsive: tasarım korunur, taşma yok) */}
-    <div className="w-full max-w-[760px] mt-3 sm:mt-4 mb-3">
-        <div className="w-full sm:flex sm:items-center sm:gap-3">
-          {/* Input */}
-          <div className="relative flex-1">
-            <input
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && doSearch()}
-              placeholder={t("search_placeholder")}
-              className="w-full h-10 text-white placeholder:text-white/40 rounded-md pl-3 pr-14 sm:pr-4 outline-none border border-white/10 bg-[#0B0E12]/45 backdrop-blur"
-            />
+<div className="w-full max-w-[760px] mt-3 sm:mt-4 mb-3">
+  <div className="w-full sm:flex sm:items-center sm:gap-3">
+    {/* Mobile: Input içine "Ara" + sağda Ses/Kamera/QR (taşma yok) */}
+    <div className="flex items-center gap-2 w-full flex-nowrap sm:block">
+      {/* Input */}
+      <div className="relative flex-1 min-w-0">
+        <input
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && doSearch()}
+          placeholder={placeholders_[currentPlaceholder] || t("search.search")}
+          className="w-full h-10 text-white placeholder:text-white/40 rounded-md pl-3 pr-24 sm:pr-4 outline-none border border-white/10 bg-[#0B0E12]/45 backdrop-blur"
+        />
 
-            {/* Mobile: Search button inside the input */}
-            <button
-              onClick={doSearch}
-              className="sm:hidden absolute right-1.5 top-1/2 -translate-y-1/2 h-8 px-3 rounded-md bg-[#D9A441] text-[#0B0E12] font-semibold flex items-center gap-2 shadow hover:brightness-105 transition"
-              aria-label={t("search")}
-              title={t("search")}
-            >
-              <span className="text-[13px]">{t("search")}</span>
-            </button>
-          </div>
+        {/* Mobile: Search button inside the input */}
+        <button
+          onClick={doSearch}
+          className="sm:hidden absolute right-1.5 top-1/2 -translate-y-1/2 h-8 px-2.5 rounded-md bg-[#D9A441] text-[#0B0E12] font-semibold flex items-center gap-2 shadow hover:brightness-105 transition"
+          aria-label={t("search.search")}
+          title={t("search.search")}
+        >
+          <span className="text-[13px] max-[360px]:hidden">{t("search.search")}</span>
+          <span className="text-[16px]" aria-hidden>
+            🔍
+          </span>
+        </button>
+      </div>
 
-          {/* Desktop/Tablet: Controls OUTSIDE the input (PC/tablet unchanged) */}
-          <div className="hidden sm:flex items-center gap-2">
-            <button
-              onClick={startMic}
-              className="w-9 h-9 rounded-xl border border-[#D9A441]/35 hover:border-[#D9A441]/70 bg-[#0B0E12]/55 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
-              title={t("voice")}
-              aria-label={t("voice")}
-            >
-              <img src={micIcon} alt="Mic" className="w-4.5 h-4.5 opacity-90" />
-            </button>
+      {/* Mobile: Voice/Camera/QR (Ara butonunun eski yerine sağ tarafa) */}
+      <div className="sm:hidden flex items-center gap-2 flex-shrink-0">
+        <button
+          onClick={startMic}
+          className="w-10 h-10 rounded-xl border border-[#D9A441]/35 hover:border-[#D9A441]/70 bg-[#0B0E12]/55 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
+          title={t("search.voice")}
+          aria-label={t("search.voice")}
+        >
+          <img src={micIcon} alt={t("search.voice")} className="w-5 h-5 opacity-90" />
+        </button>
 
-            <button
-              onClick={openCamera}
-              className="w-9 h-9 rounded-xl border border-[#D9A441]/35 hover:border-[#D9A441]/70 bg-[#0B0E12]/55 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
-              title={t("camera")}
-              aria-label={t("camera")}
-            >
-              <img src={cameraApple} alt="Camera" className="w-4.5 h-4.5 opacity-90" />
-            </button>
+        <button
+          onClick={openCamera}
+          className="w-10 h-10 rounded-xl border border-[#D9A441]/35 hover:border-[#D9A441]/70 bg-[#0B0E12]/55 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
+          title={t("search.camera")}
+          aria-label={t("search.camera")}
+        >
+          {/* FIX: cameraApple undefined -> use imported asset `camera` */}
+          <img src={camera} alt={t("search.camera")} className="w-5 h-5 opacity-90" />
+        </button>
 
-            <button
-              onClick={openQR}
-              className="w-9 h-9 rounded-xl border border-[#D9A441]/35 hover:border-[#D9A441]/70 bg-[#0B0E12]/55 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
-              title={t("qr")}
-              aria-label={t("qr")}
-            >
-              <AiOutlineQrcode className="text-[#D9A441] text-[20px]" />
-            </button>
+        <button
+          onClick={startQRScanner}
+          className="w-10 h-10 rounded-xl border border-[#D9A441]/35 hover:border-[#D9A441]/70 bg-[#0B0E12]/55 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
+          title={t("search.qr")}
+          aria-label={t("search.qr")}
+        >
+          {/* FIX: react-icons symbol was undefined; use imported lucide icon */}
+          <QrCode className="text-[#D9A441]" size={22} />
+        </button>
+      </div>
+    </div>
 
-            <button
-              onClick={doSearch}
-              className="h-10 px-5 rounded-xl bg-[#D9A441] text-[#0B0E12] font-bold flex items-center gap-2 shadow hover:brightness-105 transition"
-              aria-label={t("search")}
-              title={t("search")}
-            >
-              <AiOutlineSearch className="text-[20px]" />
-              <span>{t("search")}</span>
-            </button>
-          </div>
-        </div>
+    {/* Desktop/Tablet: Controls OUTSIDE the input (PC/tablet unchanged) */}
+    <div className="hidden sm:flex items-center gap-2">
+      <button
+        onClick={startMic}
+        className="w-9 h-9 rounded-xl border border-[#D9A441]/35 hover:border-[#D9A441]/70 bg-[#0B0E12]/55 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
+        title={t("search.voice")}
+        aria-label={t("search.voice")}
+      >
+        <img src={micIcon} alt={t("search.voice")} className="w-5 h-5 opacity-90" />
+      </button>
 
-        {/* Mobile: Voice/Camera/QR replace the old big Search button row */}
-        <div className="sm:hidden mt-3 flex items-center justify-center gap-3">
-          <button
-            onClick={startMic}
-            className="w-11 h-11 rounded-xl border border-[#D9A441]/35 hover:border-[#D9A441]/70 bg-[#0B0E12]/55 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
-            title={t("voice")}
-            aria-label={t("voice")}
-          >
-            <img src={micIcon} alt="Mic" className="w-5 h-5 opacity-90" />
-          </button>
+      <button
+        onClick={openCamera}
+        className="w-9 h-9 rounded-xl border border-[#D9A441]/35 hover:border-[#D9A441]/70 bg-[#0B0E12]/55 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
+        title={t("search.camera")}
+        aria-label={t("search.camera")}
+      >
+        {/* FIX: cameraApple undefined -> use imported asset `camera` */}
+        <img src={camera} alt={t("search.camera")} className="w-5 h-5 opacity-90" />
+      </button>
 
-          <button
-            onClick={openCamera}
-            className="w-11 h-11 rounded-xl border border-[#D9A441]/35 hover:border-[#D9A441]/70 bg-[#0B0E12]/55 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
-            title={t("camera")}
-            aria-label={t("camera")}
-          >
-            <img src={cameraApple} alt="Camera" className="w-5 h-5 opacity-90" />
-          </button>
+      <button
+        onClick={startQRScanner}
+        className="w-9 h-9 rounded-xl border border-[#D9A441]/35 hover:border-[#D9A441]/70 bg-[#0B0E12]/55 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
+        title={t("search.qr")}
+        aria-label={t("search.qr")}
+      >
+        {/* FIX: react-icons symbol was undefined; use imported lucide icon */}
+        <QrCode className="text-[#D9A441]" size={20} />
+      </button>
 
-          <button
-            onClick={openQR}
-            className="w-11 h-11 rounded-xl border border-[#D9A441]/35 hover:border-[#D9A441]/70 bg-[#0B0E12]/55 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
-            title={t("qr")}
-            aria-label={t("qr")}
-          >
-            <AiOutlineQrcode className="text-[#D9A441] text-[22px]" />
-          </button>
-        </div>
-      </div>      </div>
+      <button
+        onClick={doSearch}
+        className="h-10 px-5 rounded-xl bg-[#D9A441] text-[#0B0E12] font-bold flex items-center gap-2 shadow hover:brightness-105 transition"
+        aria-label={t("search.search")}
+        title={t("search.search")}
+      >
+        {/* FIX: react-icons symbol was undefined; use imported lucide icon */}
+        <SearchIcon className="" size={20} />
+        <span>{t("search.search")}</span>
+      </button>
+    </div>
+  </div>
+</div>
 
-        {/* ◆ Akıllı Selam */}
+{/* ◆ Akıllı Selam */}
         {(() => {
           let rawName = "";
           try {

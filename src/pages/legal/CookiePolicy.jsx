@@ -1,86 +1,153 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-
-const UPDATED_AT = "24 Aralık 2025";
-
-function TR() {
-  return (
-    <div>
-      <h1>Çerez Politikası</h1>
-      <p className="muted">Son güncelleme: {UPDATED_AT}</p>
-
-      <p>
-        FindAllEasy, hizmeti düzgün çalıştırmak, tercihlerinizi hatırlamak ve güvenliği artırmak
-        için çerezler ve benzeri teknolojiler (localStorage vb.) kullanabilir.
-      </p>
-
-      <h2>1) Hangi tür çerezler kullanılır?</h2>
-      <ul>
-        <li>
-          <strong>Zorunlu:</strong> oturum yönetimi, güvenlik ve temel site fonksiyonları.
-        </li>
-        <li>
-          <strong>Tercih:</strong> dil/bölge gibi seçimlerinizi hatırlamak.
-        </li>
-        <li>
-          <strong>Analitik/performans (opsiyonel):</strong> hata ayıklama, performans ölçümü.
-        </li>
-        <li>
-          <strong>Affiliate takip (bağlantı parametreleri):</strong> üçüncü taraf sağlayıcıya
-          yönlendirmelerde clickId/subId gibi parametreler ile attribution sağlanabilir.
-        </li>
-      </ul>
-
-      <h2>2) Üçüncü taraf çerezleri</h2>
-      <p>
-        FindAllEasy’den bir satıcı/servis sağlayıcı sitesine geçtiğinizde, o üçüncü tarafın kendi
-        çerez politikası geçerli olur. Satın alma işlemi üçüncü taraf sitede gerçekleşir.
-      </p>
-
-      <h2>3) Çerezleri nasıl yönetebilirsin?</h2>
-      <ul>
-        <li>Tarayıcı ayarlarından çerezleri silebilir veya engelleyebilirsin.</li>
-        <li>
-          Bazı çerezleri engellemek, oturum/güvenlik gibi özelliklerin çalışmasını etkileyebilir.
-        </li>
-      </ul>
-
-      <h2>4) İletişim</h2>
-      <p>
-        Çerezler hakkında: <a href="mailto:findalleasy@gmail.com">findalleasy@gmail.com</a>
-      </p>
-    </div>
-  );
-}
-
-function EN() {
-  return (
-    <div>
-      <h1>Cookie Policy</h1>
-      <p className="muted">Last updated: {UPDATED_AT}</p>
-      <p>
-        FindAllEasy may use cookies and similar technologies (such as localStorage) to operate the
-        service, remember preferences, and improve security.
-      </p>
-      <h2>Types</h2>
-      <ul>
-        <li>Strictly necessary (session, security, core functionality)</li>
-        <li>Preferences (language/region)</li>
-        <li>Analytics/performance (optional diagnostics)</li>
-        <li>Affiliate attribution (clickId/subId parameters on outbound links)</li>
-      </ul>
-      <h2>Manage cookies</h2>
-      <p>You can delete or block cookies using your browser settings. Blocking may affect features.</p>
-      <h2>Contact</h2>
-      <p>
-        <a href="mailto:findalleasy@gmail.com">findalleasy@gmail.com</a>
-      </p>
-    </div>
-  );
-}
+import LegalShell from "../../components/LegalShell.jsx";
 
 export default function CookiePolicy() {
   const { i18n } = useTranslation();
-  const lang = String(i18n.language || "tr").toLowerCase();
-  return lang.startsWith("en") ? <EN /> : <TR />;
+  const langRaw = String(i18n.resolvedLanguage || i18n.language || "tr").toLowerCase();
+  const lang = (langRaw.split("-")[0] || "tr").toLowerCase();
+
+  const UPDATED_AT_TR = "24 Aralık 2025";
+  const UPDATED_AT_EN = "Dec 24, 2025";
+
+  const TR = (
+    <>
+      <h1 className="text-2xl font-bold mb-3 text-[#d4af37]">Çerez Politikası</h1>
+      <p className="text-white/70 text-sm mb-5">Son güncelleme: {UPDATED_AT_TR}</p>
+
+      <p className="text-white/80 mb-3">
+        FindAllEasy, kullanıcı deneyimini geliştirmek ve bazı temel işlevleri sağlamak
+        için çerezler (cookies) kullanabilir.
+      </p>
+
+      <h2 className="text-lg font-semibold text-white mt-6 mb-2">Kullandığımız Çerez Türleri</h2>
+      <ul className="list-disc pl-5 text-white/80 space-y-2">
+        <li>Gerekli çerezler: Oturum ve temel güvenlik için.</li>
+        <li>Tercih çerezleri: Dil gibi tercihleri hatırlamak için.</li>
+        <li>Analitik: Hizmeti iyileştirmek için anonim kullanım ölçümleri (varsa).</li>
+      </ul>
+
+      <h2 className="text-lg font-semibold text-white mt-6 mb-2">Kontrol</h2>
+      <p className="text-white/80">
+        Çerezleri tarayıcı ayarlarınızdan yönetebilir veya silebilirsiniz. Bazı çerezleri
+        devre dışı bırakmak, sitenin belirli özelliklerini etkileyebilir.
+      </p>
+    </>
+  );
+
+  const EN = (
+    <>
+      <h1 className="text-2xl font-bold mb-3 text-[#d4af37]">Cookie Policy</h1>
+      <p className="text-white/70 text-sm mb-5">Last updated: {UPDATED_AT_EN}</p>
+
+      <p className="text-white/80 mb-3">
+        FindAllEasy may use cookies to improve user experience and provide certain core functions.
+      </p>
+
+      <h2 className="text-lg font-semibold text-white mt-6 mb-2">Types of Cookies We Use</h2>
+      <ul className="list-disc pl-5 text-white/80 space-y-2">
+        <li>Essential cookies: session and basic security.</li>
+        <li>Preference cookies: remembering settings such as language.</li>
+        <li>Analytics: anonymous usage metrics to improve the service (if enabled).</li>
+      </ul>
+
+      <h2 className="text-lg font-semibold text-white mt-6 mb-2">Control</h2>
+      <p className="text-white/80">
+        You can manage or delete cookies in your browser settings. Disabling some cookies may affect certain features.
+      </p>
+    </>
+  );
+
+  const FR = (
+    <>
+      <h1 className="text-2xl font-bold mb-3 text-[#d4af37]">Politique relative aux cookies</h1>
+      <p className="text-white/70 text-sm mb-5">Dernière mise à jour : {UPDATED_AT_EN}</p>
+
+      <p className="text-white/80 mb-3">
+        FindAllEasy peut utiliser des cookies afin d&apos;améliorer l&apos;expérience utilisateur et d&apos;assurer
+        certaines fonctions essentielles.
+      </p>
+
+      <h2 className="text-lg font-semibold text-white mt-6 mb-2">Types de cookies utilisés</h2>
+      <ul className="list-disc pl-5 text-white/80 space-y-2">
+        <li>Cookies essentiels : session et sécurité de base.</li>
+        <li>Cookies de préférence : mémoriser des réglages comme la langue.</li>
+        <li>Analytique : mesures anonymes d&apos;usage pour améliorer le service (si activé).</li>
+      </ul>
+
+      <h2 className="text-lg font-semibold text-white mt-6 mb-2">Contrôle</h2>
+      <p className="text-white/80">
+        Vous pouvez gérer ou supprimer les cookies via les paramètres de votre navigateur. La désactivation de certains
+        cookies peut affecter certaines fonctionnalités.
+      </p>
+    </>
+  );
+
+  const RU = (
+    <>
+      <h1 className="text-2xl font-bold mb-3 text-[#d4af37]">Политика использования файлов cookie</h1>
+      <p className="text-white/70 text-sm mb-5">Последнее обновление: {UPDATED_AT_EN}</p>
+
+      <p className="text-white/80 mb-3">
+        FindAllEasy может использовать cookie-файлы для улучшения пользовательского опыта и обеспечения базовых функций.
+      </p>
+
+      <h2 className="text-lg font-semibold text-white mt-6 mb-2">Какие cookie мы используем</h2>
+      <ul className="list-disc pl-5 text-white/80 space-y-2">
+        <li>Необходимые cookie: сессия и базовая безопасность.</li>
+        <li>Cookie предпочтений: запоминание настроек, например языка.</li>
+        <li>Аналитика: анонимные метрики использования для улучшения сервиса (если включено).</li>
+      </ul>
+
+      <h2 className="text-lg font-semibold text-white mt-6 mb-2">Управление</h2>
+      <p className="text-white/80">
+        Вы можете управлять или удалять cookie в настройках браузера. Отключение некоторых cookie может повлиять на
+        отдельные функции сайта.
+      </p>
+    </>
+  );
+
+  const AR = (
+    <>
+      <h1 className="text-2xl font-bold mb-3 text-[#d4af37]">سياسة ملفات تعريف الارتباط</h1>
+      <p className="text-white/70 text-sm mb-5">آخر تحديث: {UPDATED_AT_EN}</p>
+
+      <p className="text-white/80 mb-3">
+        قد يستخدم FindAllEasy ملفات تعريف الارتباط لتحسين تجربة المستخدم وتوفير بعض الوظائف الأساسية.
+      </p>
+
+      <h2 className="text-lg font-semibold text-white mt-6 mb-2">أنواع ملفات تعريف الارتباط التي نستخدمها</h2>
+      <ul className="list-disc pl-5 text-white/80 space-y-2">
+        <li>ملفات ضرورية: للجلسة والأمان الأساسي.</li>
+        <li>ملفات تفضيلات: لتذكر الإعدادات مثل اللغة.</li>
+        <li>تحليلات: مقاييس استخدام مجهولة لتحسين الخدمة (إن كانت مفعلة).</li>
+      </ul>
+
+      <h2 className="text-lg font-semibold text-white mt-6 mb-2">التحكم</h2>
+      <p className="text-white/80">
+        يمكنك إدارة ملفات تعريف الارتباط أو حذفها من إعدادات المتصفح. قد يؤدي تعطيل بعض الملفات إلى التأثير على بعض
+        الميزات.
+      </p>
+    </>
+  );
+
+  const CONTENT = lang === "en" ? EN : lang === "fr" ? FR : lang === "ru" ? RU : lang === "ar" ? AR : TR;
+
+  return (
+    <LegalShell
+      badgeText={
+        lang === "tr"
+          ? "Çerezler"
+          : lang === "en"
+          ? "Cookies"
+          : lang === "fr"
+          ? "Cookies"
+          : lang === "ru"
+          ? "Cookie"
+          : "الكوكيز"
+      }
+    >
+      {CONTENT}
+    </LegalShell>
+  );
 }

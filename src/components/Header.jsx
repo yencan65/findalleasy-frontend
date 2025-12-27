@@ -105,11 +105,16 @@ export default function Header() {
   // ========================================================
   const LANG_LABELS = { tr: "TR", en: "EN", fr: "FR", ru: "RU", ar: "AR" };
 
+  const langRaw = String(i18n.resolvedLanguage || i18n.language || "tr").toLowerCase();
+  const langKey = (langRaw.split("-")[0] || "tr").toLowerCase();
+  const langLabel = LANG_LABELS[langRaw] || LANG_LABELS[langKey] || langKey.toUpperCase();
+
   function changeLanguage(lang) {
     try {
       i18n.changeLanguage(lang);
       localStorage.setItem("i18nextLng", lang);
       document.documentElement.lang = lang;
+      document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
       window.dispatchEvent(new Event("language-change"));
       window.dispatchEvent(new Event("fae.vitrine.refresh"));
       setOpenLang(false);
@@ -144,7 +149,7 @@ export default function Header() {
   return (
     <header
       className="
-        w-full flex justify-between items-center flex-wrap
+        w-full flex justify-between items-center flex-nowrap sm:flex-wrap gap-2 sm:gap-3
         px-3 sm:px-6 py-3 sm:py-4 bg-transparent 
         border-b border-[#d4af37]/20 
         text-white font-sans backdrop-blur-xl
@@ -155,7 +160,7 @@ export default function Header() {
     >
       {/* LOGO */}
       <h1
-        className="text-xl font-semibold text-[#d4af37] select-none cursor-pointer whitespace-nowrap"
+        className="text-lg sm:text-xl font-semibold text-[#d4af37] select-none cursor-pointer whitespace-nowrap flex-shrink-0"
         onClick={() => window.dispatchEvent(new Event("fae.vitrine.refresh"))}
         style={{ textShadow: "0 0 6px rgba(212,175,55,0.4)" }}
       >
@@ -163,7 +168,7 @@ export default function Header() {
       </h1>
 
       {/* RIGHT SIDE */}
-      <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+      <div className="flex flex-nowrap items-center justify-end sm:justify-center gap-2 sm:gap-4 flex-shrink-0">
 
         {/* 🌍 LANGUAGE PICKER */}
         <div className="relative" ref={langRef}>
@@ -171,7 +176,7 @@ export default function Header() {
           <button
             onClick={() => setOpenLang(!openLang)}
             className="
-              flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full
+              flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-full
               border border-[#d4af37]/40 text-[#d4af37]
               bg-black/25 backdrop-blur-lg
               shadow-[inset_0_0_10px_rgba(255,255,255,0.10),0_0_6px_rgba(212,175,55,0.25)]
@@ -184,7 +189,7 @@ export default function Header() {
           >
             <Globe size={18} />
             <span className="uppercase text-sm">
-              {LANG_LABELS[i18n.language] || "??"}
+              {langLabel}
             </span>
           </button>
 
@@ -201,7 +206,7 @@ export default function Header() {
 	                px-3 py-2 
 	                flex flex-nowrap gap-2
 	                max-w-[88vw] sm:max-w-none
-	                overflow-x-auto sm:overflow-visible
+	                overflow-y-auto overflow-x-hidden
 	                whitespace-nowrap
 	                [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
 	                justify-start

@@ -1,9 +1,7 @@
 // src/components/WalletPanel.jsx
 import React, { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../hooks/useAuth";
-import { Lock, Unlock } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import InviteFriend from "./InviteFriend";
 import OrderHistory from "./OrderHistory"; // 🆕 Siparişlerim sekmesi için
 
 // =================================================================
@@ -560,25 +558,25 @@ export default function WalletPanel({ onClose }) {
             <p>
               {t("wallet.infoWallet", {
                 defaultValue:
-                  "Bu ekran cüzdan altyapısının önizlemesidir. Cashback/kupon dağıtımı şu an aktif değildir ve para çekimi (IBAN) yoktur.",
+                  "Bu ekran cüzdan altyapısının önizlemesidir. Şu an ödül/cashback/kupon dağıtımı yoktur; para çekimi (IBAN) de yoktur.",
               })}
             </p>
             <p>
               {t("wallet.infoCoupon", {
                 defaultValue:
-                  "Kupon oluşturma/harcama özelliği (ve ödül dönüşümü) onaylar tamamlandıktan sonra açılacaktır.",
+                  "Cüzdan özellikleri ileride açılabilir. Şimdilik bu panel bilgilendirme ve davet linki içindir.",
               })}
             </p>
             <p>
               {t("wallet.infoDiscount", {
                 defaultValue:
-                  "Şu an yalnızca en iyi fiyatı bulma ve yönlendirme altyapısını test ediyoruz. Ödül/kupon kuralları aktif olduğunda burada net şekilde yayınlanacaktır.",
+                  "Şu an yalnızca en iyi fiyatı bulma ve yönlendirme altyapısını test ediyoruz. Cüzdan/ödüllendirme aktif olduğunda burada net şekilde duyurulacaktır.",
               })}
             </p>
             <p>
               {t("wallet.infoReferral", {
                 defaultValue:
-                  "Davet altyapısı hazır; ödüllendirme aktif olduğunda davet kazanımları bu ekranda görünecektir.",
+                  "Davet altyapısı hazır; ileride aktif olursa davet kazanımları bu ekranda görünecektir.",
               })}
             </p>
           </div>
@@ -590,7 +588,7 @@ export default function WalletPanel({ onClose }) {
           dangerouslySetInnerHTML={{
             __html: t("wallet.motto", {
               defaultValue:
-                "<span style='color:#FFD700;'>Yakında:</span> ödül/kupon/davet sistemi. Şimdilik en iyi fiyatı bul ve yönlendirme altyapısını test et.",
+                "<span style='color:#FFD700;'>Not:</span> Ödül, cashback ve kupon şu an aktif değil. Şimdilik en iyi fiyatı bulup yönlendirme altyapısını test ediyoruz.",
             }),
           }}
         />
@@ -633,174 +631,134 @@ export default function WalletPanel({ onClose }) {
           <>
             {/* ======================= TAB: CÜZDAN ======================= */}
             {activeTab === "wallet" && (
-              <>
-                {/* BALANCE */}
-        <div className="text-white text-2xl font-bold mb-1">
-          💎 {Math.round(Number(rewards || 0))} Puan
-        </div>
-        <div className="text-white/50 text-xs mb-4">
-          {t("wallet.pointsHint", {
-            defaultValue: "Puanlar bilgilendirme amaçlıdır; cashback/çekim henüz yok.",
+  <>
+    <div className="text-white/60 text-xs mb-4">
+      {t("wallet.statusNote", {
+        defaultValue:
+          "Bu panel şu an yalnızca davet linki ve geçmiş içindir.",
+      })}
+    </div>
+
+    {/* ACTION BUTTONS */}
+    <div className="flex flex-col sm:flex-row gap-2">
+      <button
+        onClick={createInvite}
+        className="flex-1 py-2 rounded-xl border border-[#d4af37]/60 text-[#d4af37] hover:bg-[#d4af37]/15 text-xs transition"
+      >
+        {t("wallet.invite", { defaultValue: "Davet Et" })}
+      </button>
+    </div>
+
+    {/* SHARE BLOCK */}
+    {showShare && shareUrl && (
+      <div className="mt-3 p-3 rounded-xl bg-black/40 border border-[#d4af37]/40 text-xs space-y-2">
+        <div className="font-semibold text-[#d4af37]">
+          {t("wallet.shareWithFriends", {
+            defaultValue: "Linki Paylaş",
           })}
         </div>
 
-                {/* LOCK STATE */}
-                <div className="flex items-center justify-between mb-4 gap-2">
-                  <div className="flex items-center gap-2 text-white/70 text-xs sm:text-sm">
-                    {locked ? <Lock size={18} /> : <Unlock size={18} />}
-                    <span className="text-white/70">
-                      {locked
-                        ? t("wallet.locked", {
-                            defaultValue:
-                              "Ödül sistemi şu an kapalı/erken aşamada.",
-                          })
-                        : t("wallet.unlockedText", {
-                            defaultValue:
-                              "Cüzdan beta: özellikler kademeli açılacak.",
-                          })}
-                    </span>
-                  </div>
+        <div className="break-all text-white/70 text-[11px]">
+          {shareUrl}
+        </div>
 
-	                  <button
-	                    onClick={handleRedeem}
-	                    disabled={true}
-	                    className="px-3 py-1 rounded-md border border-white/20 text-white/30 cursor-not-allowed text-xs sm:text-sm"
-	                  >
-	                    {t("wallet.useDiscount", {
-	                      defaultValue: "Yakında",
-	                    })}
-	                  </button>
-                </div>
+        <div className="flex flex-wrap gap-2 mt-1">
+          <a
+            href={`https://wa.me/?text=${encodeURIComponent(
+              shareUrl
+            )}`}
+            target="_blank"
+            rel="noreferrer"
+            className="px-2 py-1 rounded-lg border border-green-400/60 text-[11px]"
+          >
+            {t("wallet.share.whatsapp", { defaultValue: "WhatsApp" })}
+          </a>
 
-                {/* ACTION BUTTONS */}
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <button
-                    onClick={createInvite}
-                    className="flex-1 py-2 rounded-xl border border-[#d4af37]/60 text-[#d4af37] hover:bg-[#d4af37]/15 text-xs transition"
-                  >
-                    {t("wallet.invite", { defaultValue: "Davet Et" })}
-                  </button>
+          <a
+            href={`https://t.me/share/url?url=${encodeURIComponent(
+              shareUrl
+            )}`}
+            target="_blank"
+            rel="noreferrer"
+            className="px-2 py-1 rounded-lg border border-sky-400/60 text-[11px]"
+          >
+            {t("wallet.share.telegram", { defaultValue: "Telegram" })}
+          </a>
 
-                  <button
-                    onClick={createCoupon}
-                    className="flex-1 py-2 rounded-xl border border-emerald-400/50 text-emerald-300 hover:bg-emerald-300/20 text-xs transition"
-                  >
-                    {t("wallet.createCoupon", {
-                      defaultValue: "Kupon Oluştur",
-                    })}
-                  </button>
-                </div>
+          <a
+            href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(
+              shareUrl
+            )}`}
+            target="_blank"
+            rel="noreferrer"
+            className="px-2 py-1 rounded-lg border border-sky-500/60 text-[11px]"
+          >
+            {t("wallet.share.x", { defaultValue: "X" })}
+          </a>
 
-                {/* SHARE BLOCK */}
-                {showShare && shareUrl && (
-                  <div className="mt-3 p-3 rounded-xl bg-black/40 border border-[#d4af37]/40 text-xs space-y-2">
-                    <div className="font-semibold text-[#d4af37]">
-                      {t("wallet.shareWithFriends", {
-                        defaultValue: "Linki Paylaş",
-                      })}
-                    </div>
+          <a
+            href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+              shareUrl
+            )}`}
+            target="_blank"
+            rel="noreferrer"
+            className="px-2 py-1 rounded-lg border border-blue-500/60 text-[11px]"
+          >
+            {t("wallet.share.facebook", { defaultValue: "Facebook" })}
+          </a>
 
-                    <div className="break-all text-white/70 text-[11px]">
-                      {shareUrl}
-                    </div>
+          <a
+            href={`https://www.instagram.com/?url=${encodeURIComponent(
+              shareUrl
+            )}`}
+            target="_blank"
+            rel="noreferrer"
+            className="px-2 py-1 rounded-lg border border-pink-400/60 text-[11px]"
+          >
+            {t("wallet.share.instagram", { defaultValue: "Instagram" })}
+          </a>
+        </div>
+      </div>
+    )}
 
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      <a
-                        href={`https://wa.me/?text=${encodeURIComponent(
-                          shareUrl
-                        )}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="px-2 py-1 rounded-lg border border-green-400/60 text-[11px]"
-                      >
-                        WhatsApp
-                      </a>
+    {/* HATA / BİLGİ */}
+    {err && !redeemMsg && (
+      <div className="mt-3 text-xs text-red-300 bg-red-900/20 p-2 rounded-lg">
+        {err}
+      </div>
+    )}
 
-                      <a
-                        href={`https://t.me/share/url?url=${encodeURIComponent(
-                          shareUrl
-                        )}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="px-2 py-1 rounded-lg border border-sky-400/60 text-[11px]"
-                      >
-                        Telegram
-                      </a>
+    {redeemMsg && (
+      <div className="mt-3 text-xs text-yellow-300 bg-yellow-900/20 p-2 rounded-lg">
+        {redeemMsg}
+      </div>
+    )}
 
-                      <a
-                        href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(
-                          shareUrl
-                        )}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="px-2 py-1 rounded-lg border border-sky-500/60 text-[11px]"
-                      >
-                        X (Twitter)
-                      </a>
+    {/* BADGES */}
+    <div className="mt-4 text-white/80 text-sm mb-1">
+      {t("wallet.myBadges", { defaultValue: "Rozetlerin" })}
+    </div>
 
-                      <a
-                        href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
-                          shareUrl
-                        )}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="px-2 py-1 rounded-lg border border-blue-500/60 text-[11px]"
-                      >
-                        Facebook
-                      </a>
-
-                      <a
-                        href={`https://www.instagram.com/?url=${encodeURIComponent(
-                          shareUrl
-                        )}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="px-2 py-1 rounded-lg border border-pink-400/60 text-[11px]"
-                      >
-                        Instagram
-                      </a>
-                    </div>
-                  </div>
-                )}
-
-                {/* HATA / BİLGİ */}
-                {err && !redeemMsg && (
-                  <div className="mt-3 text-xs text-red-300 bg-red-900/20 p-2 rounded-lg">
-                    {err}
-                  </div>
-                )}
-
-                {redeemMsg && (
-                  <div className="mt-3 text-xs text-yellow-300 bg-yellow-900/20 p-2 rounded-lg">
-                    {redeemMsg}
-                  </div>
-                )}
-
-                {/* BADGES */}
-                <div className="mt-4 text-white/80 text-sm mb-1">
-                  {t("wallet.myBadges", { defaultValue: "Rozetlerin" })}
-                </div>
-
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {badges.length === 0 ? (
-                    <div className="text-white/50 text-xs">
-                      {t("wallet.noBadges", {
-                        defaultValue: "Henüz rozetin yok.",
-                      })}
-                    </div>
-                  ) : (
-                    badges.map((b, i) => (
-                      <div
-                        key={i}
-                        className="px-2 py-1 text-xs text-[#d4af37] rounded-full border border-[#d4af37]/40"
-                      >
-                        {b.name}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </>
-            )}
+    <div className="flex flex-wrap gap-2 mb-3">
+      {badges.length === 0 ? (
+        <div className="text-white/50 text-xs">
+          {t("wallet.noBadges", {
+            defaultValue: "Henüz rozetin yok.",
+          })}
+        </div>
+      ) : (
+        badges.map((b, i) => (
+          <div
+            key={i}
+            className="px-2 py-1 text-xs text-[#d4af37] rounded-full border border-[#d4af37]/40"
+          >
+            {b.name}
+          </div>
+        ))
+      )}
+    </div>
+  </>
+)}
 
             {/* ======================= TAB: HAREKETLER ======================= */}
             {activeTab === "history" && (

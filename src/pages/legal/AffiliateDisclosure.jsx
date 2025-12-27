@@ -1,98 +1,154 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-
-const UPDATED_AT = "24 Aralık 2025";
-
-function TR() {
-  return (
-    <div>
-      <h1>Affiliate (Ortaklık) Açıklaması</h1>
-      <p className="muted">Son güncelleme: {UPDATED_AT}</p>
-
-      <p>
-        FindAllEasy bir ürün/hizmet <strong>satıcısı</strong> değildir. Biz, farklı platformlardaki
-        teklifleri bulmanıza ve karşılaştırmanıza yardımcı olur, satın alma işlemi için sizi ilgili
-        satıcı/servis sağlayıcıya yönlendiririz.
-      </p>
-
-      <h2>Komisyon (affiliate gelir) nasıl çalışır?</h2>
-      <p>
-        Bazı bağlantılarımız bir affiliate/ortaklık takip bağlantısı olabilir. Bu, ilgili üçüncü
-        taraf sağlayıcıdan satın alma yapmanız durumunda FindAllEasy’nin komisyon kazanabileceği
-        anlamına gelir.
-      </p>
-
-      <h2>Size bir maliyeti var mı?</h2>
-      <p>
-        Hayır. Affiliate komisyonları genellikle satıcı/affiliate network tarafından ödenir ve
-        kullanıcı için ekstra bir ücret oluşturmaz.
-      </p>
-
-      <h2>Sıralama ve tarafsızlık</h2>
-      <p>
-        Amacımız, kullanıcıya <strong>en avantajlı</strong> ve <strong>en güvenilir</strong> seçenekleri
-        sunmaktır. Sonuçların sıralanmasında fiyat, güven sinyalleri, kullanıcı deneyimi ve benzeri
-        sinyaller kullanılabilir. Bazı sağlayıcılarla ortaklık ilişkimiz olması, otomatik olarak
-        onları “en üstte” göstereceğimiz anlamına gelmez.
-      </p>
-
-      <h2>Üçüncü taraf siteler</h2>
-      <p>
-        FindAllEasy’den yönlendirildiğiniz siteler üçüncü taraflara aittir. Satın alma, iade,
-        teslimat ve müşteri hizmetleri süreçleri ilgili sağlayıcının politikalarına tabidir.
-      </p>
-
-      <h2>İletişim</h2>
-      <p>
-        Bu açıklama hakkında sorularınız için: <a href="mailto:findalleasy@gmail.com">findalleasy@gmail.com</a>
-      </p>
-    </div>
-  );
-}
-
-function EN() {
-  return (
-    <div>
-      <h1>Affiliate Disclosure</h1>
-      <p className="muted">Last updated: {UPDATED_AT}</p>
-
-      <p>
-        FindAllEasy is not a seller. We help you discover and compare offers and redirect you to
-        third‑party providers to complete purchases.
-      </p>
-
-      <h2>How commissions work</h2>
-      <p>
-        Some links may be affiliate links. This means FindAllEasy may earn a commission if you
-        make a qualifying purchase on a third‑party provider.
-      </p>
-
-      <h2>Does it cost you extra?</h2>
-      <p>No. Commissions are typically paid by the merchant/affiliate network and do not add fees.</p>
-
-      <h2>Ranking & neutrality</h2>
-      <p>
-        We aim to surface the most advantageous and trustworthy options. Rankings may use signals
-        like price and trust indicators. An affiliate relationship does not automatically mean a
-        provider will be placed at the top.
-      </p>
-
-      <h2>Third‑party sites</h2>
-      <p>
-        Purchases, returns, shipping and customer service are handled by the third‑party provider
-        under their own policies.
-      </p>
-
-      <h2>Contact</h2>
-      <p>
-        <a href="mailto:findalleasy@gmail.com">findalleasy@gmail.com</a>
-      </p>
-    </div>
-  );
-}
+import LegalShell from "../../components/LegalShell.jsx";
 
 export default function AffiliateDisclosure() {
   const { i18n } = useTranslation();
-  const lang = String(i18n.language || "tr").toLowerCase();
-  return lang.startsWith("en") ? <EN /> : <TR />;
+  const langRaw = String(i18n.resolvedLanguage || i18n.language || "tr").toLowerCase();
+  const lang = (langRaw.split("-")[0] || "tr").toLowerCase();
+
+  const UPDATED_AT_TR = "24 Aralık 2025";
+  const UPDATED_AT_EN = "Dec 24, 2025";
+
+  const TR = (
+    <>
+      <h1 className="text-2xl font-bold mb-3 text-[#d4af37]">Affiliate Açıklaması</h1>
+      <p className="text-white/70 text-sm mb-5">Son güncelleme: {UPDATED_AT_TR}</p>
+
+      <p className="text-white/80 mb-3">
+        FindAllEasy bir karşılaştırma ve yönlendirme platformudur. Bazı bağlantılarımız
+        affiliate (ortaklık) bağlantıları olabilir.
+      </p>
+
+      <p className="text-white/80 mb-3">
+        Bu bağlantılar üzerinden ilgili platformda alışveriş yapmanız halinde, platform
+        tarafından komisyon kazanabiliriz. Bu durum, ürün/hizmet fiyatını sizin için
+        artırmaz.
+      </p>
+
+      <p className="text-white/80">
+        Şeffaflık bizim için önemlidir. Sorularınız için{" "}
+        <a className="text-[#d4af37] underline" href="mailto:findalleasy@gmail.com">
+          findalleasy@gmail.com
+        </a>{" "}
+        adresine yazabilirsiniz.
+      </p>
+    </>
+  );
+
+  const EN = (
+    <>
+      <h1 className="text-2xl font-bold mb-3 text-[#d4af37]">Affiliate Disclosure</h1>
+      <p className="text-white/70 text-sm mb-5">Last updated: {UPDATED_AT_EN}</p>
+
+      <p className="text-white/80 mb-3">
+        FindAllEasy is a comparison and redirection platform. Some links may be affiliate links.
+      </p>
+
+      <p className="text-white/80 mb-3">
+        If you make a purchase on the provider&apos;s website through these links, we may earn a commission.
+        This does not increase the price for you.
+      </p>
+
+      <p className="text-white/80">
+        Transparency matters to us. For questions, email{" "}
+        <a className="text-[#d4af37] underline" href="mailto:findalleasy@gmail.com">
+          findalleasy@gmail.com
+        </a>
+        .
+      </p>
+    </>
+  );
+
+  const FR = (
+    <>
+      <h1 className="text-2xl font-bold mb-3 text-[#d4af37]">Déclaration d&apos;affiliation</h1>
+      <p className="text-white/70 text-sm mb-5">Dernière mise à jour : {UPDATED_AT_EN}</p>
+
+      <p className="text-white/80 mb-3">
+        FindAllEasy est une plateforme de comparaison et de redirection. Certains liens peuvent être des liens
+        d&apos;affiliation.
+      </p>
+
+      <p className="text-white/80 mb-3">
+        Si vous effectuez un achat sur le site du fournisseur via ces liens, nous pouvons percevoir une commission.
+        Cela n&apos;augmente pas le prix pour vous.
+      </p>
+
+      <p className="text-white/80">
+        La transparence est importante pour nous. Questions :{" "}
+        <a className="text-[#d4af37] underline" href="mailto:findalleasy@gmail.com">
+          findalleasy@gmail.com
+        </a>
+        .
+      </p>
+    </>
+  );
+
+  const RU = (
+    <>
+      <h1 className="text-2xl font-bold mb-3 text-[#d4af37]">Партнёрское раскрытие</h1>
+      <p className="text-white/70 text-sm mb-5">Последнее обновление: {UPDATED_AT_EN}</p>
+
+      <p className="text-white/80 mb-3">
+        FindAllEasy — платформа сравнения и перенаправления. Некоторые ссылки могут быть партнёрскими (affiliate).
+      </p>
+
+      <p className="text-white/80 mb-3">
+        Если вы совершаете покупку на сайте поставщика через такие ссылки, мы можем получить комиссию. Для вас цена не
+        увеличивается.
+      </p>
+
+      <p className="text-white/80">
+        Прозрачность важна для нас. Вопросы:{" "}
+        <a className="text-[#d4af37] underline" href="mailto:findalleasy@gmail.com">
+          findalleasy@gmail.com
+        </a>
+        .
+      </p>
+    </>
+  );
+
+  const AR = (
+    <>
+      <h1 className="text-2xl font-bold mb-3 text-[#d4af37]">إفصاح الروابط التابعة</h1>
+      <p className="text-white/70 text-sm mb-5">آخر تحديث: {UPDATED_AT_EN}</p>
+
+      <p className="text-white/80 mb-3">
+        FindAllEasy منصة مقارنة وتحويل. قد تكون بعض الروابط روابط شراكة (Affiliate).
+      </p>
+
+      <p className="text-white/80 mb-3">
+        عند الشراء على موقع المزوّد عبر هذه الروابط قد نحصل على عمولة. هذا لا يزيد السعر عليك.
+      </p>
+
+      <p className="text-white/80">
+        الشفافية مهمة لنا. للاستفسارات:{" "}
+        <a className="text-[#d4af37] underline" href="mailto:findalleasy@gmail.com">
+          findalleasy@gmail.com
+        </a>
+        .
+      </p>
+    </>
+  );
+
+  const CONTENT = lang === "en" ? EN : lang === "fr" ? FR : lang === "ru" ? RU : lang === "ar" ? AR : TR;
+
+  return (
+    <LegalShell
+      badgeText={
+        lang === "tr"
+          ? "Affiliate"
+          : lang === "en"
+          ? "Affiliate"
+          : lang === "fr"
+          ? "Affiliation"
+          : lang === "ru"
+          ? "Affiliate"
+          : "أفلييت"
+      }
+    >
+      {CONTENT}
+    </LegalShell>
+  );
 }

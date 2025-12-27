@@ -152,6 +152,7 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
   const [thinking, setThinking] = useState(false);
   const [messages, setMessages] = useState([]);
   const messagesRef = useRef([]);
+  const greetedRef = useRef(false);
 
   // --- REF TANIMLARI ---
   const wrapRef = useRef(null);
@@ -169,6 +170,34 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
   const synthRef = useRef(
     typeof window !== "undefined" ? window.speechSynthesis : null
   );
+
+// Warm up TTS voices early (first speak can be delayed on some browsers)
+useEffect(() => {
+  if (typeof window === "undefined") return;
+  const synth = window.speechSynthesis;
+  if (!synth || typeof synth.getVoices !== "function") return;
+
+  const warmVoices = () => {
+    try {
+      synth.getVoices();
+    } catch {}
+  };
+
+  warmVoices();
+  // Some browsers populate voices async
+  const handler = () => warmVoices();
+
+  try {
+    synth.addEventListener?.("voiceschanged", handler);
+  } catch {}
+
+  return () => {
+    try {
+      synth.removeEventListener?.("voiceschanged", handler);
+    } catch {}
+  };
+}, []);
+
 
   // --- TEMİZLİK (CLEANUP) ---
  // Action engine sadece 1 kere çalışacak
@@ -359,6 +388,7 @@ useEffect(() => {
       if (!wrapRef.current) return;
       if (!wrapRef.current.contains(e.target)) {
         setOpen(false);
+        greetedRef.current = false;
         setTimeout(() => setMessages([]), 150);
       }
     };
@@ -378,9 +408,10 @@ useEffect(() => {
   function speak(text) {
     try {
       if (!synthRef.current || typeof window === "undefined") return;
+      const synth = synthRef.current;
       const u = new SpeechSynthesisUtterance(text);
 
-      u.lang =
+      const lang =
         locale.startsWith("tr")
           ? "tr-TR"
           : locale.startsWith("fr")
@@ -391,8 +422,35 @@ useEffect(() => {
           ? "ar-SA"
           : "en-US";
 
-      synthRef.current.cancel();
-      synthRef.current.speak(u);
+      u.lang = lang;
+
+      // 🎙️ Voice seçimi (bazı tarayıcılarda ilk TTS gecikmesini azaltır)
+      try {
+        const voices = synth.getVoices?.() || [];
+        const lang2 = String(lang).toLowerCase();
+        const short2 = lang2.slice(0, 2);
+        const v =
+          voices.find((x) => String(x?.lang || "").toLowerCase() === lang2) ||
+          voices.find((x) =>
+            String(x?.lang || "").toLowerCase().startsWith(lang2)
+          ) ||
+          voices.find((x) =>
+            String(x?.lang || "").toLowerCase().startsWith(short2)
+          );
+        if (v) u.voice = v;
+      } catch {
+        // ignore
+      }
+
+      // Bazı tarayıcılarda synth "paused" kalabiliyor
+      try {
+        synth.cancel();
+        synth.resume?.();
+      } catch {
+        // ignore
+      }
+
+      synth.speak(u);
 
       u.onend = () => {
         const micBtn = document.querySelector(".sono-mic-glow");
@@ -413,7 +471,11 @@ useEffect(() => {
 
     const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!Rec) {
-      alert(t("ai.no_support", "Tarayıcınız sesli komutu desteklemiyor."));
+      alert(
+        t("ai.noSpeech", {
+          defaultValue: "Tarayıcınız sesli komutu desteklemiyor.",
+        })
+      );
       return;
     }
 
@@ -636,7 +698,15 @@ triggerSearchFromAI(text);
           }
         }
 
-        setMessages((m) => [...m, { from: "ai", text: j?.answer || "Şu an cevap alamadım." }]);
+        setMessages((m) => [
+          ...m,
+          {
+            from: "ai",
+            text:
+              j?.answer ||
+              t("ai.noAnswer", { defaultValue: "Şu an cevap alamadım." }),
+          },
+        ]);
       }
 
       if (!silent) {
@@ -650,7 +720,10 @@ triggerSearchFromAI(text);
       if (error.name !== "AbortError") {
         setMessages((m) => [
           ...m,
-          { from: "ai", text: "Bir hata oluştu, tekrar deneyiniz." },
+          {
+            from: "ai",
+            text: t("ai.error", { defaultValue: "Bir hata oluştu, tekrar deneyiniz." }),
+          },
         ]);
       }
     } finally {
@@ -683,19 +756,24 @@ triggerSearchFromAI(text);
   }
 
   // Açıldığında ilk selamlama + persona
-  useEffect(() => {
-    if (open && messages.length === 0) {
-      const greet =
-        t("ai.hello", {
-          defaultValue: persona.hello,
-        }) || persona.hello;
+const greetNow = () => {
+  const greet =
+    t("ai.hello", {
+      defaultValue: persona.hello,
+    }) || persona.hello;
 
-      const intro = `${greet}`;
-      setMessages([{ from: "ai", text: intro }]);
-      speak(intro);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, i18n.language]);
+  const intro = `${greet}`;
+  setMessages([{ from: "ai", text: intro }]);
+  speak(intro);
+};
+
+useEffect(() => {
+  if (open && messages.length === 0 && !greetedRef.current) {
+    greetedRef.current = true;
+    greetNow();
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [open, i18n.language]);
 
   const isRTL = locale.startsWith("ar");
 
@@ -739,7 +817,18 @@ triggerSearchFromAI(text);
             const willOpen = !open;
             setOpen(willOpen);
             pulseHalo();
-            if (!willOpen) setTimeout(() => setMessages([]), 100);
+
+            if (willOpen) {
+              // Speak immediately (avoid waiting for useEffect re-render)
+              if (!greetedRef.current && messages.length === 0) {
+                greetedRef.current = true;
+                greetNow();
+              }
+              setTimeout(() => inputRef.current?.focus(), 60);
+            } else {
+              greetedRef.current = false;
+              setTimeout(() => setMessages([]), 100);
+            }
           }}
           aria-label={t("ai.sono", { defaultValue: "Sono AI" })}
           className="relative w-[56px] h-[56px] rounded-full bg-black/70 border border-[#d4af37]/60 shadow-lg 

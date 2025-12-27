@@ -135,7 +135,7 @@ export default function AuthModal({ onClose, onLoggedIn, onLoginSuccess }) {
 
       onClose?.();
     } catch (err) {
-      alert("NETWORK ERROR → " + err.message);
+      alert(`${t("networkError")} → ${err.message}`);
     } finally {
       setLoading(false);
     }

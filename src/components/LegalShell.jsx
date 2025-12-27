@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import Header from "./Header.jsx";
 import Footer from "./Footer.jsx";
 
@@ -15,6 +16,9 @@ export default function LegalShell({
   homeHref = "/",
   homeLabel = "← Ana sayfa",
 }) {
+  const { t } = useTranslation();
+  const badge = badgeText ?? t("legal.badge", { defaultValue: "Legal" });
+  const home = homeLabel ?? t("legal.home", { defaultValue: "← Ana sayfa" });
   return (
     <div className="min-h-screen w-full bg-transparent text-white">
       <Header />
@@ -29,9 +33,9 @@ export default function LegalShell({
               href={homeHref}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#d4af37]/35 text-[#d4af37] bg-black/20 hover:bg-[#d4af37]/20 hover:text-black transition-all"
             >
-              {homeLabel}
+              {home}
             </a>
-            <div className="text-xs text-[#d4af37]/70">FindAllEasy • {badgeText}</div>
+            <div className="text-xs text-[#d4af37]/70">FindAllEasy • {badge}</div>
           </div>
 
           <div className="legal-prose">{children}</div>

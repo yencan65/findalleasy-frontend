@@ -1,99 +1,130 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-
-const UPDATED_AT = "24 Aralık 2025";
-
-function TR() {
-  return (
-    <div>
-      <h1>Nasıl Çalışır?</h1>
-      <p className="muted">Son güncelleme: {UPDATED_AT}</p>
-
-      <p>
-        FindAllEasy, farklı sağlayıcılardaki (merchant / servis sağlayıcı) seçenekleri tek arayüzde
-        karşılaştırmanı sağlar. Satın alma işlemi FindAllEasy üzerinde değil, ilgili sağlayıcının
-        kendi sitesinde/uygulamasında tamamlanır.
-      </p>
-
-      <h2>1) Ara</h2>
-      <p>
-        Ürün veya hizmeti yaz (ör. "iPhone 15", "otel bodrum", "araç kiralama"). Sistem, sorguyu
-        yorumlar ve uygun kategoriye göre sonuç toplamaya çalışır.
-      </p>
-
-      <h2>2) Karşılaştır</h2>
-      <p>
-        Sonuçlar; fiyat, başlık, sağlayıcı ve ilgili detaylarla listelenir. Amacımız seçim yapmanı
-        hızlandırmak ve gereksiz sekme/araştırma yükünü azaltmaktır.
-      </p>
-
-      <h2>3) Yönlen & Satın Al</h2>
-      <p>
-        Beğendiğin seçeneğe tıkladığında ilgili sağlayıcının sayfasına yönlenirsin. Ödeme, teslimat,
-        iade ve müşteri hizmetleri süreçleri o sağlayıcının politikalarına tabidir.
-      </p>
-
-      <h2>Affiliate (komisyon) notu</h2>
-      <p>
-        Bazı yönlendirmelerde affiliate link kullanılabilir. Bu senin ödediğin fiyatı artırmaz.
-        Satın alma gerçekleşirse, sağlayıcı/affiliate network bize komisyon ödeyebilir.
-        Detaylar: <a href="/affiliate-disclosure">Affiliate Açıklaması</a>
-      </p>
-
-      <h2>İletişim</h2>
-      <p>
-        Sorun mu var, geri bildirim mi? Yaz: <a href="mailto:findalleasy@gmail.com">findalleasy@gmail.com</a>
-      </p>
-    </div>
-  );
-}
-
-function EN() {
-  return (
-    <div>
-      <h1>How it works</h1>
-      <p className="muted">Last updated: {UPDATED_AT}</p>
-
-      <p>
-        FindAllEasy helps you compare offers from multiple providers (merchants / service providers)
-        in one place. Purchases are not completed on FindAllEasy; you complete the transaction on
-        the provider’s website or app.
-      </p>
-
-      <h2>1) Search</h2>
-      <p>
-        Type what you’re looking for (e.g., "iPhone 15", "hotel bodrum", "car rental"). We interpret
-        the query and try to fetch relevant results.
-      </p>
-
-      <h2>2) Compare</h2>
-      <p>
-        We list options with key details such as price, title, and provider. The goal is to reduce
-        tab‑hopping and make decisions faster.
-      </p>
-
-      <h2>3) Click out & Purchase</h2>
-      <p>
-        When you click a result, you’re redirected to the provider. Payment, delivery, refunds and
-        customer support are handled by that provider.
-      </p>
-
-      <h2>Affiliate note</h2>
-      <p>
-        Some outbound links may be affiliate links. This does not increase your price. If a purchase
-        happens, we may earn a commission. See: <a href="/affiliate-disclosure">Affiliate Disclosure</a>
-      </p>
-
-      <h2>Contact</h2>
-      <p>
-        <a href="mailto:findalleasy@gmail.com">findalleasy@gmail.com</a>
-      </p>
-    </div>
-  );
-}
+import LegalShell from "../../components/LegalShell.jsx";
 
 export default function HowItWorks() {
   const { i18n } = useTranslation();
-  const lang = String(i18n.language || "tr").toLowerCase();
-  return lang.startsWith("en") ? <EN /> : <TR />;
+  const langRaw = String(i18n.resolvedLanguage || i18n.language || "tr").toLowerCase();
+  const lang = (langRaw.split("-")[0] || "tr").toLowerCase();
+
+  const TR = (
+    <>
+      <h1 className="text-2xl font-bold mb-4 text-[#d4af37]">Nasıl Çalışır?</h1>
+
+      <ol className="list-decimal pl-5 space-y-3 text-white/80">
+        <li>
+          Aradığınız ürün veya hizmeti yazın (isterseniz ses veya kamera ile de arama
+          başlatabilirsiniz).
+        </li>
+        <li>
+          FindAllEasy, ilgili kaynaklardan sonuçları toplar ve tek ekranda listeler.
+        </li>
+        <li>
+          Beğendiğiniz seçeneğe tıklayın; detayları ve satın alma işlemini ilgili
+          platformda tamamlarsınız.
+        </li>
+      </ol>
+
+      <p className="text-white/70 text-sm mt-6">
+        Not: Fiyatlar ve stok durumu, yönlendirildiğiniz platformda değişebilir.
+      </p>
+    </>
+  );
+
+  const EN = (
+    <>
+      <h1 className="text-2xl font-bold mb-4 text-[#d4af37]">How It Works</h1>
+
+      <ol className="list-decimal pl-5 space-y-3 text-white/80">
+        <li>
+          Type what you&apos;re looking for (you can also start a search with voice or
+          camera).
+        </li>
+        <li>
+          FindAllEasy gathers results from relevant sources and lists them on one screen.
+        </li>
+        <li>
+          Click an option you like; you&apos;ll view details and complete the purchase on
+          the provider&apos;s website.
+        </li>
+      </ol>
+
+      <p className="text-white/70 text-sm mt-6">
+        Note: Prices and availability may change on the provider&apos;s website.
+      </p>
+    </>
+  );
+
+  const FR = (
+    <>
+      <h1 className="text-2xl font-bold mb-4 text-[#d4af37]">Comment ça marche</h1>
+
+      <ol className="list-decimal pl-5 space-y-3 text-white/80">
+        <li>
+          Saisissez le produit ou le service recherché (vous pouvez aussi lancer une
+          recherche par la voix ou la caméra).
+        </li>
+        <li>
+          FindAllEasy collecte les résultats auprès des sources pertinentes et les affiche
+          sur un seul écran.
+        </li>
+        <li>
+          Cliquez sur l&apos;option qui vous convient ; vous consultez les détails et
+          finalisez l&apos;achat sur le site du fournisseur.
+        </li>
+      </ol>
+
+      <p className="text-white/70 text-sm mt-6">
+        Remarque : Les prix et la disponibilité peuvent changer sur le site du fournisseur.
+      </p>
+    </>
+  );
+
+  const RU = (
+    <>
+      <h1 className="text-2xl font-bold mb-4 text-[#d4af37]">Как это работает</h1>
+
+      <ol className="list-decimal pl-5 space-y-3 text-white/80">
+        <li>
+          Введите запрос (при желании можно начать поиск голосом или с помощью камеры).
+        </li>
+        <li>
+          FindAllEasy собирает результаты из подходящих источников и показывает их на одном экране.
+        </li>
+        <li>
+          Нажмите на понравившийся вариант — детали и покупку вы завершаете на сайте поставщика.
+        </li>
+      </ol>
+
+      <p className="text-white/70 text-sm mt-6">
+        Примечание: цены и наличие могут измениться на сайте поставщика.
+      </p>
+    </>
+  );
+
+  const AR = (
+    <>
+      <h1 className="text-2xl font-bold mb-4 text-[#d4af37]">كيف يعمل</h1>
+
+      <ol className="list-decimal pl-5 space-y-3 text-white/80">
+        <li>
+          اكتب ما تبحث عنه (ويمكنك أيضًا بدء البحث بالصوت أو بالكاميرا).
+        </li>
+        <li>
+          يقوم FindAllEasy بجمع النتائج من المصادر المناسبة وعرضها على شاشة واحدة.
+        </li>
+        <li>
+          اضغط على الخيار الذي يناسبك؛ ستعرض التفاصيل وتكمل الشراء على موقع المزوّد.
+        </li>
+      </ol>
+
+      <p className="text-white/70 text-sm mt-6">
+        ملاحظة: قد تتغير الأسعار والتوفر على موقع المزوّد.
+      </p>
+    </>
+  );
+
+  const CONTENT = lang === "en" ? EN : lang === "fr" ? FR : lang === "ru" ? RU : lang === "ar" ? AR : TR;
+
+  return <LegalShell>{CONTENT}</LegalShell>;
 }
