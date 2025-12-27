@@ -77,7 +77,11 @@ const resources = {
         camera: "Kamera ile ara",
         qr: "QR ile ara",
         search: "Ara",
-        voiceNotSupported: "Tarayıcın ses tanımayı desteklemiyor!"
+        voiceNotSupported: "Tarayıcın ses tanımayı desteklemiyor!",
+        voiceStarted: "Sesli arama başladı — şimdi konuşabilirsin.",
+        voiceDone: "Tamam — arıyorum.",
+        voiceStopped: "Sesli arama durduruldu.",
+        voiceError: "Sesli arama hatası."
       },
 
       smartGreeting: {
@@ -383,7 +387,11 @@ const resources = {
         camera: "Search with camera",
         qr: "Search with QR",
         search: "Search",
-        voiceNotSupported: "Your browser does not support speech recognition!"
+        voiceNotSupported: "Your browser does not support speech recognition!",
+        voiceStarted: "Voice search started — you can speak now.",
+        voiceDone: "Got it — searching.",
+        voiceStopped: "Voice search stopped.",
+        voiceError: "Voice search error."
       },
 
       smartGreeting: {
@@ -688,7 +696,11 @@ const resources = {
         qr: "Recherche par QR",
         search: "Rechercher",
         voiceNotSupported:
-          "Votre navigateur ne supporte pas la reconnaissance vocale."
+          "Votre navigateur ne supporte pas la reconnaissance vocale.",
+        voiceStarted: "La recherche vocale a démarré — vous pouvez parler.",
+        voiceDone: "Compris — je recherche.",
+        voiceStopped: "Recherche vocale arrêtée.",
+        voiceError: "Erreur de recherche vocale."
       },
 
       smartGreeting: {
@@ -1007,7 +1019,11 @@ const resources = {
         qr: "Поиск по QR",
         search: "Искать",
         voiceNotSupported:
-          "Браузер не поддерживает распознавание речи."
+          "Браузер не поддерживает распознавание речи.",
+        voiceStarted: "Голосовой поиск начался — говорите.",
+        voiceDone: "Понял — ищу.",
+        voiceStopped: "Голосовой поиск остановлен.",
+        voiceError: "Ошибка голосового поиска."
       },
 
       smartGreeting: {
@@ -1322,7 +1338,11 @@ const resources = {
         camera: "بحث بالكاميرا",
         qr: "بحث عبر QR",
         search: "بحث",
-        voiceNotSupported: "المتصفح لا يدعم التعرف على الصوت."
+        voiceNotSupported: "المتصفح لا يدعم التعرف على الصوت.",
+        voiceStarted: "بدأ البحث الصوتي — يمكنك التحدث الآن.",
+        voiceDone: "تم — جارٍ البحث.",
+        voiceStopped: "تم إيقاف البحث الصوتي.",
+        voiceError: "حدث خطأ في البحث الصوتي."
       },
 
       smartGreeting: {

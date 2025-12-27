@@ -173,16 +173,36 @@ export default function App() {
   }, [placeholders_]);
 
   const [value, setValue] = useState("");
+
+  // === Sesli arama UI (kullanıcı ne olduğunu ANLASIN diye) ===
+  const [voiceToast, setVoiceToast] = useState(null); // { msg, kind }
+  const [voiceListening, setVoiceListening] = useState(false);
+  const voiceRecRef = useRef(null);
+  const voiceToastTimer = useRef(null);
+
+  const showVoiceToast = (msg, kind = "info", ttl = 2200) => {
+    try {
+      if (voiceToastTimer.current) clearTimeout(voiceToastTimer.current);
+    } catch {}
+    setVoiceToast({ msg, kind });
+    voiceToastTimer.current = setTimeout(() => setVoiceToast(null), ttl);
+  };
+
   const fileRef = useRef(null);
 
   // === Arama ===
- async function doSearch(q) {
+ async function doSearch(q, opts = {}) {
   const raw = q ?? value;
   const query = String(raw || "").trim();
   if (!query) return;
 
+  const source = String(opts?.source || "input");
+  const skipUnified = Boolean(opts?.skipUnified);
+
   // 🔥 TEK BEYİN
-  await runUnifiedSearch(query, { source: "input" });
+  if (!skipUnified) {
+    await runUnifiedSearch(query, { source });
+  }
 
     const region =
       (typeof window !== "undefined" &&
@@ -242,38 +262,92 @@ group: "product",
     if (typeof window === "undefined") return;
 
     const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!Rec)
-      return alert(
-        t("ai.noSpeech", {
+    if (!Rec) {
+      showVoiceToast(
+        t("search.voiceNotSupported", {
           defaultValue: "Tarayıcın ses tanımayı desteklemiyor!",
-        })
+        }),
+        "error",
+        2600
       );
+      return;
+    }
+
+    // Zaten dinliyorsak: tekrar basınca durdur
+    if (voiceListening && voiceRecRef.current) {
+      try {
+        voiceRecRef.current.stop();
+      } catch {}
+      setVoiceListening(false);
+      voiceRecRef.current = null;
+      showVoiceToast(
+        t("search.voiceStopped", { defaultValue: "Sesli arama durduruldu." }),
+        "info",
+        1600
+      );
+      return;
+    }
 
     try {
       const rec = new Rec();
+      voiceRecRef.current = rec;
+
       rec.lang = i18n.language || "tr-TR";
       rec.interimResults = false;
       rec.maxAlternatives = 1;
 
+      rec.onstart = () => {
+        setVoiceListening(true);
+        showVoiceToast(
+          t("search.voiceStarted", {
+            defaultValue: "Sesli arama başladı — şimdi konuşabilirsin.",
+          }),
+          "info",
+          2400
+        );
+      };
+
       rec.onresult = async (e) => {
-  const text = e.results[0][0].transcript;
-  const clean = text.trim();
-  setValue(clean);
+        const text = e?.results?.[0]?.[0]?.transcript || "";
+        const clean = String(text).trim();
+        if (!clean) return;
 
-  // 🔥 TEK BEYİN
-  await runUnifiedSearch(clean, { source: "voice" });
+        setValue(clean);
+        showVoiceToast(
+          t("search.voiceDone", { defaultValue: "Tamam — arıyorum." }),
+          "ok",
+          1400
+        );
 
-  doSearch(clean);
-};
-
+        await doSearch(clean, { source: "voice" });
+      };
 
       rec.onerror = (e) => {
         console.warn("Speech recognition error:", e);
+        setVoiceListening(false);
+        voiceRecRef.current = null;
+        showVoiceToast(
+          t("search.voiceError", { defaultValue: "Sesli arama hatası." }),
+          "error",
+          2400
+        );
+      };
+
+      rec.onend = () => {
+        setVoiceListening(false);
+        voiceRecRef.current = null;
       };
 
       rec.start();
     } catch (err) {
       console.warn("Speech recognition start error:", err);
+      setVoiceListening(false);
+      voiceRecRef.current = null;
+      showVoiceToast(
+        t("search.voiceError", { defaultValue: "Sesli arama hatası." }),
+        "error",
+        2400
+      );
     }
   }
 
@@ -327,7 +401,7 @@ group: "product",
         setValue(q);
 		 // 🔥 TEK BEYİN
   await runUnifiedSearch(q, { source: "camera" });
-        doSearch(q);
+        doSearch(q, { skipUnified: true });
       }
     } catch (err) {
       console.warn("Vision arama hatası:", err);
@@ -376,6 +450,17 @@ group: "product",
     <div className="min-h-[100dvh] flex flex-col bg-[#0b0e14] text-white font-sans overflow-x-hidden">
       <Header />
 
+      {voiceToast ? (
+        <div className="fixed top-[72px] sm:top-[84px] left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
+          <div
+            className={`px-3 py-2 rounded-xl border bg-black/70 backdrop-blur text-xs shadow
+              ${voiceToast.kind === "error" ? "border-red-500/30 text-red-100" : voiceToast.kind === "ok" ? "border-emerald-500/25 text-emerald-50" : "border-[#D9A441]/25 text-white"}`}>
+            <span className="mr-2 text-[#D9A441]">🎤</span>
+            {voiceToast.msg}
+          </div>
+        </div>
+      ) : null}
+
       <main
         className="flex-1 flex flex-col items-center justify-start w-full px-4 pt-10 sm:pt-14 pb-24"
       >
@@ -407,51 +492,55 @@ group: "product",
         {/* ◆ Arama Çubuğu (Responsive: mobil düzen ferah, masaüstü korunur) */}
         <div className="w-full max-w-[760px] mt-3 sm:mt-4 mb-3">
           {/* Mobile: input içinde sadece ikon + sağda Ses/Kamera/QR */}
-          <div className="sm:hidden flex items-center gap-2 w-full flex-nowrap">
+          <div className="sm:hidden flex items-center gap-1 w-full flex-nowrap">
             <div className="relative flex-1 min-w-0">
               <input
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && doSearch()}
                 placeholder={placeholders_[currentPlaceholder] || t("search.search")}
-                className="w-full h-11 rounded-xl px-4 pr-12 text-white placeholder:text-white/40 outline-none border border-white/10 bg-[#0B0E12]/45 backdrop-blur"
+                className="w-full h-11 rounded-xl px-4 pr-10 text-white placeholder:text-white/40 outline-none border border-white/10 bg-[#0B0E12]/45 backdrop-blur"
               />
               <button
                 onClick={doSearch}
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-lg bg-[#D9A441] flex items-center justify-center shadow hover:brightness-105 transition"
+                className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
                 aria-label={t("search.search")}
                 title={t("search.search")}
               >
-                <SearchIcon size={18} className="text-black" aria-hidden />
+                <SearchIcon size={18} className="text-[#D9A441]" aria-hidden />
               </button>
             </div>
 
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-1 flex-shrink-0">
               <button
                 onClick={startMic}
-                className="w-11 h-11 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
+                className={`w-10 h-10 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition ${voiceListening ? "ring-2 ring-[#D9A441]/40 bg-[#D9A441]/10" : ""}`}
                 title={t("search.voice")}
                 aria-label={t("search.voice")}
               >
-                <img src={micIcon} alt={t("search.voice")} className="w-5 h-5 opacity-90" />
+                <img
+                  src={micIcon}
+                  alt={t("search.voice")}
+                  className={`w-[18px] h-[18px] opacity-90 ${voiceListening ? "animate-pulse" : ""}`}
+                />
               </button>
 
               <button
                 onClick={openCamera}
-                className="w-11 h-11 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
+                className="w-10 h-10 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
                 title={t("search.camera")}
                 aria-label={t("search.camera")}
               >
-                <img src={camera} alt={t("search.camera")} className="w-5 h-5 opacity-90" />
+                <img src={camera} alt={t("search.camera")} className="w-[18px] h-[18px] opacity-90" />
               </button>
 
               <button
                 onClick={startQRScanner}
-                className="w-11 h-11 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
+                className="w-10 h-10 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
                 title={t("search.qr")}
                 aria-label={t("search.qr")}
               >
-                <QrCode className="text-[#D9A441]" size={22} />
+                <QrCode className="text-[#D9A441]" size={20} />
               </button>
             </div>
           </div>
@@ -603,7 +692,7 @@ group: "product",
       window.dispatchEvent(new Event("fae.vitrine.refresh"));
 
       // 🔥 APP beynine arama
-      doSearch(q);
+      doSearch(q, { skipUnified: true });
     }}
     onClose={() => setQrScanOpen(false)}
   />
@@ -619,7 +708,7 @@ group: "product",
       await runUnifiedSearch(q, { source: "ai" });
 
       // ⭐ APP'in kendi arama hattını çağır
-      doSearch(q);
+      doSearch(q, { skipUnified: true });
     }}
     key={i18n.language}
   />
