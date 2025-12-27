@@ -279,6 +279,9 @@ group: "product",
 
   // === Görsel arama ===
   function openCamera() {
+    try {
+      if (fileRef.current) fileRef.current.value = "";
+    } catch (_) {}
     fileRef.current?.click();
   }
 
@@ -401,112 +404,104 @@ group: "product",
           <span className="text-[#d4af37]">{t("halleder.")}</span>
         </h2>
 
-        {/* ◆ Arama Çubuğu (Responsive: tasarım korunur, taşma yok) */}
-<div className="w-full max-w-[760px] mt-3 sm:mt-4 mb-3">
-  <div className="w-full sm:flex sm:items-center sm:gap-3">
-    {/* Mobile: Input içine "Ara" + sağda Ses/Kamera/QR (taşma yok) */}
-    <div className="flex items-center gap-2 w-full flex-nowrap sm:block">
-      {/* Input */}
-      <div className="relative flex-1 min-w-0">
-        <input
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && doSearch()}
-          placeholder={placeholders_[currentPlaceholder] || t("search.search")}
-          className="w-full h-10 text-white placeholder:text-white/40 rounded-md pl-3 pr-24 sm:pr-4 outline-none border border-white/10 bg-[#0B0E12]/45 backdrop-blur"
-        />
+        {/* ◆ Arama Çubuğu (Responsive: mobil düzen ferah, masaüstü korunur) */}
+        <div className="w-full max-w-[760px] mt-3 sm:mt-4 mb-3">
+          {/* Mobile: input içinde sadece ikon + sağda Ses/Kamera/QR */}
+          <div className="sm:hidden flex items-center gap-2 w-full flex-nowrap">
+            <div className="relative flex-1 min-w-0">
+              <input
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && doSearch()}
+                placeholder={placeholders_[currentPlaceholder] || t("search.search")}
+                className="w-full h-11 rounded-xl px-4 pr-12 text-white placeholder:text-white/40 outline-none border border-white/10 bg-[#0B0E12]/45 backdrop-blur"
+              />
+              <button
+                onClick={doSearch}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-lg bg-[#D9A441] flex items-center justify-center shadow hover:brightness-105 transition"
+                aria-label={t("search.search")}
+                title={t("search.search")}
+              >
+                <SearchIcon size={18} className="text-black" aria-hidden />
+              </button>
+            </div>
 
-        {/* Mobile: Search button inside the input */}
-        <button
-          onClick={doSearch}
-          className="sm:hidden absolute right-1.5 top-1/2 -translate-y-1/2 h-8 px-2.5 rounded-md bg-[#D9A441] text-[#0B0E12] font-semibold flex items-center gap-2 shadow hover:brightness-105 transition"
-          aria-label={t("search.search")}
-          title={t("search.search")}
-        >
-          <span className="text-[13px] max-[360px]:hidden">{t("search.search")}</span>
-          <span className="text-[16px]" aria-hidden>
-            🔍
-          </span>
-        </button>
-      </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={startMic}
+                className="w-11 h-11 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
+                title={t("search.voice")}
+                aria-label={t("search.voice")}
+              >
+                <img src={micIcon} alt={t("search.voice")} className="w-5 h-5 opacity-90" />
+              </button>
 
-      {/* Mobile: Voice/Camera/QR (Ara butonunun eski yerine sağ tarafa) */}
-      <div className="sm:hidden flex items-center gap-2 flex-shrink-0">
-        <button
-          onClick={startMic}
-          className="w-10 h-10 rounded-xl border border-[#D9A441]/35 hover:border-[#D9A441]/70 bg-[#0B0E12]/55 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
-          title={t("search.voice")}
-          aria-label={t("search.voice")}
-        >
-          <img src={micIcon} alt={t("search.voice")} className="w-5 h-5 opacity-90" />
-        </button>
+              <button
+                onClick={openCamera}
+                className="w-11 h-11 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
+                title={t("search.camera")}
+                aria-label={t("search.camera")}
+              >
+                <img src={camera} alt={t("search.camera")} className="w-5 h-5 opacity-90" />
+              </button>
 
-        <button
-          onClick={openCamera}
-          className="w-10 h-10 rounded-xl border border-[#D9A441]/35 hover:border-[#D9A441]/70 bg-[#0B0E12]/55 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
-          title={t("search.camera")}
-          aria-label={t("search.camera")}
-        >
-          {/* FIX: cameraApple undefined -> use imported asset `camera` */}
-          <img src={camera} alt={t("search.camera")} className="w-5 h-5 opacity-90" />
-        </button>
+              <button
+                onClick={startQRScanner}
+                className="w-11 h-11 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
+                title={t("search.qr")}
+                aria-label={t("search.qr")}
+              >
+                <QrCode className="text-[#D9A441]" size={22} />
+              </button>
+            </div>
+          </div>
 
-        <button
-          onClick={startQRScanner}
-          className="w-10 h-10 rounded-xl border border-[#D9A441]/35 hover:border-[#D9A441]/70 bg-[#0B0E12]/55 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
-          title={t("search.qr")}
-          aria-label={t("search.qr")}
-        >
-          {/* FIX: react-icons symbol was undefined; use imported lucide icon */}
-          <QrCode className="text-[#D9A441]" size={22} />
-        </button>
-      </div>
-    </div>
+          {/* Desktop/Tablet: düzen korunur (input + Ara + Ses/Kamera/QR) */}
+          <div className="hidden sm:flex items-center gap-2 w-full">
+            <input
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && doSearch()}
+              placeholder={placeholders_[currentPlaceholder] || t("search.search")}
+              className="flex-1 h-12 rounded-xl px-4 text-white placeholder:text-white/40 outline-none border border-white/10 bg-[#0B0E12]/45 backdrop-blur"
+            />
+            <button
+              onClick={doSearch}
+              className="h-12 px-5 rounded-xl bg-[#D9A441] text-black font-semibold flex items-center gap-2 shadow hover:brightness-105 transition whitespace-nowrap"
+              aria-label={t("search.search")}
+              title={t("search.search")}
+            >
+              {t("search.search")} <SearchIcon size={18} aria-hidden />
+            </button>
 
-    {/* Desktop/Tablet: Controls OUTSIDE the input (PC/tablet unchanged) */}
-    <div className="hidden sm:flex items-center gap-2">
-      <button
-        onClick={startMic}
-        className="w-9 h-9 rounded-xl border border-[#D9A441]/35 hover:border-[#D9A441]/70 bg-[#0B0E12]/55 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
-        title={t("search.voice")}
-        aria-label={t("search.voice")}
-      >
-        <img src={micIcon} alt={t("search.voice")} className="w-5 h-5 opacity-90" />
-      </button>
+            <button
+              onClick={startMic}
+              className="w-12 h-12 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
+              title={t("search.voice")}
+              aria-label={t("search.voice")}
+            >
+              <img src={micIcon} alt={t("search.voice")} className="w-5 h-5 opacity-90" />
+            </button>
 
-      <button
-        onClick={openCamera}
-        className="w-9 h-9 rounded-xl border border-[#D9A441]/35 hover:border-[#D9A441]/70 bg-[#0B0E12]/55 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
-        title={t("search.camera")}
-        aria-label={t("search.camera")}
-      >
-        {/* FIX: cameraApple undefined -> use imported asset `camera` */}
-        <img src={camera} alt={t("search.camera")} className="w-5 h-5 opacity-90" />
-      </button>
+            <button
+              onClick={openCamera}
+              className="w-12 h-12 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
+              title={t("search.camera")}
+              aria-label={t("search.camera")}
+            >
+              <img src={camera} alt={t("search.camera")} className="w-5 h-5 opacity-90" />
+            </button>
 
-      <button
-        onClick={startQRScanner}
-        className="w-9 h-9 rounded-xl border border-[#D9A441]/35 hover:border-[#D9A441]/70 bg-[#0B0E12]/55 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
-        title={t("search.qr")}
-        aria-label={t("search.qr")}
-      >
-        {/* FIX: react-icons symbol was undefined; use imported lucide icon */}
-        <QrCode className="text-[#D9A441]" size={20} />
-      </button>
-
-      <button
-        onClick={doSearch}
-        className="h-10 px-5 rounded-xl bg-[#D9A441] text-[#0B0E12] font-bold flex items-center gap-2 shadow hover:brightness-105 transition"
-        aria-label={t("search.search")}
-        title={t("search.search")}
-      >
-        {/* FIX: react-icons symbol was undefined; use imported lucide icon */}
-        <SearchIcon className="" size={20} />
-        <span>{t("search.search")}</span>
-      </button>
-    </div>
-  </div>
-</div>
+            <button
+              onClick={startQRScanner}
+              className="w-12 h-12 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
+              title={t("search.qr")}
+              aria-label={t("search.qr")}
+            >
+              <QrCode className="text-[#D9A441]" size={22} />
+            </button>
+          </div>
+        </div>
 
 {/* ◆ Akıllı Selam */}
         {(() => {
@@ -556,6 +551,16 @@ group: "product",
 
         {/* ◆ VİTRİN */}
         <Vitrin />
+        {/* Hidden file input for camera capture (mobile) */}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={onPickFile}
+          className="hidden"
+        />
+
       </main>
 
       {/* QR Scanner */}

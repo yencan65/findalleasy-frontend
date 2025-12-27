@@ -149,7 +149,7 @@ export default function Header() {
   return (
     <header
       className="
-        w-full flex justify-between items-center flex-nowrap sm:flex-wrap gap-2 sm:gap-3
+        w-full flex flex-row justify-between items-center flex-nowrap gap-2 sm:gap-3
         px-3 sm:px-6 py-3 sm:py-4 bg-transparent 
         border-b border-[#d4af37]/20 
         text-white font-sans backdrop-blur-xl
@@ -160,7 +160,7 @@ export default function Header() {
     >
       {/* LOGO */}
       <h1
-        className="text-lg sm:text-xl font-semibold text-[#d4af37] select-none cursor-pointer whitespace-nowrap flex-shrink-0"
+        className="text-lg sm:text-xl font-semibold text-[#d4af37] select-none cursor-pointer whitespace-nowrap flex-shrink-0 text-left"
         onClick={() => window.dispatchEvent(new Event("fae.vitrine.refresh"))}
         style={{ textShadow: "0 0 6px rgba(212,175,55,0.4)" }}
       >
@@ -168,7 +168,7 @@ export default function Header() {
       </h1>
 
       {/* RIGHT SIDE */}
-      <div className="flex flex-nowrap items-center justify-end sm:justify-center gap-2 sm:gap-4 flex-shrink-0">
+      <div className="flex flex-nowrap items-center justify-end gap-2 sm:gap-4 flex-shrink-0">
 
         {/* 🌍 LANGUAGE PICKER */}
         <div className="relative" ref={langRef}>
