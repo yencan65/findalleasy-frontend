@@ -2,11 +2,14 @@
 <html lang="tr">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FindAllEasy — Yapay Zeka Destekli Fiyat Kıyaslama</title>
+
+    <!-- ✅ IMPACT SITE VERIFICATION (Meta Tag yöntemi) -->
+    <meta
+      name="impact-site-verification"
+      value="83facd8a-c872-4fb0-85cd-9f1ba5822af9"
+    />
 
     <!-- SEO & OpenGraph -->
     <meta
@@ -18,60 +21,83 @@
       content="FindAllEasy, Sono, yapay zeka, fiyat karşılaştırma, en ucuz, en uygun, güvenilir alışveriş, ürün kıyaslama, otel, uçak bileti, global comparison, e-ticaret, AI assistant, tek tıkla bul"
     />
     <meta name="robots" content="index, follow" />
-    <link rel="canonical" href="https://findalleasy.com/" />
+    <link rel="canonical" href="https://www.findalleasy.com/" />
 
-    <meta property="og:title" content="FindAllEasy — Yapay zeka destekli fiyat kıyaslama" />
+    <meta
+      property="og:title"
+      content="FindAllEasy — Yapay zeka destekli fiyat kıyaslama"
+    />
     <meta
       property="og:description"
       content="Sono AI ile yaz, konuş, foto çek — vitrine en iyi seçenekler gelsin. Global akıllı fiyat kıyaslama platformu."
     />
-    <meta property="og:url" content="https://findalleasy.com/" />
+    <meta property="og:url" content="https://www.findalleasy.com/" />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="/logo.png" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="FindAllEasy — Global Akıllı Fiyat Kıyaslama" />
+    <meta
+      name="twitter:title"
+      content="FindAllEasy — Global Akıllı Fiyat Kıyaslama"
+    />
     <meta
       name="twitter:description"
-      content="Yazman yeterli, gerisini O halleder. Sesli, görsel ve metin arama tek platformda."
+      content="Yazman yeterli, gerisini o halleder. Sesli, görsel ve metin arama tek platformda."
     />
     <meta name="twitter:image" content="/logo.png" />
 
     <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="theme-color" content="#000000" />
-  
-<script>
-(function(){
-  function applyTheme(){
-    const h = new Date().getHours();
-    let theme = 'day';
-    if(h>=20 || h<6) theme='night'; else if(h>=17) theme='evening';
-    document.documentElement.setAttribute('data-fae-theme', theme);
-  }
-  applyTheme(); setInterval(applyTheme, 10*60*1000);
-  // optional ambient music (user opt-in via localStorage flag)
-  if(localStorage.getItem('fae_ambient')==='1'){
-    const a = document.createElement('audio'); a.src='/ambient.mp3'; a.loop=true; a.volume=0.15; a.autoplay=true; document.body.appendChild(a);
-  }
-})();
-</script>
-<style>
-  :root[data-fae-theme=day]    { --fae-bg:#0a0a0a; }
-  :root[data-fae-theme=evening]{ --fae-bg:#080808; }
-  :root[data-fae-theme=night]  { --fae-bg:#050505; }
-  body { background: var(--fae-bg, #000); }
-</style>
 
-</head>
+    <style>
+      :root[data-fae-theme="day"] {
+        --fae-bg: #0a0a0a;
+      }
+      :root[data-fae-theme="evening"] {
+        --fae-bg: #080808;
+      }
+      :root[data-fae-theme="night"] {
+        --fae-bg: #050505;
+      }
+      body {
+        background: var(--fae-bg, #000);
+      }
+    </style>
+
+    <script>
+      (function () {
+        function applyTheme() {
+          const h = new Date().getHours();
+          let theme = "day";
+          if (h >= 20 || h < 6) theme = "night";
+          else if (h >= 17) theme = "evening";
+          document.documentElement.setAttribute("data-fae-theme", theme);
+        }
+        applyTheme();
+        setInterval(applyTheme, 10 * 60 * 1000);
+
+        // Ambient müzik (sadece kullanıcı opt-in yaptıysa)
+        document.addEventListener("DOMContentLoaded", () => {
+          if (localStorage.getItem("fae_ambient") === "1") {
+            const a = document.createElement("audio");
+            a.src = "/ambient.mp3";
+            a.loop = true;
+            a.volume = 0.15;
+            a.autoplay = true;
+            document.body.appendChild(a);
+          }
+        });
+      })();
+    </script>
+  </head>
 
   <body class="bg-darkblue text-white">
-    <!-- React uygulaması burada render edilir -->
     <div id="root"></div>
 
     <!-- React ana dosyası -->
     <script type="module" src="/src/main.jsx"></script>
 
-    <!-- Çevrimdışı ve çevrimiçi uyarı -->
+    <!-- Offline/Online uyarı -->
     <script>
       window.addEventListener("offline", () => {
         const popup = document.createElement("div");
@@ -109,6 +135,12 @@
         setTimeout(() => popup.remove(), 4000);
       });
     </script>
-  <script> if('serviceWorker' in navigator){ navigator.serviceWorker.register('/service-worker.js'); } </script></body>
+
+    <!-- Service worker -->
+    <script>
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/service-worker.js");
+      }
+    </script>
+  </body>
 </html>
-<script type="module" src="/src/main-boost.js"></script>
