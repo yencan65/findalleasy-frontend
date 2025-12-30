@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { API_BASE } from "../utils/api";
 
 export default function AuthPanel({ visible, onClose, onLoginSuccess }) {
   const [mode, setMode] = useState("login"); // 'login' | 'register'
@@ -33,7 +34,7 @@ export default function AuthPanel({ visible, onClose, onLoginSuccess }) {
   async function submit(){
     if(!validate()) return;
     setLoading(true);
-    const backend = import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
+    const backend = API_BASE || "";
     const url = mode==="login" ? `${backend}/api/login` : `${backend}/api/register`;
     const body = mode==="login"
       ? { email, password }
@@ -49,7 +50,7 @@ export default function AuthPanel({ visible, onClose, onLoginSuccess }) {
   }
 
   // Google için referral'ı state ile taşı
-  const backend = import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
+  const backend = API_BASE || "";
   const ref = localStorage.getItem("ref") || "";
   const state = btoa(JSON.stringify({ ref })); // base64 JSON
 

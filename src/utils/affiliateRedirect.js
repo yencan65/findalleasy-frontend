@@ -1,5 +1,7 @@
 // ===============================================================
 // FindAllEasy Frontend — Affiliate Redirect Helper (SAFE)
+
+import { API_BASE } from "./api";
 // ZERO-CRASH: No store imports, no hard dependencies.
 //
 // Contract (backend):
@@ -63,7 +65,7 @@ export function buildAffiliateRedirectUrl(item, userId = null, extra = {}) {
   const url = pickBestUrl(item);
   if (!item || !url) return null;
 
-  const backend = safeStr(import.meta?.env?.VITE_BACKEND_URL || "");
+  const backend = safeStr(API_BASE || "");
   const provider = safeStr(pickProviderKey(item));
   const uid = safeStr(userId || readUserIdFromStorage() || "");
 

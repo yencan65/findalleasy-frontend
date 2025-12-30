@@ -1,9 +1,10 @@
+import { API_BASE } from "../utils/api";
 // =============================================================
 // src/api/ai.js — HERKÜL SÜRÜMÜ
 // Mevcut işlev silinmedi, tamamı güçlendirildi
 // =============================================================
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
+const BACKEND_URL = API_BASE || "";
 
 // XSS güvenliği + boşluk temizliği
 function safe(q) {

@@ -1,8 +1,9 @@
 
 // src/components/RewardTree.jsx
 import React, { useEffect, useState } from "react";
+import { API_BASE } from "../utils/api";
 
-const BURL = import.meta.env.VITE_BACKEND_URL;
+const BURL = API_BASE;
 
 function Node({node}){
   return (

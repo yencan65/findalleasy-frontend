@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import QrScanner from "qr-scanner";
 import { pushQueryToVitrine, runUnifiedSearch } from "../utils/searchBridge";
+import { API_BASE } from "../utils/api";
 
 // ⭐ Güvenli destroy fonksiyonu
 function safeDestroy(scanner) {
@@ -38,7 +39,7 @@ export default function QRScanner({ onDetect, onClose }) {
   // ==========================================================
   const fetchProductInfoFromQR = useCallback(async (qrData) => {
   try {
-    const backend = import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
+    const backend = API_BASE || "";
 
     const res = await fetch(`${backend}/api/product-info`, {
       method: "POST",

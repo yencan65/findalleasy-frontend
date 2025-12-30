@@ -2,12 +2,13 @@
 import React, { useState } from "react";
 import { askAI } from "../api/ai";
 import { triggerVitrineSearch } from "../utils/vitrineEvent"; // ✅ vitrin senkronizasyonu
+import { API_BASE } from "../utils/api";
 
 export default function SonoBubble() {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
+  const BACKEND_URL = API_BASE || "";
 
   // 🔹 Hafıza (AI geçmişi)
   function getHistory() {

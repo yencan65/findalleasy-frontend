@@ -4,6 +4,7 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
+import { API_BASE } from "./utils/api";
 
 const resources = {
   tr: {
@@ -166,7 +167,8 @@ const resources = {
       },
 
       common: {
-        loading: "Yükleniyor…"
+        loading: "Yükleniyor…",
+        noImage: "Görsel yok"
       },
 
       actions: {
@@ -476,7 +478,8 @@ const resources = {
       },
 
       common: {
-        loading: "Loading…"
+        loading: "Loading…",
+        noImage: "No image"
       },
 
       actions: {
@@ -789,7 +792,8 @@ const resources = {
       },
 
       common: {
-        loading: "Chargement…"
+        loading: "Chargement…",
+        noImage: "Aucune image"
       },
 
       actions: {
@@ -1113,7 +1117,8 @@ const resources = {
       },
 
       common: {
-        loading: "Загрузка…"
+        loading: "Загрузка…",
+        noImage: "Нет изображения"
       },
 
       actions: {
@@ -1431,7 +1436,8 @@ const resources = {
       },
 
       common: {
-        loading: "جارٍ التحميل…"
+        loading: "جارٍ التحميل…",
+        noImage: "لا توجد صورة"
       },
 
       actions: {
@@ -1614,7 +1620,7 @@ export function sanitizeName(name) {
 export async function aiTranslate(text, targetLang) {
   try {
     const res = await fetch(
-      (import.meta.env.VITE_BACKEND_URL || "http://localhost:8080") +
+      (API_BASE || "") +
         "/api/translate",
       {
         method: "POST",

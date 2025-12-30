@@ -14,6 +14,7 @@ import VerifiedBadge from "./VerifiedBadge";
 import "./Vitrin.css";
 import sonoIcon from "../sono-assets/sono-face.svg";
 import { runUnifiedSearch } from "../utils/searchBridge";
+import { API_BASE } from "../utils/api";
 
 // Yeni ama şu an UI’de zorunlu olmayan etiket sistemi
 import BadgeTag from "./BadgeTag";
@@ -270,20 +271,8 @@ export default function Vitrin() {
   }
 
   function getBackendBase() {
-    const envBase = import.meta.env.VITE_BACKEND_URL || "";
-    if (envBase) return envBase;
-
-    try {
-      if (
-        typeof window !== "undefined" &&
-        window.location &&
-        window.location.hostname === "localhost"
-      ) {
-        return "http://localhost:8080";
-      }
-    } catch {}
-
-    return "";
+    // Single source of truth (prod-safe)
+    return API_BASE || "";
   }
 
   function getOptionalAuthHeader() {
@@ -889,7 +878,9 @@ export default function Vitrin() {
           {img ? (
             <img src={img} alt={safeTitle} className="w-full h-full object-contain" />
           ) : (
-            <span className="text-white/25 text-sm">Görsel yok</span>
+            <span className="text-white/25 text-sm">
+              {t("common.noImage", { defaultValue: "Görsel yok" })}
+            </span>
           )}
         </div>
 
@@ -959,7 +950,7 @@ export default function Vitrin() {
             />
           ) : (
             <div className="rounded-2xl border border-dashed border-white/15 text-xs text-white/40 p-4 flex items-center justify-center h-full min-h-[160px]">
-              Kişisel vitrininiz hazırlanıyor...
+              {t("home.customShowcase", { defaultValue: "Kişisel vitrininiz hazırlanıyor..." })}
             </div>
           )}
         </div>

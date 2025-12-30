@@ -1,10 +1,8 @@
+import { API_BASE } from "../utils/api";
 // src/api/rewards.js
 
 // BE backend base URL
-const API =
-  import.meta.env.VITE_BACKEND_URL ||
-  import.meta.env.VITE_API_URL ||
-  "http://localhost:8080";
+const API = API_BASE || "";
 
 // ---------------------------------------------
 //  Kullanıcı cüzdan + ödül özeti (ESKİ KOD)

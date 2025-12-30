@@ -5,13 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FindAllEasy — Yapay Zeka Destekli Fiyat Kıyaslama</title>
 
-    <!-- ✅ IMPACT SITE VERIFICATION (Meta Tag yöntemi) -->
-    <!-- Sadece aktif property kalsın -->
-    <meta
-      name="impact-site-verification"
-      value="5dba6847-4a68-4f95-a1d6-cf95410bb486"
-    />
-
     <!-- SEO & OpenGraph -->
     <meta
       name="description"
@@ -22,34 +15,55 @@
       content="FindAllEasy, Sono, yapay zeka, fiyat karşılaştırma, en ucuz, en uygun, güvenilir alışveriş, ürün kıyaslama, otel, uçak bileti, global comparison, e-ticaret, AI assistant, tek tıkla bul"
     />
     <meta name="robots" content="index, follow" />
-    <link rel="canonical" href="https://www.findalleasy.com/" />
+    <link rel="canonical" href="https://findalleasy.com/" />
 
-    <meta
-      property="og:title"
-      content="FindAllEasy — Yapay zeka destekli fiyat kıyaslama"
-    />
+    <meta property="og:title" content="FindAllEasy — Yapay zeka destekli fiyat kıyaslama" />
     <meta
       property="og:description"
       content="Sono AI ile yaz, konuş, foto çek — vitrine en iyi seçenekler gelsin. Global akıllı fiyat kıyaslama platformu."
     />
-    <meta property="og:url" content="https://www.findalleasy.com/" />
+    <meta property="og:url" content="https://findalleasy.com/" />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="/logo.png" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta
-      name="twitter:title"
-      content="FindAllEasy — Global Akıllı Fiyat Kıyaslama"
-    />
+    <meta name="twitter:title" content="FindAllEasy — Global Akıllı Fiyat Kıyaslama" />
     <meta
       name="twitter:description"
-      content="Yazman yeterli, gerisini o halleder. Sesli, görsel ve metin arama tek platformda."
+      content="Yazman yeterli, gerisini O halleder. Sesli, görsel ve metin arama tek platformda."
     />
     <meta name="twitter:image" content="/logo.png" />
 
     <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="theme-color" content="#000000" />
 
+    <script>
+      (function () {
+        function applyTheme() {
+          const h = new Date().getHours();
+          let theme = "day";
+          if (h >= 20 || h < 6) theme = "night";
+          else if (h >= 17) theme = "evening";
+          document.documentElement.setAttribute("data-fae-theme", theme);
+        }
+
+        applyTheme();
+        setInterval(applyTheme, 10 * 60 * 1000);
+
+        // Optional ambient music (ONLY if user explicitly opted-in via localStorage)
+        document.addEventListener("DOMContentLoaded", () => {
+          try {
+            if (localStorage.getItem("fae_ambient") !== "1") return;
+            const a = document.createElement("audio");
+            a.src = "/ambient.mp3";
+            a.loop = true;
+            a.volume = 0.15;
+            a.autoplay = true;
+            document.body.appendChild(a);
+          } catch {}
+        });
+      })();
+    </script>
     <style>
       :root[data-fae-theme="day"] {
         --fae-bg: #0a0a0a;
@@ -64,84 +78,10 @@
         background: var(--fae-bg, #000);
       }
     </style>
-
-    <script>
-      (function () {
-        function applyTheme() {
-          const h = new Date().getHours();
-          let theme = "day";
-          if (h >= 20 || h < 6) theme = "night";
-          else if (h >= 17) theme = "evening";
-          document.documentElement.setAttribute("data-fae-theme", theme);
-        }
-        applyTheme();
-        setInterval(applyTheme, 10 * 60 * 1000);
-
-        // Ambient müzik (sadece kullanıcı opt-in yaptıysa)
-        document.addEventListener("DOMContentLoaded", () => {
-          if (localStorage.getItem("fae_ambient") === "1") {
-            const a = document.createElement("audio");
-            a.src = "/ambient.mp3";
-            a.loop = true;
-            a.volume = 0.15;
-            a.autoplay = true;
-            document.body.appendChild(a);
-          }
-        });
-      })();
-    </script>
   </head>
 
   <body class="bg-darkblue text-white">
     <div id="root"></div>
-
-    <!-- React ana dosyası -->
     <script type="module" src="/src/main.jsx"></script>
-
-    <!-- Offline/Online uyarı -->
-    <script>
-      window.addEventListener("offline", () => {
-        const popup = document.createElement("div");
-        popup.innerText = "📡 Bağlantı gitti — çevrimdışı mod!";
-        Object.assign(popup.style, {
-          position: "fixed",
-          bottom: "20px",
-          right: "20px",
-          background: "rgba(0,0,0,0.8)",
-          color: "#d4af37",
-          padding: "10px 16px",
-          borderRadius: "10px",
-          fontSize: "14px",
-          zIndex: "9999",
-        });
-        document.body.appendChild(popup);
-        setTimeout(() => popup.remove(), 4000);
-      });
-
-      window.addEventListener("online", () => {
-        const popup = document.createElement("div");
-        popup.innerText = "✅ İnternet bağlantısı geri geldi";
-        Object.assign(popup.style, {
-          position: "fixed",
-          bottom: "20px",
-          right: "20px",
-          background: "rgba(0,0,0,0.8)",
-          color: "#4ade80",
-          padding: "10px 16px",
-          borderRadius: "10px",
-          fontSize: "14px",
-          zIndex: "9999",
-        });
-        document.body.appendChild(popup);
-        setTimeout(() => popup.remove(), 4000);
-      });
-    </script>
-
-    <!-- Service worker -->
-    <script>
-      if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.register("/service-worker.js");
-      }
-    </script>
   </body>
 </html>

@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { runUnifiedSearch } from "../utils/searchBridge";
 import { initSonoActionEngine } from "../engines/sonoActionEngine";
+import { API_BASE } from "../utils/api";
 
 /**
  * ------------------------------------------------------------------
@@ -654,8 +655,7 @@ triggerSearchFromAI(text);
   await onSuggest(text);
 } else {
         // 8) Backend Chat / AI API Çağrısı
-        const backendUrl = import.meta.env?.VITE_BACKEND_URL;
-        const backend = backendUrl || "http://localhost:8080";
+        const backend = API_BASE || "";
 
         // Kullanıcı + AI geçmişi: backend'e güvenli formatta gönderilir
         const safeHistory = messagesRef.current

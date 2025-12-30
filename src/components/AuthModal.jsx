@@ -8,12 +8,10 @@ import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 
-import {
-  getStoredReferral,
-  clearStoredReferral,
-} from "../utils/referralTracker";
+import { API_BASE } from "../utils/api";
+import { getStoredReferral, clearStoredReferral } from "../utils/referralTracker";
 
-const BASE = import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
+const BASE = API_BASE || "";
 
 // -----------------------------------------------------------
 // Güvenli username (XSS + temizleme)

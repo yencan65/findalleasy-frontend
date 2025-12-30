@@ -1,8 +1,6 @@
+import { API_BASE } from "../utils/api";
 // src/api/orders.js
-const API =
-  import.meta.env.VITE_BACKEND_URL ||
-  import.meta.env.VITE_API_URL ||
-  "http://localhost:8080";
+const API = API_BASE || "";
 
 export async function getUserOrders(userId) {
   if (!userId) return { ok: false, orders: [] };

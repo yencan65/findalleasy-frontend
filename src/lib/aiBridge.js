@@ -1,5 +1,6 @@
 // src/lib/aiBridge.js
-const BACKEND = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+import { API_BASE } from "../utils/api";
+const BACKEND = API_BASE || "";
 
 export async function aiSearch(q, region, locale){
   const r = await fetch(`${BACKEND}/api/search`, {

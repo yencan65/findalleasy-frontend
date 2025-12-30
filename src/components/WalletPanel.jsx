@@ -3,6 +3,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useTranslation } from "react-i18next";
 import OrderHistory from "./OrderHistory"; // 🆕 Siparişlerim sekmesi için
+import { API_BASE } from "../utils/api";
 
 // =================================================================
 // GLOBAL ANIMATION – ONLY ONCE
@@ -199,7 +200,7 @@ export default function WalletPanel({ onClose }) {
 
   const [activeTab, setActiveTab] = useState("wallet"); // 🆕 Cüzdan | Hareketler | Siparişler
 
-  const backend = import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
+  const backend = API_BASE || "";
 
   // =================================================================
   // DATA LOAD

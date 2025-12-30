@@ -2,9 +2,40 @@
 // Simple API helper: single source of truth for backend URL + fetch wrappers.
 // Conservative defaults; no breaking changes.
 
-export const API_BASE =
-  (import.meta?.env?.VITE_BACKEND_URL && String(import.meta.env.VITE_BACKEND_URL).trim()) ||
-  "http://localhost:8080";
+function resolveApiBase() {
+  // 1) Explicit env override (preferred)
+  const env =
+    (import.meta?.env?.VITE_BACKEND_URL && String(import.meta.env.VITE_BACKEND_URL).trim()) ||
+    (import.meta?.env?.VITE_API_URL && String(import.meta.env.VITE_API_URL).trim()) ||
+    "";
+  if (env) return env.replace(/\/$/, "");
+
+  // 2) Browser hostname heuristic (safe + reviewer-friendly)
+  try {
+    if (typeof window !== "undefined" && window.location) {
+      const h = String(window.location.hostname || "").toLowerCase();
+
+      // Local dev
+      if (h === "localhost" || h === "127.0.0.1") return "http://localhost:8080";
+
+      // Production: main site -> API subdomain
+      if (h === "findalleasy.com" || h === "www.findalleasy.com" || h.endsWith(".findalleasy.com")) {
+        return "https://api.findalleasy.com";
+      }
+
+      // Other deploy domains: default to same-origin (empty base)
+      return "";
+    }
+  } catch {}
+
+  return "";
+}
+
+export const API_BASE = resolveApiBase();
+
+export function getApiBase() {
+  return API_BASE;
+}
 
 export function withTimeout(promise, ms = 15000) {
   let t;
@@ -14,27 +45,18 @@ export function withTimeout(promise, ms = 15000) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(t));
 }
 
-export async function apiGet(path, { timeoutMs = 15000, headers = {}, signal } = {}) {
-  const url = path.startsWith("http") ? path : `${API_BASE}${path}`;
-  const res = await withTimeout(fetch(url, { method: "GET", headers, signal }), timeoutMs);
-  const text = await res.text();
-  let data;
-  try { data = JSON.parse(text); } catch { data = text; }
-  if (!res.ok) {
-    const err = new Error(`HTTP ${res.status}`);
-    err.status = res.status;
-    err.data = data;
-    throw err;
-  }
-  return data;
-}
+export async function apiJson(path, { method = "GET", headers = {}, body, timeoutMs = 15000 } = {}) {
+  const base = API_BASE || "";
+  const url = `${base}${path.startsWith("/") ? path : `/${path}`}`;
+  const h = { "Content-Type": "application/json", ...headers };
 
-export async function apiPost(path, body, { timeoutMs = 20000, headers = {}, signal } = {}) {
-  const url = path.startsWith("http") ? path : `${API_BASE}${path}`;
+  const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+  const signal = controller?.signal;
+
   const res = await withTimeout(fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...headers },
-    body: JSON.stringify(body ?? {}),
+    method,
+    headers: h,
+    body: body === undefined ? undefined : JSON.stringify(body ?? {}),
     signal
   }), timeoutMs);
   const text = await res.text();

@@ -1,12 +1,9 @@
 // src/api/auth.js
-// src/api/auth.js
-const API =
-  import.meta.env.VITE_BACKEND_URL ||
-  import.meta.env.VITE_API_URL ||
-  "http://localhost:8080";
-
-
+import { API_BASE } from "../utils/api";
 import { getDeviceId } from "../utils/device";
+
+// Backend base — prod-safe (no localhost fallback)
+const API = API_BASE || "";
 
 export async function register(data) {
   const deviceId = getDeviceId();

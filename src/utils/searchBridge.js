@@ -1,15 +1,13 @@
 // src/utils/searchBridge.js
 // SONO SEARCH BRIDGE — Tek merkezden vitrin tetikleyici (HERKÜL MODU)
 
-// Backend tabanı — diğer yerlerle aynı mantık
-const API = import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
+import { API_BASE } from "./api";
 
-// =============================
-// EKLENDİ → Vitrin API endpoint
-// =============================
-const VITRINE_ENDPOINT = "/api/vitrine";
+// Backend tabanı — tek kaynak (prod'da localhost'a düşme yok)
+const API = API_BASE || "";
 
-
+// ✅ Vitrin API endpoint (backend route)
+const VITRINE_ENDPOINT = "/api/vitrin/dynamic";
 
 // Eğer sende /vitrine/search ise buraya yaz:
 // const VITRINE_ENDPOINT = "/vitrine/search";

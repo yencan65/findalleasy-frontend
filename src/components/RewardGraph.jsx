@@ -2,8 +2,9 @@
 // src/components/RewardGraph.jsx
 import React, { useEffect, useRef } from "react";
 import * as d3 from "d3";
+import { API_BASE } from "../utils/api";
 
-const BURL = import.meta.env.VITE_BACKEND_URL;
+const BURL = API_BASE;
 
 export default function RewardGraph({ userId, onClose }){
   const ref = useRef(null);

@@ -1,6 +1,7 @@
 // ✅ src/App.jsx — TAMAMEN CERRAHİ OLARAK TEMİZLENMİŞ + GÜÇLENDİRİLMİŞ
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import { API_BASE } from "./utils/api";
 import Header from "./components/Header.jsx";
 import AIAssistant from "./components/AIAssistant.jsx";
 import Vitrin from "./components/Vitrin.jsx";
@@ -50,7 +51,7 @@ const safeDisplayName = (raw) => {
 export default function App() {
   const [qrScanOpen, setQrScanOpen] = useState(false);
   const { t, i18n } = useTranslation();
-  const useRewards = createUseRewards(import.meta.env.VITE_BACKEND_URL);
+  const useRewards = createUseRewards(API_BASE);
 
   // =========================================================================
   //  LEGAL ROUTES (NO ROUTER LIB)
@@ -209,8 +210,7 @@ export default function App() {
         window.localStorage &&
         localStorage.getItem("region")) ||
       "TR";
-    const backend =
-      import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
+    const backend = API_BASE || "";
 
     // Global state’e yaz + vitrin event’leri → Vitrin + Sono aynı hizada
     try {
@@ -376,8 +376,7 @@ group: "product",
 
     if (!b64) return;
 
-    const backend =
-      import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
+    const backend = API_BASE || "";
 
     try {
       const r = await fetch(`${backend}/api/vision`, {
