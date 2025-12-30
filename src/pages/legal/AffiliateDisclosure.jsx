@@ -132,21 +132,5 @@ export default function AffiliateDisclosure() {
 
   const CONTENT = lang === "en" ? EN : lang === "fr" ? FR : lang === "ru" ? RU : lang === "ar" ? AR : TR;
 
-  return (
-    <LegalShell
-      badgeText={
-        lang === "tr"
-          ? "Affiliate"
-          : lang === "en"
-          ? "Affiliate"
-          : lang === "fr"
-          ? "Affiliation"
-          : lang === "ru"
-          ? "Affiliate"
-          : "أفلييت"
-      }
-    >
-      {CONTENT}
-    </LegalShell>
-  );
+  return CONTENT;
 }

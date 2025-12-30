@@ -25,6 +25,7 @@ import PrivacyPolicy from "./pages/legal/PrivacyPolicy.jsx";
 import CookiePolicy from "./pages/legal/CookiePolicy.jsx";
 import AffiliateDisclosure from "./pages/legal/AffiliateDisclosure.jsx";
 
+import TermsOfUse from "./pages/legal/TermsOfUse.jsx";
 // ✅ Site info pages (network reviews love these)
 import About from "./pages/site/About.jsx";
 import Contact from "./pages/site/Contact.jsx";

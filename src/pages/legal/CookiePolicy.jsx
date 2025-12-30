@@ -131,21 +131,5 @@ export default function CookiePolicy() {
 
   const CONTENT = lang === "en" ? EN : lang === "fr" ? FR : lang === "ru" ? RU : lang === "ar" ? AR : TR;
 
-  return (
-    <LegalShell
-      badgeText={
-        lang === "tr"
-          ? "Çerezler"
-          : lang === "en"
-          ? "Cookies"
-          : lang === "fr"
-          ? "Cookies"
-          : lang === "ru"
-          ? "Cookie"
-          : "الكوكيز"
-      }
-    >
-      {CONTENT}
-    </LegalShell>
-  );
+  return CONTENT;
 }
