@@ -42,35 +42,7 @@
 
     <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="theme-color" content="#000000" />
-
-    <script>
-      (function () {
-        function applyTheme() {
-          const h = new Date().getHours();
-          let theme = "day";
-          if (h >= 20 || h < 6) theme = "night";
-          else if (h >= 17) theme = "evening";
-          document.documentElement.setAttribute("data-fae-theme", theme);
-        }
-
-        applyTheme();
-        setInterval(applyTheme, 10 * 60 * 1000);
-
-        // Optional ambient music (ONLY if user explicitly opted-in via localStorage)
-        document.addEventListener("DOMContentLoaded", () => {
-          try {
-            if (localStorage.getItem("fae_ambient") !== "1") return;
-            const a = document.createElement("audio");
-            a.src = "/ambient.mp3";
-            a.loop = true;
-            a.volume = 0.15;
-            a.autoplay = true;
-            document.body.appendChild(a);
-          } catch {}
-        });
-      })();
-    </script>
-    <style>
+<style>
       :root[data-fae-theme="day"] {
         --fae-bg: #0a0a0a;
       }

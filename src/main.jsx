@@ -3,6 +3,11 @@ import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
 import "./index.css";
 
+
+import { themeBoot } from "./boot/themeBoot.js";
+
+themeBoot();
+
 // Service Worker caching can make deploy changes look "not applied".
 // Keep it opt-in for now: set VITE_ENABLE_SW=1 to re-enable.
 const ENABLE_SW = import.meta?.env?.VITE_ENABLE_SW === "1";
