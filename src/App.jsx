@@ -77,6 +77,14 @@ export default function App() {
     );
   }
 
+  if (pathClean === "/terms" || pathClean === "/terms-of-use") {
+    return (
+      <LegalShell badgeText="Legal">
+        <TermsOfUse />
+      </LegalShell>
+    );
+  }
+
   if (
     pathClean === "/affiliate-disclosure" ||
     pathClean === "/disclosure" ||

@@ -29,7 +29,8 @@ const resources = {
       legal: {
         privacy: "Gizlilik",
         cookies: "Çerezler",
-        affiliate: "Affiliate Açıklaması"
+        affiliate: "Affiliate Açıklaması",
+        terms: "Kullanım Şartları"
       },
 
       fillAllFields: "Lütfen tüm alanları doldurun.",
@@ -189,6 +190,7 @@ const resources = {
         privacy: "Gizlilik",
         cookies: "Çerezler",
         affiliate: "Affiliate Açıklaması",
+        terms: "Kullanım Şartları",
 
       },
 
@@ -341,7 +343,8 @@ const resources = {
       legal: {
         privacy: "Privacy",
         cookies: "Cookies",
-        affiliate: "Affiliate Disclosure"
+        affiliate: "Affiliate Disclosure",
+        terms: "Terms of Use"
       },
 
       fillAllFields: "Please fill all fields.",
@@ -500,6 +503,7 @@ const resources = {
         privacy: "Privacy",
         cookies: "Cookies",
         affiliate: "Affiliate Disclosure",
+        terms: "Terms of Use",
 
       },
 

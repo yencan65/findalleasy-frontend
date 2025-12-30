@@ -1,7 +1,5 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import LegalShell from "../../components/LegalShell.jsx";
-
 export default function PrivacyPolicy() {
   const { i18n } = useTranslation();
   const langRaw = String(i18n.resolvedLanguage || i18n.language || "tr").toLowerCase();
@@ -214,5 +212,5 @@ export default function PrivacyPolicy() {
 
   const CONTENT = lang === "en" ? EN : lang === "fr" ? FR : lang === "ru" ? RU : lang === "ar" ? AR : TR;
 
-  return <LegalShell badgeText={lang === "tr" ? "Gizlilik" : lang === "en" ? "Privacy" : lang === "fr" ? "Confidentialité" : lang === "ru" ? "Конфиденциальность" : "الخصوصية"}>{CONTENT}</LegalShell>;
+  return CONTENT;
 }

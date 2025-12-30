@@ -1,7 +1,5 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import LegalShell from "../../components/LegalShell.jsx";
-
 export default function CookiePolicy() {
   const { i18n } = useTranslation();
   const langRaw = String(i18n.resolvedLanguage || i18n.language || "tr").toLowerCase();

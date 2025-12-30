@@ -6,9 +6,9 @@ export default function Footer() {
   const { t } = useTranslation();
 
   // 🔄 Dil değişince yeniden render için
-  const [tick, setTick] = useState(0);
+  const [, forceRerender] = useState(0);
   useEffect(() => {
-    const rerender = () => setTick((t) => t + 1);
+    const rerender = () => forceRerender((n) => n + 1);
     window.addEventListener("language-change", rerender);
     return () => window.removeEventListener("language-change", rerender);
   }, []);
@@ -55,12 +55,19 @@ export default function Footer() {
         </a>
         <span className="text-[#d4af37]/40">•</span>
         <a
+          href="/terms"
+          className="text-[#d4af37]/90 hover:text-[#d4af37] underline underline-offset-4 whitespace-nowrap"
+        >
+          {t("legal.terms", { defaultValue: "Kullanım Şartları" })}
+        </a>
+        <span className="text-[#d4af37]/40">•</span>
+        <a
           href="/affiliate-disclosure"
           className="text-[#d4af37]/90 hover:text-[#d4af37] underline underline-offset-4 whitespace-nowrap"
         >
           {t("legal.affiliate", { defaultValue: "Affiliate Açıklaması" })}
         </a>
       </nav>
-</footer>
+      </footer>
   );
 } 

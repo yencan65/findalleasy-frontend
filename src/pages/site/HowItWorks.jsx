@@ -1,7 +1,5 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import LegalShell from "../../components/LegalShell.jsx";
-
 export default function HowItWorks() {
   const { i18n } = useTranslation();
   const langRaw = String(i18n.resolvedLanguage || i18n.language || "tr").toLowerCase();
@@ -126,5 +124,5 @@ export default function HowItWorks() {
 
   const CONTENT = lang === "en" ? EN : lang === "fr" ? FR : lang === "ru" ? RU : lang === "ar" ? AR : TR;
 
-  return <LegalShell>{CONTENT}</LegalShell>;
+  return CONTENT;
 }
