@@ -12,13 +12,17 @@ import Footer from "./Footer.jsx";
 // Backward compatible: existing callers pass only children.
 export default function LegalShell({
   children,
-  badgeText = "Legal",
+  badgeText,
   homeHref = "/",
-  homeLabel = "← Ana sayfa",
+  homeLabel,
 }) {
   const { t } = useTranslation();
-  const badge = badgeText ?? t("legal.badge", { defaultValue: "Legal" });
-  const home = homeLabel ?? t("legal.home", { defaultValue: "← Ana sayfa" });
+  const badge = (badgeText && String(badgeText).trim() !== "")
+    ? badgeText
+    : t("legal.badge", { defaultValue: "Info" });
+  const home = (homeLabel && String(homeLabel).trim() !== "")
+    ? homeLabel
+    : t("legal.home", { defaultValue: "← Home" });
   return (
     <div className="min-h-screen w-full bg-transparent text-white">
       <Header />

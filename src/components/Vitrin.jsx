@@ -950,7 +950,7 @@ export default function Vitrin() {
             />
           ) : (
             <div className="rounded-2xl border border-dashed border-white/15 text-xs text-white/40 p-4 flex items-center justify-center h-full min-h-[160px]">
-              {t("home.customShowcase", { defaultValue: "Kişisel vitrininiz hazırlanıyor..." })}
+              {t("trigger.customShowcase", { defaultValue: "Kişisel vitrinini hazırlıyorum..." })}
             </div>
           )}
         </div>

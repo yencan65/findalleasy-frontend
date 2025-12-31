@@ -195,11 +195,10 @@ doSearch("ürün", "camera");
               type="button"
               onClick={() => doSearch()}
               disabled={loading}
-              className="sm:hidden absolute right-2 top-1/2 -translate-y-1/2 bg-gold text-black font-semibold px-3 py-1.5 rounded-full flex items-center gap-1 shadow-md hover:opacity-95 transition disabled:opacity-60"
+              className="sm:hidden absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full border border-gold text-gold bg-transparent hover:bg-white/5 flex items-center justify-center shadow-sm transition disabled:opacity-60"
               aria-label={t("search.search")}
             >
-              <Search size={16} />
-              <span className="text-[12px] font-semibold leading-none">{t("search.search")}</span>
+              <Search size={18} />
             </button>
           </div>
 
@@ -235,10 +234,9 @@ doSearch("ürün", "camera");
           <button
             onClick={() => doSearch()}
             disabled={loading}
-            className="hidden sm:flex text-gold font-semibold px-3 hover:text-white transition items-center gap-1 disabled:opacity-60"
+            className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full border border-gold text-gold bg-transparent hover:bg-white/5 hover:text-white transition disabled:opacity-60"
           >
-            <Search size={16} />
-            {t("search.search")}
+            <Search size={18} />
           </button>
         </div>
       </div>

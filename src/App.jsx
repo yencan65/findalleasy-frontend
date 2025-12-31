@@ -564,11 +564,11 @@ group: "product",
             />
             <button
               onClick={doSearch}
-              className="h-12 px-5 rounded-xl bg-[#D9A441] text-black font-semibold flex items-center gap-2 shadow hover:brightness-105 transition whitespace-nowrap"
+              className="w-12 h-12 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
               aria-label={t("search.search")}
               title={t("search.search")}
             >
-              {t("search.search")} <SearchIcon size={18} aria-hidden />
+              <SearchIcon size={22} className="text-[#D9A441]" aria-hidden />
             </button>
 
             <button

@@ -818,6 +818,7 @@ const resources = {
         privacy: "Confidentialité",
         cookies: "Cookies",
         affiliate: "Mention d’affiliation",
+        terms: "Conditions d’utilisation",
 
       },
 
@@ -1141,8 +1142,9 @@ const resources = {
         home: "← На главную",
         updatedAt: "Обновлено",
         privacy: "Конфиденциальность",
-        cookies: "Cookies",
+        cookies: "Файлы cookie",
         affiliate: "Affiliate-раскрытие",
+        terms: "Условия использования",
 
       },
 
@@ -1462,6 +1464,7 @@ const resources = {
         privacy: "الخصوصية",
         cookies: "ملفات تعريف الارتباط",
         affiliate: "إفصاح الإحالة",
+        terms: "شروط الاستخدام",
 
       },
 
