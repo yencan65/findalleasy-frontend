@@ -5,30 +5,19 @@ import { getDeviceId } from "../utils/device";
 // Backend base — prod-safe
 const API = API_BASE || "";
 
-/**
- * JSON güvenli okuma:
- * - CDN/404 HTML dönse bile app patlamasın
- * - status/ok bilgisi response objesine _http* olarak eklenir (debug için)
- */
+// JSON güvenli okuma (404 HTML vs gelse bile patlamasın)
 async function readJsonSafe(res) {
   const text = await res.text().catch(() => "");
-  let data;
   try {
-    data = text ? JSON.parse(text) : {};
+    const data = text ? JSON.parse(text) : {};
+    if (data && typeof data === "object") {
+      data._httpStatus = res.status;
+      data._httpOk = res.ok;
+    }
+    return data;
   } catch {
-    data = {
-      ok: false,
-      error: "NON_JSON_RESPONSE",
-      raw: text.slice(0, 500),
-    };
+    return { ok: false, error: "NON_JSON_RESPONSE", _httpStatus: res.status, raw: text.slice(0, 400) };
   }
-
-  // debug meta (UI kırmasın diye isimler underscore)
-  if (data && typeof data === "object" && !Array.isArray(data)) {
-    data._httpStatus = res.status;
-    data._httpOk = res.ok;
-  }
-  return data;
 }
 
 async function postJson(path, body) {
@@ -40,23 +29,18 @@ async function postJson(path, body) {
   return readJsonSafe(res);
 }
 
-/**
- * Primary endpoint 404 / NOT_FOUND ise fallback dener.
- * ÖNEMLİ: Primary başarılıysa fallback çalışmaz (çift mail atmasın diye).
- */
+// Primary 404 ise fallback dener (deploy karmaşasında hayat kurtarır)
 async function postJsonWithFallback(primaryPath, fallbackPath, body) {
-  const primary = await postJson(primaryPath, body);
+  const r1 = await postJson(primaryPath, body);
 
-  const looksNotFound =
-    primary?._httpStatus === 404 ||
-    primary?.error === "NOT_FOUND" ||
-    primary?.error === "Not Found" ||
-    primary?.error === "Cannot POST" ||
-    primary?.error === "NON_JSON_RESPONSE"; // CDN 404 HTML vs.
+  const notFoundLike =
+    r1?._httpStatus === 404 ||
+    r1?.error === "NOT_FOUND" ||
+    r1?.error === "Not Found" ||
+    r1?.error === "NON_JSON_RESPONSE";
 
-  if (!looksNotFound) return primary;
-  if (!fallbackPath) return primary;
-
+  if (!notFoundLike) return r1;
+  if (!fallbackPath) return r1;
   return postJson(fallbackPath, body);
 }
 
@@ -69,42 +53,25 @@ export async function loginReq(data) {
   return postJson("/api/auth/login", data);
 }
 
-// =========================
-// Password reset flow
-// =========================
+// ✅ Password reset: DOĞRU endpoint
 export async function requestReset(email) {
-  // Yeni: /forgot-password | Eski fallback: /request-reset
-  return postJsonWithFallback(
-    "/api/auth/forgot-password",
-    "/api/auth/request-reset",
-    { email }
-  );
+  // yeni: /forgot-password | eski fallback: /request-reset
+  return postJsonWithFallback("/api/auth/forgot-password", "/api/auth/request-reset", { email });
 }
 
 export async function resetPassword(email, code, newPassword) {
-  // Yeni: /reset-password (genelde aynı kalır)
   return postJson("/api/auth/reset-password", { email, code, newPassword });
 }
 
-// =========================
-// Activation flow
-// =========================
+// ✅ Activation: DOĞRU endpoint
 export async function sendVerifyCode(email) {
-  // Yeni: /resend-activation | Eski fallback: /send-code
-  return postJsonWithFallback(
-    "/api/auth/resend-activation",
-    "/api/auth/send-code",
-    { email }
-  );
+  // yeni: /resend-activation | eski fallback: /send-code
+  return postJsonWithFallback("/api/auth/resend-activation", "/api/auth/send-code", { email });
 }
 
 export async function verifyCode(email, code) {
-  // Yeni: /activate | Eski fallback: /verify-code
-  return postJsonWithFallback(
-    "/api/auth/activate",
-    "/api/auth/verify-code",
-    { email, code }
-  );
+  // yeni: /activate | eski fallback: /verify-code
+  return postJsonWithFallback("/api/auth/activate", "/api/auth/verify-code", { email, code });
 }
 
 export async function getProfile(id) {
