@@ -1,123 +1,75 @@
 // src/api/auth.js
-import { API_BASE } from "../utils/api";
-import { getDeviceId } from "../utils/device";
+// ============================================================================
+// FAE FRONTEND AUTH API — aligns with backend routers:
+// - /api/auth/*  (auth.js)
+// - /api/verify/* (verify.js)
+// ============================================================================
 
-// Backend base — prod-safe (no localhost fallback)
-const API = API_BASE || "";
+const API_BASE =
+  (import.meta?.env?.VITE_API_BASE || "").trim() ||
+  "https://api.findalleasy.com";
 
-// localStorage key helper (verify session)
-function verifySessionKey(email) {
-  return `fae_verify_sessionId:${String(email || "").trim().toLowerCase()}`;
-}
+async function postJson(path, body) {
+  const url = `${API_BASE}${path}`;
+  const r = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(body || {}),
+  });
 
-async function safeJson(res) {
-  const text = await res.text().catch(() => "");
+  let data = null;
   try {
-    return JSON.parse(text || "{}");
+    data = await r.json();
   } catch {
-    return { ok: false, error: "NON_JSON_RESPONSE", status: res.status, raw: text?.slice?.(0, 400) || "" };
+    data = null;
   }
-}
 
-export async function register(data) {
-  const deviceId = getDeviceId();
-
-  // Backend expects: username, email, password, (optional) referral
-  const payload = {
-    username: data?.username || data?.name || "",
-    email: data?.email || "",
-    password: data?.password || "",
-    referral: data?.referral || data?.referralCode || "",
-    deviceId,
-    // extra fields are tolerated
-    ...data,
-  };
-
-  const res = await fetch(`${API}/api/auth/register`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-
-  return safeJson(res);
-}
-
-export async function loginReq(data) {
-  const res = await fetch(`${API}/api/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      email: data?.email || "",
-      password: data?.password || "",
-      ...data,
-    }),
-  });
-
-  return safeJson(res);
-}
-
-// Backend: POST /api/auth/forgot-password  { email }
-export async function requestReset(email) {
-  const res = await fetch(`${API}/api/auth/forgot-password`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email }),
-  });
-
-  return safeJson(res);
-}
-
-// Backend: POST /api/auth/reset-password  { email, code, newPassword }
-export async function resetPassword(email, code, newPassword) {
-  const res = await fetch(`${API}/api/auth/reset-password`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, code, newPassword }),
-  });
-
-  return safeJson(res);
-}
-
-// Backend: POST /api/verify/send-code  { email }  -> returns sessionId
-export async function sendVerifyCode(email) {
-  const res = await fetch(`${API}/api/verify/send-code`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email }),
-  });
-
-  const out = await safeJson(res);
-  if (out?.ok && out?.sessionId) {
-    try {
-      localStorage.setItem(verifySessionKey(email), String(out.sessionId));
-    } catch {}
+  if (!r.ok) {
+    const msg =
+      data?.error ||
+      data?.message ||
+      `HTTP ${r.status} ${r.statusText || ""}`.trim();
+    throw new Error(msg);
   }
-  return out;
+  return data;
 }
 
-// Backend: POST /api/verify/verify-code { email, code, sessionId }
-export async function verifyCode(email, code) {
-  let sessionId = "";
-  try {
-    sessionId = localStorage.getItem(verifySessionKey(email)) || "";
-  } catch {}
-
-  const res = await fetch(`${API}/api/verify/verify-code`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, code, sessionId }),
-  });
-
-  const out = await safeJson(res);
-  if (out?.verified) {
-    try {
-      localStorage.removeItem(verifySessionKey(email));
-    } catch {}
-  }
-  return out;
+// ✅ Register: /api/auth/register
+export async function register({ username, email, password, referral }) {
+  return postJson("/api/auth/register", { username, email, password, referral });
 }
 
-export async function getProfile(id) {
-  const res = await fetch(`${API}/api/auth/profile/${id}`);
-  return safeJson(res);
+// ✅ Activate: /api/auth/activate
+export async function activateAccount({ email, code }) {
+  return postJson("/api/auth/activate", { email, code });
+}
+
+// ✅ Login: /api/auth/login
+export async function login({ email, password }) {
+  return postJson("/api/auth/login", { email, password });
+}
+
+// ✅ Resend activation: /api/auth/resend-activation
+export async function resendActivation({ email }) {
+  return postJson("/api/auth/resend-activation", { email });
+}
+
+// ✅ Forgot password: /api/auth/forgot-password
+export async function forgotPassword({ email }) {
+  return postJson("/api/auth/forgot-password", { email });
+}
+
+// ✅ Reset password: /api/auth/reset-password
+export async function resetPassword({ email, code, newPassword }) {
+  return postJson("/api/auth/reset-password", { email, code, newPassword });
+}
+
+// ✅ VERIFY ROUTER (email code flow) — /api/verify/*
+export async function sendVerifyCode({ email }) {
+  return postJson("/api/verify/send-code", { email });
+}
+
+export async function verifyCode({ email, code }) {
+  return postJson("/api/verify/verify-code", { email, code });
 }
