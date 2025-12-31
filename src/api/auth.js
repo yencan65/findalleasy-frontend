@@ -1,70 +1,95 @@
 // src/api/auth.js
+// ============================================================================
+// AUTH API — aligned with backend routes
+//
+// Backend:
+//   /api/auth/register
+//   /api/auth/login
+//   /api/auth/forgot-password
+//   /api/auth/reset-password
+//   /api/auth/profile/:id
+//   /api/verify/send-code
+//   /api/verify/verify-code
+// ============================================================================
+
 import { API_BASE } from "../utils/api";
 import { getDeviceId } from "../utils/device";
 
-// Prod-safe API base:
-// - Prefer VITE_API_BASE (API_BASE)
-// - If missing in production, fall back to https://api.findalleasy.com
-const API =
-  API_BASE ||
-  (import.meta?.env?.PROD ? "https://api.findalleasy.com" : "");
+// Backend base — prod-safe
+const API = String(API_BASE || "").replace(/\/+$/, "");
 
-// Small helper: always returns JSON-ish object
-async function fetchJson(url, options) {
-  const res = await fetch(url, options);
-  const ct = res.headers.get("content-type") || "";
-
-  let data = null;
-  if (ct.includes("application/json")) {
-    data = await res.json().catch(() => null);
-  } else {
-    const text = await res.text().catch(() => "");
-    data = { ok: false, error: text || `HTTP_${res.status}`, status: res.status };
+async function readJson(res) {
+  // Some proxies return HTML on errors; keep it safe.
+  const ct = String(res?.headers?.get?.("content-type") || "");
+  if (ct.includes("application/json") || ct.includes("+json")) {
+    return res.json();
   }
-
-  // normalize
-  if (!res.ok && data && typeof data === "object" && data.ok !== true) {
-    data.ok = false;
-    if (!data.error) data.error = `HTTP_${res.status}`;
-  }
-  return data ?? { ok: res.ok, status: res.status };
-}
-
-function post(path, body) {
-  return fetchJson(`${API}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body ?? {}),
-  });
+  const text = await res.text().catch(() => "");
+  return { ok: false, error: "NON_JSON_RESPONSE", status: res.status, body: text.slice(0, 500) };
 }
 
 export async function register(data) {
   const deviceId = getDeviceId();
-  return post("/api/auth/register", { ...(data || {}), deviceId });
+
+  const res = await fetch(`${API}/api/auth/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...data, deviceId }),
+  });
+
+  return readJson(res);
 }
 
 export async function loginReq(data) {
-  return post("/api/auth/login", data || {});
+  const res = await fetch(`${API}/api/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  return readJson(res);
 }
 
-// Password reset flow (backend: forgot-password -> reset-password)
+// Password reset flow (backend uses /forgot-password)
 export async function requestReset(email) {
-  return post("/api/auth/forgot-password", { email });
+  const res = await fetch(`${API}/api/auth/forgot-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  return readJson(res);
 }
 
 export async function resetPassword(email, code, newPassword) {
-  return post("/api/auth/reset-password", { email, code, newPassword });
+  const res = await fetch(`${API}/api/auth/reset-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, code, newPassword }),
+  });
+  return readJson(res);
 }
 
-// Email verification flow (backend: resend-activation -> activate)
+// Email verification code flow (backend requires sessionId)
 export async function sendVerifyCode(email) {
-  return post("/api/auth/resend-activation", { email });
+  const sessionId = getDeviceId();
+  const res = await fetch(`${API}/api/verify/send-code`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, sessionId }),
+  });
+  return readJson(res);
 }
 
 export async function verifyCode(email, code) {
-  return post("/api/auth/activate", { email, code });
+  const sessionId = getDeviceId();
+  const res = await fetch(`${API}/api/verify/verify-code`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, code, sessionId }),
+  });
+  return readJson(res);
 }
 
 export async function getProfile(id) {
-  return fetchJson(`${API}/api/auth/profile/${id}`, { method: "GET" });
+  const res = await fetch(`${API}/api/auth/profile/${id}`);
+  return readJson(res);
 }
