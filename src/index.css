@@ -20,6 +20,12 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* === MODAL OPEN (scroll lock) === */
+body.fae-modal-open {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
 
 #root {
   width: 100%;

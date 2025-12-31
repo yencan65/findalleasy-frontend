@@ -4,7 +4,8 @@
 // İşlev silme YOK — sadece güçlendirme ve doğru akış
 // ===========================================================
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 
@@ -25,6 +26,33 @@ function safeName(raw) {
 
 export default function AuthModal({ onClose, onLoggedIn, onLoginSuccess }) {
   const { t } = useTranslation();
+
+  // ===========================================================
+  // FULLSCREEN MODAL QUALITY
+  // - Body scroll lock (no page scrolling behind)
+  // - ESC to close
+  // - Render via Portal (never gets stuck inside header/layout)
+  // ===========================================================
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    if (typeof document !== "undefined") {
+      document.body.classList.add("fae-modal-open");
+    }
+
+    const onKey = (e) => {
+      if (e?.key === "Escape") onClose?.();
+    };
+
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      try {
+        document.body.classList.remove("fae-modal-open");
+      } catch {}
+    };
+  }, [onClose]);
 
   // ===========================================================
   // STATE
@@ -352,24 +380,29 @@ export default function AuthModal({ onClose, onLoggedIn, onLoginSuccess }) {
   // ===========================================================
   // UI
   // ===========================================================
-  return (
+  const modal = (
     <div
       id="auth-bg"
+      role="dialog"
+      aria-modal="true"
       className="
-        fixed inset-0 bg-black/50 backdrop-blur-sm
-        flex items-start justify-center 
-        z-[9999] pt-6 p-3 sm:p-6 overflow-y-auto
+        fixed inset-0 z-[99999]
+        bg-black/55 backdrop-blur-md
+        flex items-center justify-center
+        p-3 sm:p-6 overflow-hidden
       "
       onClick={(e) => {
-        if (e.target.id === "auth-bg") onClose();
+        if (e.target?.id === "auth-bg") onClose?.();
       }}
     >
       <div
         className="
           relative w-full max-w-[420px]
-          rounded-2xl border border-[#d4af37]/40 
-          bg-[#111] p-6 shadow-xl max-h-[92dvh] overflow-y-auto
-          animate-scale-in mt-6
+          rounded-2xl border border-[#d4af37]/40
+          bg-[#0f1116] p-5 sm:p-6 shadow-2xl
+          max-h-[calc(100dvh-24px)] overflow-y-auto
+          [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
+          animate-scale-in
         "
       >
         <button
@@ -622,4 +655,12 @@ export default function AuthModal({ onClose, onLoggedIn, onLoginSuccess }) {
       </div>
     </div>
   );
+
+  // Portal ile body'ye bas: sticky header/overflow/transform etkilerinden kurtul.
+  if (!mounted) return null;
+  try {
+    return createPortal(modal, document.body);
+  } catch {
+    return modal;
+  }
 }

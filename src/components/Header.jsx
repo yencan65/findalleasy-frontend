@@ -295,7 +295,12 @@ export default function Header() {
                 </>
               ) : (
                 <button
-                  onClick={() => setShowAuth(true)}
+                  onClick={() => {
+                    // UI hijack yok: auth açılınca menüler kapanır
+                    setUserOpen(false);
+                    setOpenLang(false);
+                    setShowAuth(true);
+                  }}
                   className="
                     w-full border border-[#d4af37]/60 rounded-lg 
                     text-[#d4af37] hover:bg-[#d4af37]/25 py-1 transition-all
