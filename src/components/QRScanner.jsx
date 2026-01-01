@@ -56,7 +56,8 @@ export default function QRScanner({ onDetect, onClose }) {
   // Backend’e telemetri — Vitrin tetikleme YOK
 await fetch(`${backend}/api/search`, {
   method: "POST",
-  headers: { "Content-Type": "application/json" },
+  // Telemetry-only: do not trigger SerpApi fallback / credit burn
+  headers: { "Content-Type": "application/json", "x-fae-skip-fallback": "1" },
   body: JSON.stringify({
     query: productName,
     region: localStorage.getItem("region") || "TR",
