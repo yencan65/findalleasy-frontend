@@ -6,11 +6,9 @@ import { pushQueryToVitrine, runUnifiedSearch } from "../utils/searchBridge";
 import { useTranslation } from "react-i18next";
 import QRScanner from "./QRScanner";
 import { detectCategory } from "../utils/categoryExtractor";
-import { API_BASE } from "../utils/api";
 
 export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
   const { t, i18n } = useTranslation();
-  const API = API_BASE || "";
 
   const [value, setValue] = useState("");
   const [index, setIndex] = useState(0);
@@ -116,36 +114,59 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     const f = e.target.files?.[0];
     if (!f) return;
 
+    // Aynı dosya tekrar seçilince de onChange tetiklensin
+    try { e.target.value = ""; } catch {}
+
+    // Basit boyut kalkanı (backend de ayrıca clamp var)
+    const MAX_BYTES = 6 * 1024 * 1024;
+    if (f.size > MAX_BYTES) {
+      alert(
+        t("cameraTooLarge", {
+          defaultValue:
+            "Fotoğraf çok büyük. Lütfen daha küçük bir görsel seç.",
+        })
+      );
+      return;
+    }
+
     setLoading(true);
 
-    const b64 = await new Promise((ok) => {
-      const r = new FileReader();
-      r.onloadend = () => ok(r.result);
-      r.readAsDataURL(f);
+    const b64 = await new Promise((ok, bad) => {
+      try {
+        const r = new FileReader();
+        r.onerror = () => bad(new Error("FILE_READ_ERROR"));
+        r.onloadend = () => ok(r.result);
+        r.readAsDataURL(f);
+      } catch (err) {
+        bad(err);
+      }
     });
 
     try {
-      const r = await fetch(`${API}/api/vision`, {
+      const r = await fetch("/api/vision", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ imageBase64: b64, locale: i18n.language }),
       });
 
-      const j = await r.json();
+      const j = await r.json().catch(() => ({}));
       const finalQuery = String(j?.query || "").trim();
 
-      if (!finalQuery || finalQuery.toLowerCase() === "ürün") {
-        throw new Error("VISION_NO_QUERY");
+      if (!r.ok || j?.ok === false || !finalQuery) {
+        const msg = j?.error || `VISION_FAILED_HTTP_${r.status}`;
+        throw new Error(msg);
       }
 
       setValue(finalQuery);
       doSearch(finalQuery, "camera");
-
-    } catch (e) {
-      console.error("Vision error:", e);
-      try {
-        alert("Fotoğraf tanınamadı. Daha net çekip tekrar deneyin.");
-      } catch {}
+    } catch (err) {
+      console.error("Vision error:", err);
+      alert(
+        t("cameraVisionDisabled", {
+          defaultValue:
+            "Kamera ile arama hattı hazır ama görsel tanıma kapalı görünüyor (VISION_DISABLED / API key). Şimdilik metinle arayın; API anahtarı gelince kamera otomatik çalışır.",
+        })
+      );
     } finally {
       setLoading(false);
     }
