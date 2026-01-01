@@ -2,42 +2,23 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import QrScanner from "qr-scanner";
 import { API_BASE } from "../utils/api";
 
-// ======================================================================
-// QR + BARCODE SCANNER (Hybrid)
-// - QR: qr-scanner (mevcut bağımlılık)
-// - Barkod: BarcodeDetector API (destekleyen tarayıcılarda: Chrome/Edge/Android)
-//   iOS Safari’de barkod desteği cihaz/versiyona göre gelmeyebilir.
-// - Tek çağrı disiplini: Scanner sadece en iyi "query"yi üretir, aramayı üst bileşen yapar.
-// ======================================================================
-
+// ⭐ Güvenli destroy fonksiyonu
 function safeDestroy(scanner) {
   try {
     if (!scanner) return;
-    if (typeof scanner.stop === "function") scanner.stop().catch(() => {});
-    if (typeof scanner.destroy === "function") scanner.destroy();
-  } catch {}
-}
 
-function stopVideoStream(videoEl) {
-  try {
-    const stream = videoEl?.srcObject;
-    if (!stream) return;
-    const tracks = stream.getTracks?.() || [];
-    tracks.forEach((t) => {
-      try {
-        t.stop();
-      } catch {}
-    });
-    videoEl.srcObject = null;
-  } catch {}
-}
+    // Önce stop et
+    if (typeof scanner.stop === "function") {
+      scanner.stop().catch(() => {});
+    }
 
-function supportsBarcodeDetector() {
-  return typeof window !== "undefined" && "BarcodeDetector" in window;
-}
-
-function isProbablyBarcode(text) {
-  return /^\d{8,14}$/.test(String(text || "").trim());
+    // Sonra destroy et
+    if (typeof scanner.destroy === "function") {
+      scanner.destroy();
+    }
+  } catch (e) {
+    console.warn("⚠ Destroy sırasında hata:", e);
+  }
 }
 
 export default function QRScanner({ onDetect, onClose }) {
@@ -49,112 +30,114 @@ export default function QRScanner({ onDetect, onClose }) {
 
   const videoRef = useRef(null);
   const scannerRef = useRef(null);
-  const barcodeDetectorRef = useRef(null);
-  const barcodeIntervalRef = useRef(null);
   const lastScanTimeRef = useRef(0);
 
-  const backend = API_BASE || "";
+  // ==========================================================
+  //  QR / Barkod → ürün adı normalize (backend)
+  // ==========================================================
+  const fetchProductInfoFromCode = useCallback(async (code) => {
+    const backend = API_BASE || "";
+    const safe = String(code || "").trim();
+    if (!safe) return "";
+
+    // Backend route map: /api/product-info/product
+    const res = await fetch(`${backend}/api/product-info/product`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ qr: safe }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    const productName = data?.product?.name || data?.productName || "";
+
+    return String(productName || safe).trim();
+  }, []);
 
   // ==========================================================
-  //  Ürün adı çözümleme — backend
+  //  KAMERA KONTROLÜ
   // ==========================================================
-  const fetchProductName = useCallback(
-    async (raw) => {
-      const qr = String(raw || "").trim();
-      if (!qr) return "";
-
-      try {
-        // server/routes/product-info.js: /api/product-info/product
-        const res = await fetch(`${backend}/api/product-info/product`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ qr }),
-        });
-
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-        const data = await res.json().catch(() => ({}));
-        const name =
-          String(data?.product?.name || data?.productName || "").trim() || "";
-        return name || qr;
-      } catch {
-        // resolver çalışmazsa raw ile devam
-        return qr;
-      }
-    },
-    [backend]
-  );
-
-  // ==========================================================
-  //  Kamera cihazı var mı?
-  // ==========================================================
-  const checkCameraPermissions = useCallback(async () => {
+  const checkCameraAvailability = useCallback(async () => {
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = devices.filter((d) => d.kind === "videoinput");
       return videoDevices.length > 0;
-    } catch {
+    } catch (err) {
+      console.warn("Kamera cihazları listelenemedi:", err);
       return false;
     }
   }, []);
 
   // ==========================================================
-  //  Tek seferlik yakalama handler'ı
+  //  KAPATMA İŞLEMİ (temizlik)
   // ==========================================================
-  const handleDetected = useCallback(
-    async (rawText) => {
-      const now = Date.now();
-      if (now - lastScanTimeRef.current < 900) return;
-      lastScanTimeRef.current = now;
+  const handleClose = useCallback(() => {
+    setActive(false);
 
-      const text = String(rawText || "").trim();
-      if (!text) return;
+    // Scanner'ı güvenli şekilde durdur ve temizle
+    if (scannerRef.current) {
+      safeDestroy(scannerRef.current);
+      scannerRef.current = null;
+    }
 
-      setLastScan(text);
+    // Video stream'ini temizle
+    if (videoRef.current?.srcObject) {
+      const tracks = videoRef.current.srcObject.getTracks();
+      tracks.forEach((t) => t.stop());
+      videoRef.current.srcObject = null;
+    }
 
-      // Önce query'yi çöz
-      const bestQuery = await fetchProductName(text);
-
-      // Scanner'ı durdur
-      setActive(false);
-
-      // Parent aramayı yapsın
-      onDetect?.(bestQuery || text);
-
-      // Debug
-      if (isProbablyBarcode(text)) {
-        console.log("📦 Barkod okundu:", text, "→", bestQuery);
-      } else {
-        console.log("📸 QR okundu:", text, "→", bestQuery);
-      }
-    },
-    [fetchProductName, onDetect]
-  );
+    onClose?.();
+  }, [onClose]);
 
   // ==========================================================
-  //  Scanner başlat
+  //  SCANNER BAŞLATMA (QR + Barkod)
   // ==========================================================
   useEffect(() => {
+    let scanner;
     let isMounted = true;
+    let barcodeTimer = null;
 
-    const stopBarcodeLoop = () => {
+    const processDetectedValue = async (rawValue) => {
+      if (!isMounted) return;
+      if (!active) return;
+
+      const now = Date.now();
+      if (now - lastScanTimeRef.current < 1200) return; // debounce
+      lastScanTimeRef.current = now;
+
+      const text = String(rawValue || "").trim();
+      if (!text) return;
+
+      setActive(false);
+      setLastScan(text);
+
+      let query = text;
       try {
-        if (barcodeIntervalRef.current) clearInterval(barcodeIntervalRef.current);
+        const normalized = await fetchProductInfoFromCode(text);
+        if (normalized) query = normalized;
+      } catch (err) {
+        // normalize patlarsa: ham değerle devam
+        console.warn("QR/Barcode normalize skip:", err?.message || err);
+      }
+
+      try {
+        onDetect?.(query);
       } catch {}
-      barcodeIntervalRef.current = null;
-      barcodeDetectorRef.current = null;
+
+      // Kullanıcı deneyimi: scanner kapanır (tek aksiyon, tek arama)
+      handleClose();
     };
 
-    const init = async () => {
-      setError("");
-
-      const cameraAvailable = await checkCameraPermissions();
+    const initializeScanner = async () => {
+      // Kamera var mı?
+      const cameraAvailable = await checkCameraAvailability();
       if (!cameraAvailable) {
-        setHasCamera(false);
         setError("Kamera bulunamadı veya erişim izni verilmedi.");
+        setHasCamera(false);
         return;
       }
 
+      // HTTPS kontrolü
       const isLocalhost =
         window.location.hostname === "localhost" ||
         window.location.hostname === "127.0.0.1";
@@ -172,123 +155,122 @@ export default function QRScanner({ onDetect, onClose }) {
           return;
         }
 
-        // Önce temizlik
-        stopBarcodeLoop();
+        // Önceki scanner'ı temizle
         if (scannerRef.current) {
           safeDestroy(scannerRef.current);
           scannerRef.current = null;
         }
-        stopVideoStream(videoEl);
 
         // QR scanner
-        const scanner = new QrScanner(
+        scanner = new QrScanner(
           videoEl,
-          (result) => {
-            // qr-scanner result bazen string, bazen {data}
-            const text =
-              typeof result === "string"
-                ? result
-                : result?.data || result?.text || "";
-            handleDetected(text);
-          },
+          (result) => processDetectedValue(result?.data),
           {
+            highlightScanRegion: true,
+            highlightCodeOutline: true,
+            maxScansPerSecond: 5,
+            preferredCamera: "environment",
             returnDetailedScanResult: true,
-            highlightScanRegion: false,
-            highlightCodeOutline: false,
-            maxScansPerSecond: 4,
           }
         );
 
         scannerRef.current = scanner;
-
         await scanner.start();
 
-        // Torch capability varsa initial state reset
-        const track = scanner.$video?.srcObject?.getVideoTracks?.()?.[0];
+        // Torch kapasitesi kontrolü (UI butonu için)
+        const track = scanner.$video?.srcObject?.getVideoTracks?.()[0];
         if (track?.getCapabilities?.().torch) setTorchOn(false);
 
-        // Barkod loop (destek varsa)
-        if (supportsBarcodeDetector()) {
+        // Barkod desteği (Chromium/Android vb.)
+        if (typeof window !== "undefined" && "BarcodeDetector" in window) {
           try {
-            const formats = [
-              "ean_13",
-              "ean_8",
-              "upc_a",
-              "upc_e",
-              "code_128",
-              "code_39",
-              "itf",
-              "data_matrix",
-              "qr_code",
-            ];
-
-            // Bazı tarayıcılarda getSupportedFormats var
-            let supported = formats;
-            try {
-              const got = await window.BarcodeDetector.getSupportedFormats?.();
-              if (Array.isArray(got) && got.length) supported = got;
-            } catch {}
-
-            barcodeDetectorRef.current = new window.BarcodeDetector({
-              formats: supported,
+            const detector = new window.BarcodeDetector({
+              formats: [
+                "ean_13",
+                "ean_8",
+                "upc_a",
+                "upc_e",
+                "code_128",
+                "code_39",
+                "qr_code",
+              ],
             });
 
-            barcodeIntervalRef.current = setInterval(async () => {
-              if (!isMounted || !active) return;
-              const det = barcodeDetectorRef.current;
-              const v = videoRef.current;
-              if (!det || !v) return;
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+            barcodeTimer = setInterval(async () => {
               try {
-                const codes = await det.detect(v);
-                if (codes && codes.length) {
-                  const val = codes[0]?.rawValue || codes[0]?.rawValueText || "";
-                  if (val) handleDetected(val);
-                }
+                if (!isMounted || !active) return;
+                if (!videoEl || videoEl.readyState < 2) return;
+
+                const w = videoEl.videoWidth || 0;
+                const h = videoEl.videoHeight || 0;
+                if (!w || !h) return;
+
+                canvas.width = w;
+                canvas.height = h;
+                ctx.drawImage(videoEl, 0, 0, w, h);
+
+                const codes = await detector.detect(canvas);
+                const first = codes?.[0]?.rawValue;
+                if (first) processDetectedValue(first);
               } catch {
-                // sessiz
+                // Barkod detector bazen false-positive/hata atar: sessiz geç
               }
-            }, 350);
-          } catch (e) {
-            console.warn("BarcodeDetector başlatılamadı:", e);
+            }, 800);
+          } catch (err) {
+            console.warn("BarcodeDetector init skip:", err?.message || err);
           }
         }
-      } catch (e) {
-        console.error("Kamera açılamadı:", e);
-        if (isMounted) setError("Kamera erişimi reddedildi: " + e.message);
+      } catch (err) {
+        console.error("Kamera açılamadı:", err);
+        if (isMounted) {
+          setError("Kamera erişimi reddedildi: " + (err?.message || err));
+        }
       }
     };
 
-    init();
+    initializeScanner();
 
+    // CLEANUP
     return () => {
       isMounted = false;
 
-      try {
-        if (barcodeIntervalRef.current) clearInterval(barcodeIntervalRef.current);
-      } catch {}
-      barcodeIntervalRef.current = null;
-      barcodeDetectorRef.current = null;
-
-      if (scannerRef.current) {
-        safeDestroy(scannerRef.current);
-        scannerRef.current = null;
+      if (barcodeTimer) {
+        clearInterval(barcodeTimer);
+        barcodeTimer = null;
       }
-      stopVideoStream(videoRef.current);
+
+      if (scanner) safeDestroy(scanner);
+
+      // Video stream'ini temizle
+      if (videoRef.current?.srcObject) {
+        const tracks = videoRef.current.srcObject.getTracks();
+        tracks.forEach((t) => {
+          try {
+            t.stop();
+          } catch {}
+        });
+        videoRef.current.srcObject = null;
+      }
+
+      scannerRef.current = null;
     };
-  }, [active, checkCameraPermissions, handleDetected]);
+  }, [active, onDetect, handleClose, fetchProductInfoFromCode, checkCameraAvailability]);
 
   // ==========================================================
-  //  Fener kontrolü
+  //  FENER KONTROLÜ
   // ==========================================================
   const toggleTorch = useCallback(async () => {
     try {
       if (!scannerRef.current) return;
 
-      const track = scannerRef.current.$video?.srcObject?.getVideoTracks?.()?.[0];
+      const track = scannerRef.current.$video?.srcObject?.getVideoTracks?.()[0];
       if (!track) return;
 
-      const caps = track.getCapabilities?.();
-      if (!caps?.torch) {
+      const capabilities = track.getCapabilities?.();
+      if (!capabilities?.torch) {
         alert("Bu cihazda fener desteği yok.");
         return;
       }
@@ -303,7 +285,7 @@ export default function QRScanner({ onDetect, onClose }) {
   }, [torchOn]);
 
   // ==========================================================
-  //  Kamera yeniden başlatma
+  //  KAMERA YENİDEN BAŞLATMA
   // ==========================================================
   const restartCamera = useCallback(async () => {
     setError("");
@@ -311,28 +293,6 @@ export default function QRScanner({ onDetect, onClose }) {
     await new Promise((r) => setTimeout(r, 120));
     setActive(true);
   }, []);
-
-  // ==========================================================
-  //  Kapatma
-  // ==========================================================
-  const handleClose = useCallback(() => {
-    setActive(false);
-
-    try {
-      if (barcodeIntervalRef.current) clearInterval(barcodeIntervalRef.current);
-    } catch {}
-    barcodeIntervalRef.current = null;
-    barcodeDetectorRef.current = null;
-
-    if (scannerRef.current) {
-      safeDestroy(scannerRef.current);
-      scannerRef.current = null;
-    }
-
-    stopVideoStream(videoRef.current);
-
-    onClose?.();
-  }, [onClose]);
 
   // ==========================================================
   //  UI
@@ -419,12 +379,8 @@ export default function QRScanner({ onDetect, onClose }) {
 
       {/* Yardım metni */}
       <p className="text-gray-400 text-xs mt-4 text-center max-w-xs">
-        QR veya barkodu kare içine hizalayın. Otomatik olarak tarayacaktır.
-        {!supportsBarcodeDetector() ? (
-          <span className="block mt-1 text-yellow-400">
-            Not: Bu tarayıcı barkod taramayı desteklemiyor; QR tarama çalışır.
-          </span>
-        ) : null}
+        QR veya barkodu kare içine hizalayın. Algıladığında otomatik arama
+        tetiklenir.
       </p>
     </div>
   );
