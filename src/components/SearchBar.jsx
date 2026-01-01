@@ -6,9 +6,11 @@ import { pushQueryToVitrine, runUnifiedSearch } from "../utils/searchBridge";
 import { useTranslation } from "react-i18next";
 import QRScanner from "./QRScanner";
 import { detectCategory } from "../utils/categoryExtractor";
+import { API_BASE } from "../utils/api";
 
 export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
   const { t, i18n } = useTranslation();
+  const API = API_BASE || "";
 
   const [value, setValue] = useState("");
   const [index, setIndex] = useState(0);
@@ -123,23 +125,27 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     });
 
     try {
-      const r = await fetch("/api/vision", {
+      const r = await fetch(`${API}/api/vision`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ imageBase64: b64, locale: i18n.language }),
       });
 
       const j = await r.json();
-      const finalQuery = j?.query?.trim() || "ürün";
+      const finalQuery = String(j?.query || "").trim();
 
-    setValue(finalQuery);
-doSearch(finalQuery, "camera");
+      if (!finalQuery || finalQuery.toLowerCase() === "ürün") {
+        throw new Error("VISION_NO_QUERY");
+      }
+
+      setValue(finalQuery);
+      doSearch(finalQuery, "camera");
 
     } catch (e) {
       console.error("Vision error:", e);
-     setValue("ürün");
-doSearch("ürün", "camera");
-
+      try {
+        alert("Fotoğraf tanınamadı. Daha net çekip tekrar deneyin.");
+      } catch {}
     } finally {
       setLoading(false);
     }
