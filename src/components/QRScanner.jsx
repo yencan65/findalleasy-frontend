@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import QrScanner from "qr-scanner";
 import { API_BASE } from "../utils/api";
 
@@ -22,6 +23,7 @@ function safeDestroy(scanner) {
 }
 
 export default function QRScanner({ onDetect, onClose }) {
+  const { t } = useTranslation();
   const [error, setError] = useState("");
   const [active, setActive] = useState(true);
   const [torchOn, setTorchOn] = useState(false);
@@ -132,7 +134,7 @@ export default function QRScanner({ onDetect, onClose }) {
       // Kamera var mı?
       const cameraAvailable = await checkCameraAvailability();
       if (!cameraAvailable) {
-        setError("Kamera bulunamadı veya erişim izni verilmedi.");
+        setError(t("qrScanner.noCameraBody", "Kamera bulunamadı veya erişim izni verilmedi."));
         setHasCamera(false);
         return;
       }
@@ -142,7 +144,7 @@ export default function QRScanner({ onDetect, onClose }) {
         window.location.hostname === "localhost" ||
         window.location.hostname === "127.0.0.1";
       if (window.location.protocol !== "https:" && !isLocalhost) {
-        setError("Kamera için güvenli bağlantı (HTTPS) gerekli.");
+        setError(t("qrScanner.httpsRequired", "Kamera için güvenli bağlantı (HTTPS) gerekli."));
         return;
       }
 
@@ -151,7 +153,7 @@ export default function QRScanner({ onDetect, onClose }) {
       try {
         const videoEl = videoRef.current;
         if (!videoEl) {
-          setError("Video elementi bulunamadı.");
+          setError(t("qrScanner.videoNotFound", "Video elementi bulunamadı."));
           return;
         }
 
@@ -226,7 +228,7 @@ export default function QRScanner({ onDetect, onClose }) {
       } catch (err) {
         console.error("Kamera açılamadı:", err);
         if (isMounted) {
-          setError("Kamera erişimi reddedildi: " + (err?.message || err));
+          setError(t("qrScanner.cameraDenied", { defaultValue: "Kamera erişimi reddedildi: {{msg}}", msg: err?.message || String(err) }));
         }
       }
     };
@@ -257,7 +259,7 @@ export default function QRScanner({ onDetect, onClose }) {
 
       scannerRef.current = null;
     };
-  }, [active, onDetect, handleClose, fetchProductInfoFromCode, checkCameraAvailability]);
+  }, [active, t, onDetect, handleClose, fetchProductInfoFromCode, checkCameraAvailability]);
 
   // ==========================================================
   //  FENER KONTROLÜ
@@ -271,7 +273,7 @@ export default function QRScanner({ onDetect, onClose }) {
 
       const capabilities = track.getCapabilities?.();
       if (!capabilities?.torch) {
-        alert("Bu cihazda fener desteği yok.");
+        alert(t("qrScanner.torchNotSupported", "Bu cihazda fener desteği yok."));
         return;
       }
 
@@ -280,9 +282,9 @@ export default function QRScanner({ onDetect, onClose }) {
       setTorchOn(next);
     } catch (err) {
       console.warn("Fener değiştirilemedi:", err);
-      setError("Fener kontrol edilemedi");
+      setError(t("qrScanner.torchError", "Fener kontrol edilemedi"));
     }
-  }, [torchOn]);
+  }, [torchOn, t]);
 
   // ==========================================================
   //  KAMERA YENİDEN BAŞLATMA
@@ -301,15 +303,13 @@ export default function QRScanner({ onDetect, onClose }) {
     return (
       <div className="fixed inset-0 bg-black/90 flex flex-col items-center justify-center z-[9999]">
         <div className="bg-gray-800 p-6 rounded-xl max-w-md text-center">
-          <h2 className="text-red-400 text-lg mb-4">Kamera Erişilemiyor</h2>
-          <p className="text-white mb-4">
-            Kamera bulunamadı veya erişim izni verilmedi.
-          </p>
+          <h2 className="text-red-400 text-lg mb-4">{t("qrScanner.noCameraTitle", "Kamera Erişilemiyor")}</h2>
+          <p className="text-white mb-4">{t("qrScanner.noCameraBody", "Kamera bulunamadı veya erişim izni verilmedi.")}</p>
           <button
             onClick={handleClose}
             className="px-6 py-2 bg-red-600 rounded-lg text-white hover:bg-red-700"
           >
-            Kapat
+            {t("actions.close", "Kapat")}
           </button>
         </div>
       </div>
@@ -345,14 +345,14 @@ export default function QRScanner({ onDetect, onClose }) {
             onClick={restartCamera}
             className="px-4 py-1 text-sm bg-yellow-600 rounded-lg text-white"
           >
-            Yeniden Dene
+            {t("qrScanner.retry", "Yeniden Dene")}
           </button>
         </div>
       )}
 
       {lastScan && (
         <p className="text-[#d4af37] text-sm mt-3 text-center">
-          Son okunan: <span className="font-semibold">{lastScan}</span>
+          {t("qrScanner.lastRead", "Son okunan:")} <span className="font-semibold">{lastScan}</span>
         </p>
       )}
 
@@ -366,21 +366,20 @@ export default function QRScanner({ onDetect, onClose }) {
               : "border-[#d4af37] text-[#d4af37] hover:bg-[#d4af37]/10"
           } transition-colors`}
         >
-          {torchOn ? "🔦 Fener Kapat" : "🔦 Fener Aç"}
+          {torchOn ? t("qrScanner.torchTurnOff", "🔦 Fener Kapat") : t("qrScanner.torchTurnOn", "🔦 Fener Aç")}
         </button>
 
         <button
           onClick={handleClose}
           className="px-4 py-2 rounded-xl border border-red-500 text-red-400 hover:bg-red-500/10 transition-colors"
         >
-          ✕ Kapat
+          ✕ {t("actions.close", "Kapat")}
         </button>
       </div>
 
       {/* Yardım metni */}
       <p className="text-gray-400 text-xs mt-4 text-center max-w-xs">
-        QR veya barkodu kare içine hizalayın. Algıladığında otomatik arama
-        tetiklenir.
+        {t("qrScanner.help", "QR veya barkodu kare içine hizalayın. Algıladığında otomatik arama tetiklenir.")}
       </p>
     </div>
   );
