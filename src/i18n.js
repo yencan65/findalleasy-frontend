@@ -1,5 +1,5 @@
 // src/i18n.js
-// Çok dilli i18n yapılandırması – temiz ve tam sürüm
+// Çok dilli i18n yapılandırması – temiz ve tam sürüm (NO DUPLICATE KEYS)
 
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
@@ -7,6 +7,7 @@ import LanguageDetector from "i18next-browser-languagedetector";
 import { API_BASE } from "./utils/api";
 
 const resources = {
+  // ======================== TURKISH ========================
   tr: {
     translation: {
       "yazman yeterli,": "Yazman yeterli,",
@@ -26,7 +27,11 @@ const resources = {
         contact: "İletişim"
       },
 
+      // ✅ TEK legal objesi (birleştirildi)
       legal: {
+        badge: "Legal",
+        home: "← Ana sayfa",
+        updatedAt: "Güncelleme",
         privacy: "Gizlilik",
         cookies: "Çerezler",
         affiliate: "Affiliate Açıklaması",
@@ -86,6 +91,7 @@ const resources = {
         voiceError: "Sesli arama hatası."
       },
 
+      // ✅ TEK qrScanner (TR)
       qrScanner: {
         noCameraTitle: "Kamera Erişilemiyor",
         noCameraBody: "Kamera bulunamadı veya erişim izni verilmedi.",
@@ -99,66 +105,6 @@ const resources = {
         cameraDenied: "Kamera erişimi reddedildi: {{msg}}",
         torchNotSupported: "Bu cihazda fener desteği yok.",
         torchError: "Fener kontrol edilemedi"
-      },
-
-      qrScanner: {
-        noCameraTitle: "Camera unavailable",
-        noCameraBody: "No camera found or permission was not granted.",
-        retry: "Try again",
-        lastRead: "Last scanned:",
-        torchTurnOn: "🔦 Turn on flash",
-        torchTurnOff: "🔦 Turn off flash",
-        help: "Align the QR code or barcode inside the square. Search will trigger automatically when detected.",
-        httpsRequired: "A secure connection (HTTPS) is required to use the camera.",
-        videoNotFound: "Video element not found.",
-        cameraDenied: "Camera access denied: {{msg}}",
-        torchNotSupported: "Flash is not supported on this device.",
-        torchError: "Flash could not be controlled"
-      },
-
-      qrScanner: {
-        noCameraTitle: "Caméra indisponible",
-        noCameraBody: "Aucune caméra trouvée ou l’autorisation n’a pas été accordée.",
-        retry: "Réessayer",
-        lastRead: "Dernier scan :",
-        torchTurnOn: "🔦 Allumer le flash",
-        torchTurnOff: "🔦 Éteindre le flash",
-        help: "Alignez le QR code ou le code-barres dans le cadre. La recherche se lancera automatiquement dès qu’il est détecté.",
-        httpsRequired: "Une connexion sécurisée (HTTPS) est requise pour utiliser la caméra.",
-        videoNotFound: "Élément vidéo introuvable.",
-        cameraDenied: "Accès à la caméra refusé : {{msg}}",
-        torchNotSupported: "Le flash n’est pas pris en charge sur cet appareil.",
-        torchError: "Impossible de contrôler le flash"
-      },
-
-      qrScanner: {
-        noCameraTitle: "Камера недоступна",
-        noCameraBody: "Камера не найдена или доступ к ней не разрешён.",
-        retry: "Повторить",
-        lastRead: "Последнее сканирование:",
-        torchTurnOn: "🔦 Включить фонарик",
-        torchTurnOff: "🔦 Выключить фонарик",
-        help: "Поместите QR‑код или штрих‑код в рамку. По обнаружении поиск запустится автоматически.",
-        httpsRequired: "Для использования камеры требуется защищённое соединение (HTTPS).",
-        videoNotFound: "Элемент видео не найден.",
-        cameraDenied: "Доступ к камере запрещён: {{msg}}",
-        torchNotSupported: "Фонарик не поддерживается на этом устройстве.",
-        torchError: "Не удалось управлять фонариком"
-      },
-
-      qrScanner: {
-        noCameraTitle: "الكاميرا غير متاحة",
-        noCameraBody: "لم يتم العثور على كاميرا أو لم يتم منح الإذن.",
-        retry: "أعد المحاولة",
-        lastRead: "آخر مسح:",
-        torchTurnOn: "🔦 تشغيل الفلاش",
-        torchTurnOff: "🔦 إيقاف الفلاش",
-        help: "ضع رمز QR أو الباركود داخل الإطار. سيتم تشغيل البحث تلقائيًا عند اكتشافه.",
-        httpsRequired: "يلزم اتصال آمن (HTTPS) لاستخدام الكاميرا.",
-        videoNotFound: "تعذّر العثور على عنصر الفيديو.",
-        cameraDenied: "تم رفض الوصول إلى الكاميرا: {{msg}}",
-        torchNotSupported: "الفلاش غير مدعوم على هذا الجهاز.",
-        torchError: "تعذّر التحكم في الفلاش"
       },
 
       smartGreeting: {
@@ -257,18 +203,6 @@ const resources = {
         mid: "Zaman ve paradan tasarruf için parmak şıklatman yeter,",
         right: "gerisini O halleder."
       },
-
-      legal: {
-        badge: "Legal",
-        home: "← Ana sayfa",
-        updatedAt: "Güncelleme",
-        privacy: "Gizlilik",
-        cookies: "Çerezler",
-        affiliate: "Affiliate Açıklaması",
-        terms: "Kullanım Şartları",
-
-      },
-
 
       ai: {
         sono: "Sono AI",
@@ -373,7 +307,7 @@ const resources = {
           telegram: "Telegram",
           x: "X",
           facebook: "Facebook",
-          instagram: "Instagram",
+          instagram: "Instagram"
         },
 
         motto:
@@ -415,7 +349,11 @@ const resources = {
         contact: "Contact"
       },
 
+      // ✅ merged legal
       legal: {
+        badge: "Legal",
+        home: "← Home",
+        updatedAt: "Updated",
         privacy: "Privacy",
         cookies: "Cookies",
         affiliate: "Affiliate Disclosure",
@@ -472,6 +410,22 @@ const resources = {
         voiceDone: "Got it — searching.",
         voiceStopped: "Voice search stopped.",
         voiceError: "Voice search error."
+      },
+
+      // ✅ qrScanner (EN)
+      qrScanner: {
+        noCameraTitle: "Camera unavailable",
+        noCameraBody: "No camera found or permission was not granted.",
+        retry: "Try again",
+        lastRead: "Last scanned:",
+        torchTurnOn: "🔦 Turn on flash",
+        torchTurnOff: "🔦 Turn off flash",
+        help: "Align the QR code or barcode inside the square. Search will trigger automatically when detected.",
+        httpsRequired: "A secure connection (HTTPS) is required to use the camera.",
+        videoNotFound: "Video element not found.",
+        cameraDenied: "Camera access denied: {{msg}}",
+        torchNotSupported: "Flash is not supported on this device.",
+        torchError: "Flash could not be controlled"
       },
 
       smartGreeting: {
@@ -571,18 +525,6 @@ const resources = {
         right: "it handles the rest."
       },
 
-      legal: {
-        badge: "Legal",
-        home: "← Home",
-        updatedAt: "Updated",
-        privacy: "Privacy",
-        cookies: "Cookies",
-        affiliate: "Affiliate Disclosure",
-        terms: "Terms of Use",
-
-      },
-
-
       ai: {
         sono: "Sono AI",
         listen: "Listen",
@@ -601,7 +543,8 @@ const resources = {
       },
 
       wallet: {
-        statusNote: "This panel is currently only for your invite link and history.",
+        statusNote:
+          "This panel is currently only for your invite link and history.",
         title: "My Wallet",
         howTo: "How do I earn?",
         invite: "Invite",
@@ -650,7 +593,8 @@ const resources = {
           "Wallet features may open later. For now, this panel is for info and your invite link.",
         infoDiscount:
           "Right now we’re only testing the best-price search and click-out flow. When wallet/rewards go live, details will be published here.",
-        infoReferral: "Invites are ready; if rewards become active later, referral earnings will appear here.",
+        infoReferral:
+          "Invites are ready; if rewards become active later, referral earnings will appear here.",
 
         walletTabs: {
           wallet: "Wallet",
@@ -683,7 +627,7 @@ const resources = {
           telegram: "Telegram",
           x: "X",
           facebook: "Facebook",
-          instagram: "Instagram",
+          instagram: "Instagram"
         },
 
         motto:
@@ -725,10 +669,15 @@ const resources = {
         contact: "Contact"
       },
 
+      // ✅ merged legal
       legal: {
+        badge: "Légal",
+        home: "← Accueil",
+        updatedAt: "Mise à jour",
         privacy: "Confidentialité",
         cookies: "Cookies",
-        affiliate: "Mention d’affiliation"
+        affiliate: "Mention d’affiliation",
+        terms: "Conditions d’utilisation"
       },
 
       fillAllFields: "Veuillez remplir tous les champs.",
@@ -783,6 +732,25 @@ const resources = {
         voiceDone: "Compris — je recherche.",
         voiceStopped: "Recherche vocale arrêtée.",
         voiceError: "Erreur de recherche vocale."
+      },
+
+      // ✅ qrScanner (FR)
+      qrScanner: {
+        noCameraTitle: "Caméra indisponible",
+        noCameraBody:
+          "Aucune caméra trouvée ou l’autorisation n’a pas été accordée.",
+        retry: "Réessayer",
+        lastRead: "Dernier scan :",
+        torchTurnOn: "🔦 Allumer le flash",
+        torchTurnOff: "🔦 Éteindre le flash",
+        help: "Alignez le QR code ou le code-barres dans le cadre. La recherche se lancera automatiquement dès qu’il est détecté.",
+        httpsRequired:
+          "Une connexion sécurisée (HTTPS) est requise pour utiliser la caméra.",
+        videoNotFound: "Élément vidéo introuvable.",
+        cameraDenied: "Accès à la caméra refusé : {{msg}}",
+        torchNotSupported:
+          "Le flash n’est pas pris en charge sur cet appareil.",
+        torchError: "Impossible de contrôler le flash"
       },
 
       smartGreeting: {
@@ -847,8 +815,7 @@ const resources = {
         activationMailSent:
           "Inscription réussie ! Un code d’activation a été envoyé.",
         activateTitle: "Activer le compte",
-        activationInfoEmail:
-          "veuillez saisir le code reçu à cette adresse.",
+        activationInfoEmail: "veuillez saisir le code reçu à cette adresse.",
         activationInfoNoEmail:
           "Veuillez entrer votre e-mail pour recevoir un code.",
         activationCode: "Code d’activation",
@@ -886,18 +853,6 @@ const resources = {
         right: "je m'occupe du reste."
       },
 
-      legal: {
-        badge: "Légal",
-        home: "← Accueil",
-        updatedAt: "Mise à jour",
-        privacy: "Confidentialité",
-        cookies: "Cookies",
-        affiliate: "Mention d’affiliation",
-        terms: "Conditions d’utilisation",
-
-      },
-
-
       ai: {
         sono: "Sono AI",
         listen: "Écouter",
@@ -917,7 +872,8 @@ const resources = {
       },
 
       wallet: {
-        statusNote: "Ce panneau est actuellement uniquement destiné à votre lien d\'invitation et à l\'historique.",
+        statusNote:
+          "Ce panneau est actuellement uniquement destiné à votre lien d'invitation et à l'historique.",
         title: "Mon portefeuille",
         howTo: "Comment gagner ?",
         invite: "Inviter",
@@ -942,12 +898,9 @@ const resources = {
         myBadges: "Mes badges",
         errorGeneric: "Erreur.",
         noBalance: "Aucun solde.",
-        needLogin:
-          "Veuillez vous connecter pour voir le portefeuille.",
-        mustLoginInvite:
-          "Connexion requise pour créer une invitation.",
-        mustLoginCoupon:
-          "Connexion requise pour créer un coupon.",
+        needLogin: "Veuillez vous connecter pour voir le portefeuille.",
+        mustLoginInvite: "Connexion requise pour créer une invitation.",
+        mustLoginCoupon: "Connexion requise pour créer un coupon.",
         mustLoginRedeem:
           "Connexion requise pour utiliser une réduction.",
 
@@ -981,12 +934,9 @@ const resources = {
 
         historyTitle: "Historique du portefeuille",
         historyEmpty: "Aucun mouvement enregistré.",
-        historyUnavailable:
-          "Historique indisponible ou aucun enregistrement.",
-        historyError:
-          "Erreur lors du chargement de l’historique.",
-        mustLoginHistory:
-          "Veuillez vous connecter pour voir l’historique.",
+        historyUnavailable: "Historique indisponible ou aucun enregistrement.",
+        historyError: "Erreur lors du chargement de l’historique.",
+        mustLoginHistory: "Veuillez vous connecter pour voir l’historique.",
         txOrderRef: "Commande :",
         txUnknownDate: "Aucune date",
 
@@ -1007,7 +957,7 @@ const resources = {
           telegram: "Telegram",
           x: "X",
           facebook: "Facebook",
-          instagram: "Instagram",
+          instagram: "Instagram"
         },
 
         motto:
@@ -1017,8 +967,7 @@ const resources = {
       orders: {
         title: "Mes commandes",
         empty: "Aucune commande suivie pour le moment.",
-        mustLogin:
-          "Veuillez vous connecter pour voir vos commandes.",
+        mustLogin: "Veuillez vous connecter pour voir vos commandes.",
         status: {
           pending: "En attente",
           paid: "Payé",
@@ -1050,10 +999,15 @@ const resources = {
         contact: "Контакты"
       },
 
+      // ✅ merged legal
       legal: {
+        badge: "Правовые",
+        home: "← На главную",
+        updatedAt: "Обновлено",
         privacy: "Конфиденциальность",
-        cookies: "Cookies",
-        affiliate: "Affiliate-раскрытие"
+        cookies: "Файлы cookie",
+        affiliate: "Affiliate-раскрытие",
+        terms: "Условия использования"
       },
 
       fillAllFields: "Заполните все поля.",
@@ -1108,6 +1062,23 @@ const resources = {
         voiceDone: "Понял — ищу.",
         voiceStopped: "Голосовой поиск остановлен.",
         voiceError: "Ошибка голосового поиска."
+      },
+
+      // ✅ qrScanner (RU)
+      qrScanner: {
+        noCameraTitle: "Камера недоступна",
+        noCameraBody: "Камера не найдена или доступ к ней не разрешён.",
+        retry: "Повторить",
+        lastRead: "Последнее сканирование:",
+        torchTurnOn: "🔦 Включить фонарик",
+        torchTurnOff: "🔦 Выключить фонарик",
+        help: "Поместите QR-код или штрих-код в рамку. По обнаружении поиск запустится автоматически.",
+        httpsRequired:
+          "Для использования камеры требуется защищённое соединение (HTTPS).",
+        videoNotFound: "Элемент видео не найден.",
+        cameraDenied: "Доступ к камере запрещён: {{msg}}",
+        torchNotSupported: "Фонарик не поддерживается на этом устройстве.",
+        torchError: "Не удалось управлять фонариком"
       },
 
       smartGreeting: {
@@ -1167,20 +1138,15 @@ const resources = {
 
         loginFailed: "Ошибка входа.",
         registerFailed: "Ошибка регистрации.",
-        registerSuccess:
-          "Регистрация успешна, теперь войдите.",
-        activationMailSent:
-          "Регистрация успешна! Код активации отправлен.",
+        registerSuccess: "Регистрация успешна, теперь войдите.",
+        activationMailSent: "Регистрация успешна! Код активации отправлен.",
         activateTitle: "Активировать аккаунт",
-        activationInfoEmail:
-          "введите код, отправленный на этот адрес.",
-        activationInfoNoEmail:
-          "Введите e-mail, чтобы получить код.",
+        activationInfoEmail: "введите код, отправленный на этот адрес.",
+        activationInfoNoEmail: "Введите e-mail, чтобы получить код.",
         activationCode: "Код активации",
         activateAccount: "Активировать аккаунт",
         activationCodeRequired: "Нужен код активации.",
-        activationFailed:
-          "Активация не удалась, проверьте код.",
+        activationFailed: "Активация не удалась, проверьте код.",
         activationSuccess: "Ваш аккаунт успешно активирован!",
         resendCode: "Отправить код снова",
         resendFailed: "Не удалось отправить письмо.",
@@ -1212,18 +1178,6 @@ const resources = {
         right: "остальное я сделаю."
       },
 
-      legal: {
-        badge: "Правовые",
-        home: "← На главную",
-        updatedAt: "Обновлено",
-        privacy: "Конфиденциальность",
-        cookies: "Файлы cookie",
-        affiliate: "Affiliate-раскрытие",
-        terms: "Условия использования",
-
-      },
-
-
       ai: {
         sono: "Sono AI",
         listen: "Слушать",
@@ -1237,13 +1191,13 @@ const resources = {
         talk: "Говорить",
         error: "Произошла ошибка.",
         noAnswer: "Сейчас не удалось получить ответ.",
-        noSpeech:
-          "Браузер не поддерживает распознавание речи.",
+        noSpeech: "Браузер не поддерживает распознавание речи.",
         thanksReply: "Пожалуйста, я всегда рядом."
       },
 
       wallet: {
-        statusNote: "Этот раздел сейчас предназначен только для ссылки приглашения и истории.",
+        statusNote:
+          "Этот раздел сейчас предназначен только для ссылки приглашения и истории.",
         title: "Кошелёк",
         howTo: "Как заработать?",
         invite: "Пригласить",
@@ -1269,12 +1223,9 @@ const resources = {
         errorGeneric: "Ошибка.",
         noBalance: "Нет баланса.",
         needLogin: "Войдите, чтобы увидеть кошелёк.",
-        mustLoginInvite:
-          "Войдите, чтобы создать приглашение.",
-        mustLoginCoupon:
-          "Войдите, чтобы создать купон.",
-        mustLoginRedeem:
-          "Войдите, чтобы использовать скидку.",
+        mustLoginInvite: "Войдите, чтобы создать приглашение.",
+        mustLoginCoupon: "Войдите, чтобы создать купон.",
+        mustLoginRedeem: "Войдите, чтобы использовать скидку.",
 
         enterCoupon: "Введите код купона.",
         couponInvalid: "Купон недействителен или недоступен.",
@@ -1306,11 +1257,9 @@ const resources = {
 
         historyTitle: "История кошелька",
         historyEmpty: "Нет записанных операций.",
-        historyUnavailable:
-          "История недоступна или пуста.",
+        historyUnavailable: "История недоступна или пуста.",
         historyError: "Ошибка при загрузке истории.",
-        mustLoginHistory:
-          "Войдите, чтобы увидеть историю.",
+        mustLoginHistory: "Войдите, чтобы увидеть историю.",
         txOrderRef: "Заказ:",
         txUnknownDate: "Нет даты",
 
@@ -1331,7 +1280,7 @@ const resources = {
           telegram: "Telegram",
           x: "X",
           facebook: "Facebook",
-          instagram: "Instagram",
+          instagram: "Instagram"
         },
 
         motto:
@@ -1373,10 +1322,15 @@ const resources = {
         contact: "تواصل معنا"
       },
 
+      // ✅ merged legal
       legal: {
+        badge: "قانوني",
+        home: "← الرئيسية",
+        updatedAt: "تم التحديث",
         privacy: "الخصوصية",
         cookies: "ملفات تعريف الارتباط",
-        affiliate: "إفصاح الإحالة"
+        affiliate: "إفصاح الإحالة",
+        terms: "شروط الاستخدام"
       },
 
       fillAllFields: "يرجى تعبئة جميع الحقول.",
@@ -1429,6 +1383,22 @@ const resources = {
         voiceDone: "تم — جارٍ البحث.",
         voiceStopped: "تم إيقاف البحث الصوتي.",
         voiceError: "حدث خطأ في البحث الصوتي."
+      },
+
+      // ✅ qrScanner (AR)
+      qrScanner: {
+        noCameraTitle: "الكاميرا غير متاحة",
+        noCameraBody: "لم يتم العثور على كاميرا أو لم يتم منح الإذن.",
+        retry: "أعد المحاولة",
+        lastRead: "آخر مسح:",
+        torchTurnOn: "🔦 تشغيل الفلاش",
+        torchTurnOff: "🔦 إيقاف الفلاش",
+        help: "ضع رمز QR أو الباركود داخل الإطار. سيتم تشغيل البحث تلقائيًا عند اكتشافه.",
+        httpsRequired: "يلزم اتصال آمن (HTTPS) لاستخدام الكاميرا.",
+        videoNotFound: "تعذّر العثور على عنصر الفيديو.",
+        cameraDenied: "تم رفض الوصول إلى الكاميرا: {{msg}}",
+        torchNotSupported: "الفلاش غير مدعوم على هذا الجهاز.",
+        torchError: "تعذّر التحكم في الفلاش"
       },
 
       smartGreeting: {
@@ -1488,8 +1458,7 @@ const resources = {
 
         loginFailed: "فشل تسجيل الدخول.",
         registerFailed: "فشل التسجيل.",
-        registerSuccess:
-          "تم التسجيل بنجاح، يمكنك الآن تسجيل الدخول.",
+        registerSuccess: "تم التسجيل بنجاح، يمكنك الآن تسجيل الدخول.",
         activationMailSent:
           "تم إنشاء الحساب! تم إرسال رمز التفعيل إلى بريدك الإلكتروني.",
         activateTitle: "تفعيل الحساب",
@@ -1531,18 +1500,6 @@ const resources = {
         mid: "اضغط بإصبعك لتوفير الوقت والمال،",
         right: "وسأتولى الباقي."
       },
-
-      legal: {
-        badge: "قانوني",
-        home: "← الرئيسية",
-        updatedAt: "تم التحديث",
-        privacy: "الخصوصية",
-        cookies: "ملفات تعريف الارتباط",
-        affiliate: "إفصاح الإحالة",
-        terms: "شروط الاستخدام",
-
-      },
-
 
       ai: {
         sono: "Sono AI",
@@ -1587,14 +1544,10 @@ const resources = {
         myBadges: "شاراتي",
         errorGeneric: "حدث خطأ.",
         noBalance: "لا يوجد رصيد.",
-        needLogin:
-          "يرجى تسجيل الدخول لرؤية محفظتك.",
-        mustLoginInvite:
-          "يجب تسجيل الدخول لإنشاء الدعوة.",
-        mustLoginCoupon:
-          "يجب تسجيل الدخول لإنشاء قسيمة.",
-        mustLoginRedeem:
-          "يجب تسجيل الدخول لاستخدام الخصم.",
+        needLogin: "يرجى تسجيل الدخول لرؤية محفظتك.",
+        mustLoginInvite: "يجب تسجيل الدخول لإنشاء الدعوة.",
+        mustLoginCoupon: "يجب تسجيل الدخول لإنشاء قسيمة.",
+        mustLoginRedeem: "يجب تسجيل الدخول لاستخدام الخصم.",
 
         enterCoupon: "يرجى إدخال رمز القسيمة.",
         couponInvalid: "القسيمة غير صالحة أو لا يمكن استخدامها.",
@@ -1626,12 +1579,9 @@ const resources = {
 
         historyTitle: "سجل المحفظة",
         historyEmpty: "لا توجد عمليات مسجلة.",
-        historyUnavailable:
-          "السجل غير متاح أو فارغ.",
-        historyError:
-          "حدث خطأ أثناء تحميل السجل.",
-        mustLoginHistory:
-          "يجب تسجيل الدخول لرؤية سجل المحفظة.",
+        historyUnavailable: "السجل غير متاح أو فارغ.",
+        historyError: "حدث خطأ أثناء تحميل السجل.",
+        mustLoginHistory: "يجب تسجيل الدخول لرؤية سجل المحفظة.",
         txOrderRef: "طلب:",
         txUnknownDate: "لا يوجد تاريخ",
 
@@ -1652,7 +1602,7 @@ const resources = {
           telegram: "Telegram",
           x: "X",
           facebook: "Facebook",
-          instagram: "Instagram",
+          instagram: "Instagram"
         },
 
         motto:
@@ -1701,15 +1651,11 @@ export function sanitizeName(name) {
 // Backend çeviri servisi varsa fallback
 export async function aiTranslate(text, targetLang) {
   try {
-    const res = await fetch(
-      (API_BASE || "") +
-        "/api/translate",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, targetLang })
-      }
-    );
+    const res = await fetch((API_BASE || "") + "/api/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, targetLang })
+    });
     const json = await res.json();
     return json && json.ok && json.translated ? json.translated : text;
   } catch {
