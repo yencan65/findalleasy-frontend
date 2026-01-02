@@ -86,6 +86,81 @@ const resources = {
         voiceError: "Sesli arama hatası."
       },
 
+      qrScanner: {
+        noCameraTitle: "Kamera Erişilemiyor",
+        noCameraBody: "Kamera bulunamadı veya erişim izni verilmedi.",
+        retry: "Yeniden Dene",
+        lastRead: "Son okunan:",
+        torchTurnOn: "🔦 Fener Aç",
+        torchTurnOff: "🔦 Fener Kapat",
+        help: "QR veya barkodu kare içine hizalayın. Algıladığında otomatik arama tetiklenir.",
+        httpsRequired: "Kamerayı kullanmak için güvenli bağlantı (HTTPS) gerekli.",
+        videoNotFound: "Video elementi bulunamadı.",
+        cameraDenied: "Kamera erişimi reddedildi: {{msg}}",
+        torchNotSupported: "Bu cihazda fener desteği yok.",
+        torchError: "Fener kontrol edilemedi"
+      },
+
+      qrScanner: {
+        noCameraTitle: "Camera unavailable",
+        noCameraBody: "No camera found or permission was not granted.",
+        retry: "Try again",
+        lastRead: "Last scanned:",
+        torchTurnOn: "🔦 Turn on flash",
+        torchTurnOff: "🔦 Turn off flash",
+        help: "Align the QR code or barcode inside the square. Search will trigger automatically when detected.",
+        httpsRequired: "A secure connection (HTTPS) is required to use the camera.",
+        videoNotFound: "Video element not found.",
+        cameraDenied: "Camera access denied: {{msg}}",
+        torchNotSupported: "Flash is not supported on this device.",
+        torchError: "Flash could not be controlled"
+      },
+
+      qrScanner: {
+        noCameraTitle: "Caméra indisponible",
+        noCameraBody: "Aucune caméra trouvée ou l’autorisation n’a pas été accordée.",
+        retry: "Réessayer",
+        lastRead: "Dernier scan :",
+        torchTurnOn: "🔦 Allumer le flash",
+        torchTurnOff: "🔦 Éteindre le flash",
+        help: "Alignez le QR code ou le code-barres dans le cadre. La recherche se lancera automatiquement dès qu’il est détecté.",
+        httpsRequired: "Une connexion sécurisée (HTTPS) est requise pour utiliser la caméra.",
+        videoNotFound: "Élément vidéo introuvable.",
+        cameraDenied: "Accès à la caméra refusé : {{msg}}",
+        torchNotSupported: "Le flash n’est pas pris en charge sur cet appareil.",
+        torchError: "Impossible de contrôler le flash"
+      },
+
+      qrScanner: {
+        noCameraTitle: "Камера недоступна",
+        noCameraBody: "Камера не найдена или доступ к ней не разрешён.",
+        retry: "Повторить",
+        lastRead: "Последнее сканирование:",
+        torchTurnOn: "🔦 Включить фонарик",
+        torchTurnOff: "🔦 Выключить фонарик",
+        help: "Поместите QR‑код или штрих‑код в рамку. По обнаружении поиск запустится автоматически.",
+        httpsRequired: "Для использования камеры требуется защищённое соединение (HTTPS).",
+        videoNotFound: "Элемент видео не найден.",
+        cameraDenied: "Доступ к камере запрещён: {{msg}}",
+        torchNotSupported: "Фонарик не поддерживается на этом устройстве.",
+        torchError: "Не удалось управлять фонариком"
+      },
+
+      qrScanner: {
+        noCameraTitle: "الكاميرا غير متاحة",
+        noCameraBody: "لم يتم العثور على كاميرا أو لم يتم منح الإذن.",
+        retry: "أعد المحاولة",
+        lastRead: "آخر مسح:",
+        torchTurnOn: "🔦 تشغيل الفلاش",
+        torchTurnOff: "🔦 إيقاف الفلاش",
+        help: "ضع رمز QR أو الباركود داخل الإطار. سيتم تشغيل البحث تلقائيًا عند اكتشافه.",
+        httpsRequired: "يلزم اتصال آمن (HTTPS) لاستخدام الكاميرا.",
+        videoNotFound: "تعذّر العثور على عنصر الفيديو.",
+        cameraDenied: "تم رفض الوصول إلى الكاميرا: {{msg}}",
+        torchNotSupported: "الفلاش غير مدعوم على هذا الجهاز.",
+        torchError: "تعذّر التحكم في الفلاش"
+      },
+
       smartGreeting: {
         hello: "Merhaba {{name}}",
         t1: "Bölgende en çok tıklanan fırsatları gösteriyorum",
