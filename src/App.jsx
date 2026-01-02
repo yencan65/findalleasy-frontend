@@ -497,106 +497,64 @@ group: "product",
           <span className="text-[#d4af37]">{t("halleder.")}</span>
         </h2>
 
-        {/* ◆ Arama Çubuğu (Responsive: mobil düzen ferah, masaüstü korunur) */}
+        {/* ◆ Arama Çubuğu (mobil + desktop tek yapı: ikon solda, çerçevesiz; input çerçevesi altın) */}
         <div className="w-full max-w-[760px] mt-3 sm:mt-4 mb-3">
-          {/* Mobile: input içinde sadece ikon + sağda Ses/Kamera/QR */}
-          <div className="sm:hidden flex items-center gap-1 w-full flex-nowrap">
+          <div className="flex items-center gap-1 sm:gap-2 w-full flex-nowrap">
+            {/* Input (ikon solda, çerçevesiz) */}
             <div className="relative flex-1 min-w-0">
               <input
+                id="search-input"
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && doSearch()}
                 placeholder={placeholders_[currentPlaceholder] || t("search.search")}
-                className="w-full h-11 rounded-xl px-4 pr-10 text-white placeholder:text-white/40 outline-none border border-white/10 bg-[#0B0E12]/45 backdrop-blur"
+                className="w-full h-11 sm:h-12 rounded-xl pl-9 sm:pl-11 pr-4 text-white placeholder:text-white/40 outline-none border border-[#D9A441]/45 focus:border-[#D9A441]/70 bg-[#0B0E12]/45 backdrop-blur"
               />
+
               <button
+                id="search-button"
                 onClick={doSearch}
-                className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
+                className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 p-1 rounded-md bg-transparent hover:bg-white/5 active:scale-95 transition"
                 aria-label={t("search.search")}
                 title={t("search.search")}
               >
-                <SearchIcon size={18} className="text-[#D9A441]" aria-hidden />
+                <SearchIcon className="w-4 h-4 sm:w-5 sm:h-5 text-[#D9A441]" aria-hidden />
               </button>
             </div>
 
-            <div className="flex items-center gap-1 flex-shrink-0">
+            {/* Sağ aksiyonlar: Ses / Kamera / QR */}
+            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
               <button
                 onClick={startMic}
-                className={`w-10 h-10 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition ${voiceListening ? "ring-2 ring-[#D9A441]/40 bg-[#D9A441]/10" : ""}`}
+                className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition ${voiceListening ? "ring-2 ring-[#D9A441]/40 bg-[#D9A441]/10" : ""}`}
                 title={t("search.voice")}
                 aria-label={t("search.voice")}
               >
                 <img
                   src={micIcon}
                   alt={t("search.voice")}
-                  className={`w-[18px] h-[18px] opacity-90 ${voiceListening ? "animate-pulse" : ""}`}
+                  className={`w-[18px] h-[18px] sm:w-5 sm:h-5 opacity-90 ${voiceListening ? "animate-pulse" : ""}`}
                 />
               </button>
 
               <button
                 onClick={openCamera}
-                className="w-10 h-10 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
+                className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
                 title={t("search.camera")}
                 aria-label={t("search.camera")}
               >
-                <img src={camera} alt={t("search.camera")} className="w-[18px] h-[18px] opacity-90" />
+                <img src={camera} alt={t("search.camera")} className="w-[18px] h-[18px] sm:w-5 sm:h-5 opacity-90" />
               </button>
 
               <button
                 onClick={startQRScanner}
-                className="w-10 h-10 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
+                className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
                 title={t("search.qr")}
                 aria-label={t("search.qr")}
               >
-                <QrCode className="text-[#D9A441]" size={20} />
+                <QrCode className="w-5 h-5 sm:w-[22px] sm:h-[22px] text-[#D9A441]" aria-hidden />
               </button>
             </div>
-          </div>
-
-          {/* Desktop/Tablet: düzen korunur (input + Ara + Ses/Kamera/QR) */}
-          <div className="hidden sm:flex items-center gap-2 w-full">
-            <input
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && doSearch()}
-              placeholder={placeholders_[currentPlaceholder] || t("search.search")}
-              className="flex-1 h-12 rounded-xl px-4 text-white placeholder:text-white/40 outline-none border border-white/10 bg-[#0B0E12]/45 backdrop-blur"
-            />
-            <button
-              onClick={doSearch}
-              className="w-12 h-12 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
-              aria-label={t("search.search")}
-              title={t("search.search")}
-            >
-              <SearchIcon size={22} className="text-[#D9A441]" aria-hidden />
-            </button>
-
-            <button
-              onClick={startMic}
-              className="w-12 h-12 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
-              title={t("search.voice")}
-              aria-label={t("search.voice")}
-            >
-              <img src={micIcon} alt={t("search.voice")} className="w-5 h-5 opacity-90" />
-            </button>
-
-            <button
-              onClick={openCamera}
-              className="w-12 h-12 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
-              title={t("search.camera")}
-              aria-label={t("search.camera")}
-            >
-              <img src={camera} alt={t("search.camera")} className="w-5 h-5 opacity-90" />
-            </button>
-
-            <button
-              onClick={startQRScanner}
-              className="w-12 h-12 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
-              title={t("search.qr")}
-              aria-label={t("search.qr")}
-            >
-              <QrCode className="text-[#D9A441]" size={22} />
-            </button>
           </div>
         </div>
 
