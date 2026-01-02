@@ -302,8 +302,38 @@ group: "product",
       voiceRecRef.current = rec;
 
       rec.lang = i18n.language || "tr-TR";
-      rec.interimResults = false;
+      rec.interimResults = true;       // ✅ daha hızlı tepki
+      rec.continuous = true;           // ✅ kısa boşluklarda kesilmesin
       rec.maxAlternatives = 1;
+
+      let finalText = "";
+      let idleTimer = null;
+      let committed = false;
+
+      const commit = async (text) => {
+        const clean = String(text || "").trim();
+        if (!clean || committed) return;
+        committed = true;
+
+        try {
+          clearTimeout(idleTimer);
+        } catch {}
+
+        setValue(clean);
+        showVoiceToast(
+          t("search.voiceDone", { defaultValue: "Tamam — arıyorum." }),
+          "ok",
+          1400
+        );
+
+        try {
+          await doSearch(clean, { source: "voice" });
+        } finally {
+          try {
+            rec.stop();
+          } catch {}
+        }
+      };
 
       rec.onstart = () => {
         setVoiceListening(true);
@@ -316,19 +346,32 @@ group: "product",
         );
       };
 
-      rec.onresult = async (e) => {
-        const text = e?.results?.[0]?.[0]?.transcript || "";
-        const clean = String(text).trim();
-        if (!clean) return;
+      rec.onresult = (e) => {
+        try {
+          let interim = "";
+          let finals = "";
 
-        setValue(clean);
-        showVoiceToast(
-          t("search.voiceDone", { defaultValue: "Tamam — arıyorum." }),
-          "ok",
-          1400
-        );
+          for (let i = e.resultIndex; i < e.results.length; i++) {
+            const r = e.results[i];
+            const tr = r?.[0]?.transcript || "";
+            if (r.isFinal) finals += tr + " ";
+            else interim += tr + " ";
+          }
 
-        await doSearch(clean, { source: "voice" });
+          if (finals.trim()) finalText = (finalText + " " + finals).trim();
+
+          const merged = (finalText || interim || "").trim();
+          if (merged) setValue(merged);
+
+          // ✅ Kullanıcı duraklayınca otomatik “tamam” kabul et
+          clearTimeout(idleTimer);
+          idleTimer = setTimeout(() => {
+            const q = (finalText || interim || "").trim();
+            if (q) commit(q);
+          }, 550);
+        } catch (err) {
+          console.warn("Speech onresult error:", err);
+        }
       };
 
       rec.onerror = (e) => {
@@ -343,6 +386,9 @@ group: "product",
       };
 
       rec.onend = () => {
+        try {
+          clearTimeout(idleTimer);
+        } catch {}
         setVoiceListening(false);
         voiceRecRef.current = null;
       };
@@ -368,22 +414,83 @@ group: "product",
     fileRef.current?.click();
   }
 
+  // ✅ Kamera upload'unda base64 şişmesini kes: canvas ile resize+compress
+  async function compressImageForVision(file, { maxSide = 1280, quality = 0.82 } = {}) {
+    try {
+      if (!file) return null;
+
+      // Prefer createImageBitmap (faster)
+      let bmp = null;
+      try {
+        if (typeof createImageBitmap === "function") {
+          bmp = await createImageBitmap(file);
+        }
+      } catch {
+        bmp = null;
+      }
+
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d", { alpha: false });
+      if (!ctx) return null;
+
+      if (bmp) {
+        const w = bmp.width || 0;
+        const h = bmp.height || 0;
+        if (!w || !h) return null;
+
+        const scale = Math.min(1, maxSide / Math.max(w, h));
+        const nw = Math.max(1, Math.round(w * scale));
+        const nh = Math.max(1, Math.round(h * scale));
+
+        canvas.width = nw;
+        canvas.height = nh;
+        ctx.drawImage(bmp, 0, 0, nw, nh);
+        try { bmp.close?.(); } catch {}
+
+        return canvas.toDataURL("image/jpeg", quality);
+      }
+
+      // Fallback: FileReader -> Image
+      const dataUrl = await new Promise((ok, fail) => {
+        const r = new FileReader();
+        r.onload = () => ok(r.result);
+        r.onerror = () => fail(new Error("File read error"));
+        r.readAsDataURL(file);
+      });
+
+      const img = await new Promise((ok, fail) => {
+        const im = new Image();
+        im.onload = () => ok(im);
+        im.onerror = () => fail(new Error("Image decode error"));
+        im.src = String(dataUrl);
+      });
+
+      const w = img.naturalWidth || img.width;
+      const h = img.naturalHeight || img.height;
+      const scale = Math.min(1, maxSide / Math.max(w, h));
+      const nw = Math.max(1, Math.round(w * scale));
+      const nh = Math.max(1, Math.round(h * scale));
+
+      canvas.width = nw;
+      canvas.height = nh;
+      ctx.drawImage(img, 0, 0, nw, nh);
+      return canvas.toDataURL("image/jpeg", quality);
+    } catch (err) {
+      console.warn("compressImageForVision error:", err);
+      return null;
+    }
+  }
+
   async function onPickFile(e) {
     const f = e.target?.files?.[0];
     if (!f) return;
 
-    const b64 = await new Promise((ok, fail) => {
-      try {
-        const r = new FileReader();
-        r.onload = () => ok(r.result);
-        r.onerror = () => fail(new Error("File read error"));
-        r.readAsDataURL(f);
-      } catch (err) {
-        fail(err);
-      }
-    }).catch(() => null);
+    const b64 = await compressImageForVision(f);
 
-    if (!b64) return;
+    if (!b64) {
+      console.warn("Vision image prepare failed");
+      return;
+    }
 
     const backend = API_BASE || "";
 
@@ -394,15 +501,21 @@ group: "product",
         body: JSON.stringify({
           imageBase64: b64,
           locale: i18n.language,
+          source: "camera",
         }),
       });
 
       if (!r.ok) {
         console.warn("Vision API hatası:", r.status);
+        showVoiceToast(t("search.cameraError", { defaultValue: "Kamera araması şu an çalışmadı." }), "error", 2200);
         return;
       }
 
       const j = await r.json().catch(() => null);
+      if (!j || j.ok === false) {
+        showVoiceToast(t("search.cameraError", { defaultValue: "Kamera araması sonucu alınamadı." }), "error", 2200);
+        return;
+      }
       if (j?.query) {
         const q = String(j.query).trim();
         if (!q) return;
@@ -470,7 +583,7 @@ group: "product",
       ) : null}
 
       <main
-        className="flex-1 flex flex-col items-center justify-start w-full px-4 pt-10 sm:pt-14 pb-24"
+        className="flex-1 flex flex-col items-center justify-start w-full px-4 pt-10 sm:pt-14 pb-8"
       >
         {/* ◆ SLOGAN */}
         <h2 className="flex flex-wrap justify-center items-center gap-x-2 gap-y-1 text-[18px] sm:text-[20px] md:text-[24px] lg:text-[29px] font-semibold text-center select-none px-2 leading-tight">
@@ -681,7 +794,7 @@ group: "product",
 </div>
 
 <div className="mt-auto text-center">
-  <Footer />
+  <Footer fixed />
 </div>
 {window.location.pathname === "/admin/telemetry" && <TelemetryPanel />}
 </div>

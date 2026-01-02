@@ -494,29 +494,64 @@ useEffect(() => {
         ? "ar-SA"
         : "en-US";
 
-    rec.interimResults = false;
+    // ✅ interim+debounce: daha hızlı yakala
+    rec.interimResults = true;
+    rec.continuous = true;
 
     const transcript = await new Promise((resolve) => {
+      let finalText = "";
+      let idle = null;
       let done = false;
 
+      const finish = (text) => {
+        if (done) return;
+        done = true;
+        try {
+          clearTimeout(idle);
+        } catch {}
+        resolve(String(text || ""));
+        try {
+          rec.stop();
+        } catch {}
+      };
+
       rec.onresult = (e) => {
-        if (!done) {
-          done = true;
-          resolve(e.results?.[0]?.[0]?.transcript || "");
+        try {
+          let interim = "";
+          let finals = "";
+          for (let i = e.resultIndex; i < e.results.length; i++) {
+            const r = e.results[i];
+            const tr = r?.[0]?.transcript || "";
+            if (r.isFinal) finals += tr + " ";
+            else interim += tr + " ";
+          }
+
+          if (finals.trim()) finalText = (finalText + " " + finals).trim();
+          const merged = (finalText || interim || "").trim();
+
+          // kullanıcı duraklayınca yakala
+          clearTimeout(idle);
+          idle = setTimeout(() => {
+            finish(merged);
+          }, 550);
+        } catch {
+          // ignore
         }
       };
+
       rec.onerror = () => {
-        if (!done) resolve("");
+        if (!done) finish("");
       };
+
       rec.onend = () => {
-        if (!done) resolve("");
+        if (!done) finish(finalText);
       };
 
       try {
         rec.start();
         recRef.current = rec;
       } catch {
-        resolve("");
+        finish("");
       }
     });
 

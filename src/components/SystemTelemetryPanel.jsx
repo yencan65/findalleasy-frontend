@@ -8,6 +8,19 @@ export default function SystemTelemetryPanel() {
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
+    try {
+      document.documentElement.classList.add("fae-allow-scroll");
+      document.body.classList.add("fae-allow-scroll");
+    } catch {}
+    return () => {
+      try {
+        document.documentElement.classList.remove("fae-allow-scroll");
+        document.body.classList.remove("fae-allow-scroll");
+      } catch {}
+    };
+  }, []);
+
+  useEffect(() => {
     const ws = new WebSocket("wss://findalleasy.com/ws/telemetry");
 
     ws.onopen = () => {

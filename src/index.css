@@ -8,6 +8,13 @@
   --bg: #1b1d23;
 }
 
+
+/* === Scroll unlock (legal/admin pages) === */
+html.fae-allow-scroll,
+body.fae-allow-scroll {
+  overflow-y: auto !important;
+}
+
 html,
 body {
   background-color: var(--bg);
@@ -16,7 +23,7 @@ body {
   margin: 0;
   padding: 0;
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: hidden;
   -webkit-tap-highlight-color: transparent;
 }
 

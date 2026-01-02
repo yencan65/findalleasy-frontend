@@ -2,6 +2,19 @@ import React, { useEffect, useState } from "react";
 
 export default function TelemetryPanel() {
   const [events, setEvents] = useState([]);
+  useEffect(() => {
+    try {
+      document.documentElement.classList.add("fae-allow-scroll");
+      document.body.classList.add("fae-allow-scroll");
+    } catch {}
+    return () => {
+      try {
+        document.documentElement.classList.remove("fae-allow-scroll");
+        document.body.classList.remove("fae-allow-scroll");
+      } catch {}
+    };
+  }, []);
+
 
   useEffect(() => {
     function handle(e) {

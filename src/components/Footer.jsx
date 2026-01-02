@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-export default function Footer() {
+export default function Footer({ fixed = false }) {
   const { t } = useTranslation();
 
   // 🔄 Dil değişince yeniden render için
@@ -14,7 +14,7 @@ export default function Footer() {
   }, []);
 
   return (
-    <footer className="py-2 sm:py-3 px-3 w-full">
+    <footer className={`py-2 sm:py-3 px-3 w-full ${fixed ? "fixed bottom-0 left-0 z-[60] bg-black/45 backdrop-blur-xl" : ""}`}>
       <hr className="footer-line" />
       <div className="phi-gap text-[11px] md:text-sm" />
       {/* ✅ Info + Legal links (reviewers want these) */}

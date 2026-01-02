@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import Header from "./Header.jsx";
 import Footer from "./Footer.jsx";
@@ -17,6 +17,21 @@ export default function LegalShell({
   homeLabel,
 }) {
   const { t } = useTranslation();
+
+  // Allow scrolling on legal pages (home page is scroll-locked)
+  useEffect(() => {
+    try {
+      document.documentElement.classList.add("fae-allow-scroll");
+      document.body.classList.add("fae-allow-scroll");
+    } catch {}
+    return () => {
+      try {
+        document.documentElement.classList.remove("fae-allow-scroll");
+        document.body.classList.remove("fae-allow-scroll");
+      } catch {}
+    };
+  }, []);
+
   const badge = (badgeText && String(badgeText).trim() !== "")
     ? badgeText
     : t("legal.badge", { defaultValue: "Info" });

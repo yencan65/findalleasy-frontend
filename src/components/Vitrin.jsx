@@ -404,70 +404,30 @@ export default function Vitrin() {
   // ============================================================
   async function reserve(item, source = "unknown") {
     try {
-      if (!item || !item.url) {
-        console.warn("reserve: Eksik ürün bilgisi", item);
+      if (!item) return;
+
+      // ✅ canonical URL picker + backend click-id injection
+      const redirectUrl = buildAffiliateRedirectUrl(item, user?.id || user?._id || null, {
+        source,
+      });
+
+      if (!redirectUrl) {
+        console.warn("reserve: redirectUrl üretilemedi", item);
         return;
       }
 
-      const provider = resolveProvider(item);
-      const deviceId = getDeviceId();
-
-      let userToken = null;
-
-      if (isLoggedIn && user?.id) {
-        try {
-          userToken = `${user.id}-${Date.now()}-${safeUUID()}`;
-          localStorage.setItem("fae_user_token", userToken);
-        } catch (e) {
-          console.warn("userToken oluşturulamadı:", e);
-        }
+      // Popup blocked? -> fallback same-tab
+      const w = window.open(redirectUrl, "_blank", "noopener,noreferrer");
+      if (!w) {
+        window.location.href = redirectUrl;
       }
-
-      let clickResponse = null;
-
-      if (isLoggedIn && user?.id) {
-        try {
-          let ref = null;
-          try {
-            ref = localStorage.getItem("referral") || localStorage.getItem("ref") || null;
-          } catch {}
-
-          clickResponse = await sendClick({
-            userId: user.id,
-            productId: item.id || item.productId || null,
-            provider,
-            price: item.optimizedPrice || item.finalPrice || item.price || 0,
-            source,
-            deviceId,
-            referralCode: ref,
-            appliedCouponCode: localStorage.getItem("activeCoupon") || null,
-          });
-        } catch (e) {
-          console.warn("reserve → sendClick hata:", e);
-        }
-      }
-
-      const clickId =
-        clickResponse?.clickId || clickResponse?.id || clickResponse?.data?.clickId || null;
-
-      const redirectBase =
-        import.meta.env.VITE_REDIRECT_URL || "https://findalleasy.com/redirect";
-
-      let redirectUrl = `${redirectBase}?provider=${encodeURIComponent(
-        provider
-      )}&url=${encodeURIComponent(item.url)}`;
-
-      if (clickId) redirectUrl += `&click_id=${clickId}`;
-      if (userToken) redirectUrl += `&token=${encodeURIComponent(userToken)}`;
-
-      window.open(redirectUrl, "_blank", "noopener");
 
       try {
         window.dispatchEvent(
           new CustomEvent("fie:click", {
             detail: {
-              provider,
-              price: item.price,
+              provider: resolveProvider(item),
+              price: item.optimizedPrice || item.finalPrice || item.price,
               source,
               query: localStorage.getItem("lastQuery") || "",
             },
