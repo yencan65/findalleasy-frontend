@@ -168,17 +168,17 @@ export default function Header() {
         aria-label="FindAllEasy"
         title="FindAllEasy"
       >
-        <img
-          src={logoWordmark}
-          alt="FindAllEasy"
-          className="
-            h-6 sm:h-7 md:h-8 lg:h-9
-            w-auto
-            max-w-[44vw] sm:max-w-none
-          "
-          style={{ filter: "drop-shadow(0 0 6px rgba(212,175,55,0.35))" }}
-          draggable={false}
-        />
+       <img
+  src={logo}
+  alt="FindAllEasy"
+  className="
+    h-6 sm:h-7 md:h-8 lg:h-9
+    w-auto
+    max-w-[44vw] sm:max-w-none
+  "
+  style={{ filter: "drop-shadow(0 0 6px rgba(212,175,55,0.35))" }}
+  draggable={false}
+/>
       </button>
 
       {/* RIGHT SIDE */}
