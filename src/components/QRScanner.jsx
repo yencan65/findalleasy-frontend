@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useStatusBus } from "../context/StatusBusContext";
 import QrScanner from "qr-scanner";
 import { API_BASE } from "../utils/api";
+
 // ⭐ Güvenli destroy fonksiyonu
 function safeDestroy(scanner) {
   try {
@@ -27,6 +28,7 @@ export default function QRScanner({ onDetect, onClose }) {
   const { setStatus, clearStatus } = useStatusBus();
   const STATUS_SRC = "qr";
   const STATUS_PRIO = 30;
+
   const [error, setError] = useState("");
   const [active, setActive] = useState(true);
   const [torchOn, setTorchOn] = useState(false);
@@ -35,51 +37,51 @@ export default function QRScanner({ onDetect, onClose }) {
   const [phase, setPhase] = useState("starting"); // starting | scanning | detected | normalizing | handoff
   const [countdown, setCountdown] = useState(null);
 
-
-// Global status toast (single source of truth)
-useEffect(() => {
-  const rightText =
-    countdown != null
-      ? t("qrScanner.countdown", { defaultValue: "{{count}}sn", count: countdown })
-      : null;
-
-  const base = { showDots: true, tone: "gold", priority: STATUS_PRIO, rightText };
-
-  if (phase === "starting") {
-    setStatus(STATUS_SRC, { text: t("qrScanner.starting", { defaultValue: "Kamera açılıyor…" }), ...base });
-    return;
-  }
-  if (phase === "scanning") {
-    setStatus(STATUS_SRC, { text: t("qrScanner.scanning", { defaultValue: "Barkod/QR taranıyor…" }), ...base });
-    return;
-  }
-  if (phase === "detected") {
-    setStatus(STATUS_SRC, { text: t("qrScanner.detected", { defaultValue: "Kod tespit edildi…" }), ...base });
-    return;
-  }
-  if (phase === "normalizing") {
-    setStatus(STATUS_SRC, { text: t("qrScanner.analyzing", { defaultValue: "Analiz ediliyor…" }), ...base });
-    return;
-  }
-  if (phase === "handoff") {
-    setStatus(STATUS_SRC, { text: t("qrScanner.startingSearch", { defaultValue: "Arama başlatılıyor…" }), ...base });
-    return;
-  }
-
-  // default: clear
-  clearStatus(STATUS_SRC);
-}, [phase, countdown, t, setStatus, clearStatus]);
-
-// Clear on unmount
-useEffect(() => {
-  return () => clearStatus(STATUS_SRC);
-}, [clearStatus]);
-
   const videoRef = useRef(null);
   const scannerRef = useRef(null);
   const lastScanTimeRef = useRef(0);
   const countdownRef = useRef(null);
   const processingRef = useRef(false);
+
+  // ==========================================================
+  // Global status toast (single source of truth)
+  // ==========================================================
+  useEffect(() => {
+    const rightText =
+      countdown != null
+        ? t("qrScanner.countdown", { defaultValue: "{{count}}sn", count: countdown })
+        : null;
+
+    const base = { showDots: true, tone: "gold", priority: STATUS_PRIO, rightText };
+
+    if (phase === "starting") {
+      setStatus(STATUS_SRC, { text: t("qrScanner.starting", { defaultValue: "Kamera açılıyor…" }), ...base });
+      return;
+    }
+    if (phase === "scanning") {
+      setStatus(STATUS_SRC, { text: t("qrScanner.scanning", { defaultValue: "Barkod/QR taranıyor…" }), ...base });
+      return;
+    }
+    if (phase === "detected") {
+      setStatus(STATUS_SRC, { text: t("qrScanner.detected", { defaultValue: "Kod tespit edildi…" }), ...base });
+      return;
+    }
+    if (phase === "normalizing") {
+      setStatus(STATUS_SRC, { text: t("qrScanner.analyzing", { defaultValue: "Analiz ediliyor…" }), ...base });
+      return;
+    }
+    if (phase === "handoff") {
+      setStatus(STATUS_SRC, { text: t("qrScanner.startingSearch", { defaultValue: "Arama başlatılıyor…" }), ...base });
+      return;
+    }
+
+    clearStatus(STATUS_SRC);
+  }, [phase, countdown, t, setStatus, clearStatus]);
+
+  // Clear on unmount
+  useEffect(() => {
+    return () => clearStatus(STATUS_SRC);
+  }, [clearStatus]);
 
   // ==========================================================
   //  QR / Barkod → ürün adı normalize (backend)
@@ -89,7 +91,6 @@ useEffect(() => {
     const safe = String(code || "").trim();
     if (!safe) return "";
 
-    // Backend route map: /api/product-info/product
     const res = await fetch(`${backend}/api/product-info/product`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -98,7 +99,6 @@ useEffect(() => {
 
     const data = await res.json().catch(() => ({}));
     const productName = data?.product?.name || data?.productName || "";
-
     return String(productName || safe).trim();
   }, []);
 
@@ -139,7 +139,7 @@ useEffect(() => {
     // Video stream'ini temizle
     if (videoRef.current?.srcObject) {
       const tracks = videoRef.current.srcObject.getTracks();
-      tracks.forEach((t) => t.stop());
+      tracks.forEach((tt) => tt.stop());
       videoRef.current.srcObject = null;
     }
 
@@ -165,13 +165,11 @@ useEffect(() => {
       const text = String(rawValue || "").trim();
       if (!text) return;
 
-      // Kamera/scan döngüsünü durdur ama modalı hemen kapatma:
-      // kullanıcı "tarandı mı?" sorusunu sormasın.
       setLastScan(text);
       setPhase("detected");
       setActive(false);
 
-      // küçük bir kapanış sayacı (kullanıcı bekleme süresini anlasın)
+      // küçük kapanış sayacı
       try {
         if (countdownRef.current) clearInterval(countdownRef.current);
       } catch {}
@@ -194,7 +192,6 @@ useEffect(() => {
         const normalized = await fetchProductInfoFromCode(text);
         if (normalized) query = normalized;
       } catch (err) {
-        // normalize patlarsa: ham değerle devam
         console.warn("QR/Barcode normalize skip:", err?.message || err);
       }
 
@@ -203,7 +200,6 @@ useEffect(() => {
         onDetect?.(query);
       } catch {}
 
-      // Kullanıcı deneyimi: kısa bir status göster, sonra kapat
       setTimeout(() => {
         try {
           handleClose();
@@ -212,7 +208,6 @@ useEffect(() => {
     };
 
     const initializeScanner = async () => {
-      // Kamera var mı?
       const cameraAvailable = await checkCameraAvailability();
       if (!cameraAvailable) {
         setError(t("qrScanner.noCameraBody", "Kamera bulunamadı veya erişim izni verilmedi."));
@@ -220,7 +215,6 @@ useEffect(() => {
         return;
       }
 
-      // HTTPS kontrolü
       const isLocalhost =
         window.location.hostname === "localhost" ||
         window.location.hostname === "127.0.0.1";
@@ -240,13 +234,11 @@ useEffect(() => {
           return;
         }
 
-        // Önceki scanner'ı temizle
         if (scannerRef.current) {
           safeDestroy(scannerRef.current);
           scannerRef.current = null;
         }
 
-        // QR scanner
         scanner = new QrScanner(
           videoEl,
           (result) => processDetectedValue(result?.data),
@@ -263,23 +255,14 @@ useEffect(() => {
         await scanner.start();
         if (isMounted) setPhase("scanning");
 
-        // Torch kapasitesi kontrolü (UI butonu için)
         const track = scanner.$video?.srcObject?.getVideoTracks?.()[0];
         if (track?.getCapabilities?.().torch) setTorchOn(false);
 
-        // Barkod desteği (Chromium/Android vb.)
+        // Barkod desteği
         if (typeof window !== "undefined" && "BarcodeDetector" in window) {
           try {
             const detector = new window.BarcodeDetector({
-              formats: [
-                "ean_13",
-                "ean_8",
-                "upc_a",
-                "upc_e",
-                "code_128",
-                "code_39",
-                "qr_code",
-              ],
+              formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39", "qr_code"],
             });
 
             const canvas = document.createElement("canvas");
@@ -301,9 +284,7 @@ useEffect(() => {
                 const codes = await detector.detect(canvas);
                 const first = codes?.[0]?.rawValue;
                 if (first) processDetectedValue(first);
-              } catch {
-                // Barkod detector bazen false-positive/hata atar: sessiz geç
-              }
+              } catch {}
             }, 800);
           } catch (err) {
             console.warn("BarcodeDetector init skip:", err?.message || err);
@@ -312,14 +293,18 @@ useEffect(() => {
       } catch (err) {
         console.error("Kamera açılamadı:", err);
         if (isMounted) {
-          setError(t("qrScanner.cameraDenied", { defaultValue: "Kamera erişimi reddedildi: {{msg}}", msg: err?.message || String(err) }));
+          setError(
+            t("qrScanner.cameraDenied", {
+              defaultValue: "Kamera erişimi reddedildi: {{msg}}",
+              msg: err?.message || String(err),
+            })
+          );
         }
       }
     };
 
     initializeScanner();
 
-    // CLEANUP
     return () => {
       isMounted = false;
 
@@ -330,12 +315,11 @@ useEffect(() => {
 
       if (scanner) safeDestroy(scanner);
 
-      // Video stream'ini temizle
       if (videoRef.current?.srcObject) {
         const tracks = videoRef.current.srcObject.getTracks();
-        tracks.forEach((t) => {
+        tracks.forEach((tt) => {
           try {
-            t.stop();
+            tt.stop();
           } catch {}
         });
         videoRef.current.srcObject = null;
@@ -420,8 +404,6 @@ useEffect(() => {
           </div>
         </div>
       </div>
-        </div>
-      )}
 
       {/* Durum mesajları */}
       {error && (
