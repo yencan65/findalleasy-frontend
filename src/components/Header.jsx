@@ -10,7 +10,8 @@ import WalletPanel from "./WalletPanel";
 import AuthModal from "./AuthModal";
 import { useTranslation } from "react-i18next";
 import { sanitizeName } from "../i18n";
-import logoWordmark from "../sono-assets/findalleasy_wordmark.png";
+import logo from "../sono-assets/findalleasy_logo_lockup_gold_exact_sharp.svg";
+
 
 // ========================================================
 // ========================================================
