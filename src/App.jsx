@@ -1,6 +1,6 @@
 // ✅ src/App.jsx — TAMAMEN CERRAHİ OLARAK TEMİZLENMİŞ + GÜÇLENDİRİLMİŞ
 
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { API_BASE } from "./utils/api";
 import Header from "./components/Header.jsx";
 import AIAssistant from "./components/AIAssistant.jsx";
@@ -144,7 +144,6 @@ export default function App() {
       } catch {
         // localStorage fail etse bile app çökmeyecek
       }
-      setCurrentPlaceholder(0);
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("fae.vitrine.refresh"));
       }
@@ -157,31 +156,6 @@ export default function App() {
       window.dispatchEvent(new Event("fae.vitrine.refresh"));
     }
   }, []);
-
-  // === Placeholder'lar (dile göre dinamik) ===
-  const placeholders_ = useMemo(
-    () => [
-      t("ph.searchProduct", { defaultValue: "Ürün ara..." }),
-      t("ph.findHotel", { defaultValue: "Otel bul..." }),
-      t("ph.compareFlight", { defaultValue: "Uçak biletini kıyasla..." }),
-      t("ph.exploreElectronics", { defaultValue: "Elektroniği keşfet..." }),
-      t("ph.findCarRental", {
-        defaultValue: "Araç kiralama fırsatlarını bul...",
-      }),
-    ],
-    [i18n.language, t]
-  );
-
-  const [currentPlaceholder, setCurrentPlaceholder] = useState(0);
-  useEffect(() => {
-    if (!placeholders_ || placeholders_.length === 0) return;
-    const id = setInterval(
-      () => setCurrentPlaceholder((p) => (p + 1) % placeholders_.length),
-      4000
-    );
-    return () => clearInterval(id);
-  }, [placeholders_]);
-
   const [value, setValue] = useState("");
 
   // === Sesli arama UI (kullanıcı ne olduğunu ANLASIN diye) ===
@@ -680,7 +654,7 @@ export default function App() {
                   setVisionConfirm((prev) => (prev ? { ...prev, query: v } : prev));
                 }}
                 onKeyDown={(e) => e.key === "Enter" && doSearch()}
-                placeholder={placeholders_[currentPlaceholder] || t("search.search")}
+                placeholder={t("ph.searchProduct", { defaultValue: "Ürün veya hizmet ara" })}
                 className="w-full h-11 sm:h-12 rounded-xl pl-9 sm:pl-11 pr-4 text-white placeholder:text-white/40 outline-none border border-[#D9A441]/45 focus:border-[#D9A441]/70 bg-[#0B0E12]/45 backdrop-blur"
               />
 

@@ -10,6 +10,7 @@ import WalletPanel from "./WalletPanel";
 import AuthModal from "./AuthModal";
 import { useTranslation } from "react-i18next";
 import { sanitizeName } from "../i18n";
+import logoWordmark from "../sono-assets/findalleasy_wordmark.png";
 
 // ========================================================
 // ========================================================
@@ -159,13 +160,25 @@ export default function Header() {
       }}
     >
       {/* LOGO */}
-      <h1
-        className="text-lg sm:text-xl font-semibold text-[#d4af37] select-none cursor-pointer whitespace-nowrap flex-shrink-0 text-left"
+      <button
+        type="button"
+        className="flex items-center flex-shrink-0 cursor-pointer select-none"
         onClick={() => window.dispatchEvent(new Event("fae.vitrine.refresh"))}
-        style={{ textShadow: "0 0 6px rgba(212,175,55,0.4)" }}
+        aria-label="FindAllEasy"
+        title="FindAllEasy"
       >
-        FindAllEasy
-      </h1>
+        <img
+          src={logoWordmark}
+          alt="FindAllEasy"
+          className="
+            h-6 sm:h-7 md:h-8 lg:h-9
+            w-auto
+            max-w-[44vw] sm:max-w-none
+          "
+          style={{ filter: "drop-shadow(0 0 6px rgba(212,175,55,0.35))" }}
+          draggable={false}
+        />
+      </button>
 
       {/* RIGHT SIDE */}
       <div className="flex flex-nowrap items-center justify-end gap-2 sm:gap-4 flex-shrink-0">

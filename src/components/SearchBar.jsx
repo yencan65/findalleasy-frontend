@@ -4,20 +4,33 @@ import { Search, Mic, Camera, QrCode } from "lucide-react";
 import { triggerVitrineSearch } from "../utils/vitrineEvent";
 import { pushQueryToVitrine, runUnifiedSearch } from "../utils/searchBridge";
 import { useTranslation } from "react-i18next";
+import { useStatusBus } from "../context/StatusBusContext";
 import QRScanner from "./QRScanner";
 import { detectCategory } from "../utils/categoryExtractor";
-
 export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
   const { t, i18n } = useTranslation();
+
+  const { setStatus, clearStatus, flash } = useStatusBus();
+  const STATUS_SRC = "search";
+  const STATUS_PRIO = 10;
+
+  const setBusy = (text) =>
+    setStatus(STATUS_SRC, { text, showDots: true, tone: "gold", priority: STATUS_PRIO });
+
+  const setCalm = (text, ms = 900) =>
+    setStatus(STATUS_SRC, { text, showDots: false, tone: "muted", priority: STATUS_PRIO, ttlMs: ms });
+
+  const flashMsg = (text, ms = 1600, tone = "muted") =>
+    flash(STATUS_SRC, text, ms, { tone, priority: STATUS_PRIO });
+
 
   const [value, setValue] = useState("");
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [micListening, setMicListening] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [tick, setTick] = useState(0);
-
   const fileRef = useRef(null);
-
   // Dil değişiminde placeholder reset
   useEffect(() => {
     const rerender = () => setTick((x) => x + 1);
@@ -56,6 +69,9 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
   if (!cleaned) return;
 
   setLoading(true);
+  setBusy(t("search.searching", { defaultValue: "Arama yapılıyor…" }));
+
+  let hadError = false;
 
   try {
     // 🔥 1 — TEK BEYİN: AI Unified Search
@@ -67,9 +83,16 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
 
   } catch (err) {
     console.warn("UnifiedSearch Error:", err);
+    hadError = true;
+    flashMsg(t("search.searchError", { defaultValue: "Arama başarısız. Lütfen tekrar dene." }), 2000, "danger");
   } finally {
     setLoading(false);
-  }
+    // başarıda hızlıca temizle; hata durumunda flashMsg kendi süresince kalsın
+    if (!hadError) {
+      setCalm("", 0); // clear via bus
+      clearStatus(STATUS_SRC);
+    }
+}
 }
 
 
@@ -78,11 +101,27 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     const Rec =
       window.SpeechRecognition || window.webkitSpeechRecognition || null;
 
-    if (!Rec) return alert(t("search.voiceNotSupported"));
+    if (!Rec) {
+      flashMsg(
+        t("search.voiceNotSupported", {
+          defaultValue: "Tarayıcın ses tanımayı desteklemiyor!",
+        }),
+        2500
+      );
+      return;
+    }
 
     const rec = new Rec();
-
-    rec.lang =
+    setMicListening(true);
+    setStatus(STATUS_SRC, {
+      text: t("search.voiceStarted", {
+        defaultValue: "Sesli arama başladı — şimdi konuşabilirsin.",
+      }),
+      showDots: true,
+      tone: "gold",
+      priority: STATUS_PRIO,
+    });
+rec.lang =
       i18n.language === "tr"
         ? "tr-TR"
         : i18n.language === "en"
@@ -96,10 +135,27 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     rec.interimResults = false;
 
     rec.onresult = (e) => {
-  const text = e.results[0][0].transcript;
-  setValue(text);
-  doSearch(text, "mic");
-};
+      const text = e.results[0][0].transcript;
+      setMicListening(false);
+      flashMsg(
+        t("search.voiceDone", { defaultValue: "Tamam — arıyorum." }),
+        800
+      );
+      setValue(text);
+      doSearch(text, "mic");
+    };
+
+    rec.onerror = () => {
+      setMicListening(false);
+      flashMsg(t("search.voiceError", { defaultValue: "Sesli arama hatası." }), 2000, "danger");
+      // hata sonrası durumun takılı kalmasını engelle
+      setTimeout(() => clearStatus(STATUS_SRC), 2100);
+    };
+
+    rec.onend = () => {
+      setMicListening(false);
+      clearStatus(STATUS_SRC);
+    };
 
 
     rec.start();
@@ -110,77 +166,103 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     fileRef.current?.click();
   }
 
-  async function onPickFile(e) {
-    const f = e.target.files?.[0];
-    if (!f) return;
+  
+async function onPickFile(e) {
+  const f = e.target.files?.[0];
+  if (!f) return;
 
-    // Aynı dosya tekrar seçilince de onChange tetiklensin
-    try { e.target.value = ""; } catch {}
+  // Aynı dosya tekrar seçilince de onChange tetiklensin
+  try {
+    e.target.value = "";
+  } catch {}
 
-    // Basit boyut kalkanı (backend de ayrıca clamp var)
-    const MAX_BYTES = 6 * 1024 * 1024;
-    if (f.size > MAX_BYTES) {
-      alert(
-        t("cameraTooLarge", {
-          defaultValue:
-            "Fotoğraf çok büyük. Lütfen daha küçük bir görsel seç.",
-        })
-      );
-      return;
-    }
+  // Basit boyut kalkanı (backend de ayrıca clamp var)
+  const MAX_BYTES = 6 * 1024 * 1024;
+  if (f.size > MAX_BYTES) {
+    flashMsg(
+      t("cameraTooLarge", {
+        defaultValue: "Fotoğraf çok büyük. Lütfen daha küçük bir görsel seç.",
+      }),
+      2400,
+      "danger"
+    );
+    return;
+  }
 
-    setLoading(true);
+  setLoading(true);
+  setStatus(STATUS_SRC, {
+    text: t("search.imageAnalyzing", { defaultValue: "Görsel analiz ediliyor…" }),
+    showDots: true,
+    tone: "gold",
+    priority: STATUS_PRIO,
+  });
 
+  let kickedSearch = false;
+
+  try {
     const b64 = await new Promise((ok, bad) => {
       try {
         const r = new FileReader();
         r.onerror = () => bad(new Error("FILE_READ_ERROR"));
-        r.onloadend = () => ok(r.result);
+        r.onload = () => ok(String(r.result || ""));
         r.readAsDataURL(f);
-      } catch (err) {
-        bad(err);
+      } catch (e2) {
+        bad(e2);
       }
     });
 
-    try {
-      const r = await fetch("/api/vision", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64: b64, locale: i18n.language }),
-      });
+    const r = await fetch("/api/vision?diag=0", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageBase64: b64, locale: i18n?.language || "tr" }),
+    });
 
-      const j = await r.json().catch(() => ({}));
-      const finalQuery = String(j?.query || "").trim();
+    const j = await r.json().catch(() => null);
+    const finalQuery = String(j?.query || "").trim();
 
-      if (!r.ok || j?.ok === false || !finalQuery) {
-        const msg = j?.error || `VISION_FAILED_HTTP_${r.status}`;
-        throw new Error(msg);
-      }
-
-      setValue(finalQuery);
-      doSearch(finalQuery, "camera");
-    } catch (err) {
-      console.error("Vision error:", err);
-      alert(
-        t("cameraVisionDisabled", {
-          defaultValue:
-            "Kamera ile arama hattı hazır ama görsel tanıma kapalı görünüyor (VISION_DISABLED / API key). Şimdilik metinle arayın; API anahtarı gelince kamera otomatik çalışır.",
-        })
-      );
-    } finally {
-      setLoading(false);
+    if (!r.ok || j?.ok === false || !finalQuery) {
+      const msg = j?.error || `VISION_FAILED_HTTP_${r.status}`;
+      throw new Error(msg);
     }
+
+    setValue(finalQuery);
+
+    flashMsg(
+      t("search.imageDetected", {
+        defaultValue: "Görüntüden anladığım: {{query}}",
+        query: finalQuery,
+      }),
+      900,
+      "muted"
+    );
+
+    setCalm(t("search.voiceDone", { defaultValue: "Tamam — arıyorum." }), 600);
+
+    kickedSearch = true;
+    await doSearch(finalQuery, "camera");
+  } catch (err) {
+    console.error("Vision error:", err);
+    flashMsg(
+      t("cameraVisionDisabled", {
+        defaultValue:
+          "Kamera ile arama hattı hazır ama görsel tanıma kapalı görünüyor. Şimdilik metinle arayın; API anahtarı gelince kamera otomatik çalışır.",
+      }),
+      3500,
+      "danger"
+    );
+  } finally {
+    // Eğer arama hattına devrettiysek, loading'i doSearch yönetir.
+    if (!kickedSearch) setLoading(false);
   }
-
-  // 🔥 QR Search
-  function handleQRDetect(result) {
-  if (!result) return;
-
-  localStorage.setItem("lastQuery", result);
-  setScannerOpen(false);
-
-  doSearch(result, "qr"); // sadece bu yeterli
 }
+
+function handleQRDetect(result) {
+    if (!result) return;
+
+    localStorage.setItem("lastQuery", result);
+    setScannerOpen(false);
+    doSearch(result, "qr");
+  }
 
 
   // ============================================================
@@ -236,7 +318,7 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
             className="ml-1 text-gold hover:text-white transition p-2 rounded-full"
             aria-label={t("search.voice", { defaultValue: "Sesli arama" })}
           >
-            <Mic className="w-5 h-5" />
+            <Mic className={`w-5 h-5 ${micListening ? "animate-pulse" : ""}`} />
           </button>
 
           <button
@@ -268,8 +350,12 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
         </div>
       </div>
 
+      {/* Kullanıcı "mal mal" beklemesin: net durum göstergesi */}
       {scannerOpen && (
-        <QRScanner onDetect={handleQRDetect} onClose={() => setScannerOpen(false)} />
+        <QRScanner
+          onDetect={handleQRDetect}
+          onClose={() => setScannerOpen(false)}
+        />
       )}
     </>
   );

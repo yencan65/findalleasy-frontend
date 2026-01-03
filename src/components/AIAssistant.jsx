@@ -1,10 +1,10 @@
 // src/components/AIAssistant.jsx
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useStatusBus } from "../context/StatusBusContext";
 import { runUnifiedSearch } from "../utils/searchBridge";
 import { initSonoActionEngine } from "../engines/sonoActionEngine";
 import { API_BASE } from "../utils/api";
-
 /**
  * ------------------------------------------------------------------
  * YARDIMCI FONKSİYONLAR (VİTRİN TETİKLEYİCİLER)
@@ -151,6 +151,51 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
   const [open, setOpen] = useState(false);
   const [listening, setListening] = useState(false);
   const [thinking, setThinking] = useState(false);
+  const [searching, setSearching] = useState(false);
+
+  // Global status bus: tüm async işler tek standart bildirim diliyle konuşsun
+  const { setStatus, clearStatus } = useStatusBus();
+  const STATUS_SRC = "assistant";
+  const STATUS_PRIO = 20;
+
+  const publishBusy = (text) =>
+    setStatus(STATUS_SRC, {
+      text,
+      showDots: true,
+      tone: "gold",
+      priority: STATUS_PRIO,
+    });
+
+  // Backwards-compatible helper (bu dosyada bolca kullanılıyor)
+  function flashMsg(text, ms = 0, tone = null) {
+    const msg = String(text || "").trim();
+    if (!msg) {
+      clearStatus(STATUS_SRC);
+      return;
+    }
+
+    // ms>0: kısa bilgilendirme
+    if (ms > 0) {
+      setStatus(STATUS_SRC, {
+        text: msg,
+        showDots: false,
+        tone: tone || "muted",
+        priority: STATUS_PRIO,
+        ttlMs: ms,
+      });
+      return;
+    }
+
+    // ms=0: kalıcı "iş üstünde" modu
+    publishBusy(msg);
+  }
+
+  // Unmount'ta takılı kalmasın
+  useEffect(() => {
+    return () => clearStatus(STATUS_SRC);
+  }, [clearStatus]);
+
+
   const [messages, setMessages] = useState([]);
   const messagesRef = useRef([]);
   const greetedRef = useRef(false);
@@ -481,6 +526,7 @@ useEffect(() => {
     }
 
     setListening(true);
+    flashMsg(t("ai.listening", { defaultValue: "Dinleniyorum…" }), 0);
     const rec = new Rec();
 
     rec.lang =
@@ -559,7 +605,13 @@ useEffect(() => {
     recRef.current = null;
 
     const clean = transcript.trim();
-    if (clean) processQuery(clean);
+    if (clean) {
+      flashMsg(t("ai.voiceDone", { defaultValue: "Tamam. Arıyorum…" }), 1200);
+      processQuery(clean);
+    } else {
+      // boş çıktı: kullanıcının "ne oldu?" demesin
+      flashMsg(t("ai.noSpeech", { defaultValue: "Ses algılanamadı." }), 1400);
+    }
   }
 
   // ANA BEYİN – S12
@@ -627,21 +679,36 @@ useEffect(() => {
         console.warn("fie:action event error:", e);
       }
     }
-// 🔥 TEK BEYİN — tüm AI mesajları vitrine unified olarak gider
-await runUnifiedSearch(text, { source: "ai" });
 
-triggerSearchFromAI(text);
     // 3) Kullanıcı mesajını ekle + history senkron
     setMessages((m) => {
-  const updated = [...m, { from: "user", text }];
-  
-  // 🔥 Yeni: SENKRON KORUMA — StrictMode çift render bug fix
-  queueMicrotask(() => { 
-    messagesRef.current = updated; 
-  });
+      const updated = [...m, { from: "user", text }];
 
-  return updated;
-});
+      // 🔥 Yeni: SENKRON KORUMA — StrictMode çift render bug fix
+      queueMicrotask(() => {
+        messagesRef.current = updated;
+      });
+
+      return updated;
+    });
+
+    // 🔥 Arama başladığını görsel olarak göster
+    setSearching(true);
+    flashMsg(t("ai.searching", { defaultValue: "Arıyorum…" }), 0);
+    let searchErr = false;
+    try {
+      // 🔥 TEK BEYİN — tüm AI mesajları vitrine unified olarak gider
+      await runUnifiedSearch(text, { source: "ai" });
+    } catch (err) {
+      searchErr = true;
+      console.warn("AI unified search fail:", err?.message || err);
+      flashMsg(t("ai.searchError", { defaultValue: "Arama sırasında bir hata oldu." }), 1800, "danger");
+    }
+    try {
+      triggerSearchFromAI(text);
+    } catch {}
+    setSearching(false);
+    if (!searchErr) flashMsg("", 450);
 
 
     // 4) Hassas veri filtresi
@@ -668,6 +735,7 @@ triggerSearchFromAI(text);
 
     pulseHalo();
     setThinking(true);
+    flashMsg(t("ai.analyzing", { defaultValue: "Analiz ediliyor..." }), 0);
 
     // 5) Önceki istek abort
     if (abortControllerRef.current) abortControllerRef.current.abort();
@@ -764,6 +832,7 @@ triggerSearchFromAI(text);
     } finally {
       if (abortControllerRef.current === controller) {
         setThinking(false);
+        flashMsg("", 450);
         abortControllerRef.current = null;
       }
     }
@@ -897,13 +966,6 @@ useEffect(() => {
                 {m.text}
               </p>
             ))}
-            {thinking && (
-              <p className="text-xs text-gray-300">
-                {t("ai.analyzing", {
-                  defaultValue: "Analiz ediliyor, vitrine hazırlanıyor...",
-                })}
-              </p>
-            )}
             <div ref={messagesEndRef} />
           </div>
 

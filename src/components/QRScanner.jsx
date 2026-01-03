@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { useStatusBus } from "../context/StatusBusContext";
 import QrScanner from "qr-scanner";
 import { API_BASE } from "../utils/api";
-
 // ⭐ Güvenli destroy fonksiyonu
 function safeDestroy(scanner) {
   try {
@@ -24,15 +24,62 @@ function safeDestroy(scanner) {
 
 export default function QRScanner({ onDetect, onClose }) {
   const { t } = useTranslation();
+  const { setStatus, clearStatus } = useStatusBus();
+  const STATUS_SRC = "qr";
+  const STATUS_PRIO = 30;
   const [error, setError] = useState("");
   const [active, setActive] = useState(true);
   const [torchOn, setTorchOn] = useState(false);
   const [lastScan, setLastScan] = useState(null);
   const [hasCamera, setHasCamera] = useState(true);
+  const [phase, setPhase] = useState("starting"); // starting | scanning | detected | normalizing | handoff
+  const [countdown, setCountdown] = useState(null);
+
+
+// Global status toast (single source of truth)
+useEffect(() => {
+  const rightText =
+    countdown != null
+      ? t("qrScanner.countdown", { defaultValue: "{{count}}sn", count: countdown })
+      : null;
+
+  const base = { showDots: true, tone: "gold", priority: STATUS_PRIO, rightText };
+
+  if (phase === "starting") {
+    setStatus(STATUS_SRC, { text: t("qrScanner.starting", { defaultValue: "Kamera açılıyor…" }), ...base });
+    return;
+  }
+  if (phase === "scanning") {
+    setStatus(STATUS_SRC, { text: t("qrScanner.scanning", { defaultValue: "Barkod/QR taranıyor…" }), ...base });
+    return;
+  }
+  if (phase === "detected") {
+    setStatus(STATUS_SRC, { text: t("qrScanner.detected", { defaultValue: "Kod tespit edildi…" }), ...base });
+    return;
+  }
+  if (phase === "normalizing") {
+    setStatus(STATUS_SRC, { text: t("qrScanner.analyzing", { defaultValue: "Analiz ediliyor…" }), ...base });
+    return;
+  }
+  if (phase === "handoff") {
+    setStatus(STATUS_SRC, { text: t("qrScanner.startingSearch", { defaultValue: "Arama başlatılıyor…" }), ...base });
+    return;
+  }
+
+  // default: clear
+  clearStatus(STATUS_SRC);
+}, [phase, countdown, t, setStatus, clearStatus]);
+
+// Clear on unmount
+useEffect(() => {
+  return () => clearStatus(STATUS_SRC);
+}, [clearStatus]);
 
   const videoRef = useRef(null);
   const scannerRef = useRef(null);
   const lastScanTimeRef = useRef(0);
+  const countdownRef = useRef(null);
+  const processingRef = useRef(false);
 
   // ==========================================================
   //  QR / Barkod → ürün adı normalize (backend)
@@ -73,7 +120,15 @@ export default function QRScanner({ onDetect, onClose }) {
   //  KAPATMA İŞLEMİ (temizlik)
   // ==========================================================
   const handleClose = useCallback(() => {
+    try {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    } catch {}
+    countdownRef.current = null;
+    setCountdown(null);
+    setPhase("starting");
+
     setActive(false);
+    processingRef.current = false;
 
     // Scanner'ı güvenli şekilde durdur ve temizle
     if (scannerRef.current) {
@@ -110,10 +165,31 @@ export default function QRScanner({ onDetect, onClose }) {
       const text = String(rawValue || "").trim();
       if (!text) return;
 
-      setActive(false);
+      // Kamera/scan döngüsünü durdur ama modalı hemen kapatma:
+      // kullanıcı "tarandı mı?" sorusunu sormasın.
       setLastScan(text);
+      setPhase("detected");
+      setActive(false);
+
+      // küçük bir kapanış sayacı (kullanıcı bekleme süresini anlasın)
+      try {
+        if (countdownRef.current) clearInterval(countdownRef.current);
+      } catch {}
+      let left = 2;
+      setCountdown(left);
+      countdownRef.current = setInterval(() => {
+        left -= 1;
+        setCountdown(left);
+        if (left <= 0) {
+          try {
+            clearInterval(countdownRef.current);
+          } catch {}
+          countdownRef.current = null;
+        }
+      }, 800);
 
       let query = text;
+      setPhase("normalizing");
       try {
         const normalized = await fetchProductInfoFromCode(text);
         if (normalized) query = normalized;
@@ -122,12 +198,17 @@ export default function QRScanner({ onDetect, onClose }) {
         console.warn("QR/Barcode normalize skip:", err?.message || err);
       }
 
+      setPhase("handoff");
       try {
         onDetect?.(query);
       } catch {}
 
-      // Kullanıcı deneyimi: scanner kapanır (tek aksiyon, tek arama)
-      handleClose();
+      // Kullanıcı deneyimi: kısa bir status göster, sonra kapat
+      setTimeout(() => {
+        try {
+          handleClose();
+        } catch {}
+      }, 1400);
     };
 
     const initializeScanner = async () => {
@@ -151,6 +232,8 @@ export default function QRScanner({ onDetect, onClose }) {
       if (!active || !isMounted) return;
 
       try {
+        setPhase("starting");
+        setError("");
         const videoEl = videoRef.current;
         if (!videoEl) {
           setError(t("qrScanner.videoNotFound", "Video elementi bulunamadı."));
@@ -178,6 +261,7 @@ export default function QRScanner({ onDetect, onClose }) {
 
         scannerRef.current = scanner;
         await scanner.start();
+        if (isMounted) setPhase("scanning");
 
         // Torch kapasitesi kontrolü (UI butonu için)
         const track = scanner.$video?.srcObject?.getVideoTracks?.()[0];
@@ -336,6 +420,8 @@ export default function QRScanner({ onDetect, onClose }) {
           </div>
         </div>
       </div>
+        </div>
+      )}
 
       {/* Durum mesajları */}
       {error && (
