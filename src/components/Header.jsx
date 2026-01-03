@@ -10,10 +10,7 @@ import WalletPanel from "./WalletPanel";
 import AuthModal from "./AuthModal";
 import { useTranslation } from "react-i18next";
 import { sanitizeName } from "../i18n";
-import logo from "../sono-assets/findalleasy_logo_lockup_gold_exact_sharp.svg";
 
-
-// ========================================================
 // ========================================================
 // GÜVENLİ USERNAME — email'den önceki kısmı kullan, XSS temizle
 function safeUserName(raw) {
@@ -27,6 +24,63 @@ function safeUserName(raw) {
   return base.replace(/[<>]/g, "").slice(0, 40);
 }
 
+// ========================================================
+// SNAP ICON — daha “şıklatma” hissi veren, keskin ve okunaklı ikon
+function SnapIcon({ className = "" }) {
+  return (
+    <svg
+      viewBox="0 0 64 64"
+      className={className}
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      {/* Thumb */}
+      <path
+        d="M18 43 C18 35, 24 30, 31 31 C38 32, 38 40, 31 45"
+        stroke="currentColor"
+        strokeWidth="4.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* Index finger */}
+      <path
+        d="M34 55 V35 C34 28, 39 23, 48 20 C52 19, 56 18, 60 18"
+        stroke="currentColor"
+        strokeWidth="4.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* Palm/base */}
+      <path
+        d="M18 55 C26 59, 40 59, 48 55"
+        stroke="currentColor"
+        strokeWidth="4.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* Snap spark */}
+      <path
+        d="M50 8 L50 16"
+        stroke="currentColor"
+        strokeWidth="3.6"
+        strokeLinecap="round"
+      />
+      <path
+        d="M46 12 L54 12"
+        stroke="currentColor"
+        strokeWidth="3.6"
+        strokeLinecap="round"
+      />
+      <path
+        d="M56 10 L60 6"
+        stroke="currentColor"
+        strokeWidth="3.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
 
 // ========================================================
 // HEADER COMPONENT
@@ -48,23 +102,21 @@ export default function Header() {
   // USER LOAD
   // ========================================================
   function loadUserFromStorage() {
-  try {
-    const rawName = localStorage.getItem("username") || "";
-    const points = Number(localStorage.getItem("points") || "0") || 0;
+    try {
+      const rawName = localStorage.getItem("username") || "";
+      const points = Number(localStorage.getItem("points") || "0") || 0;
 
-    if (!rawName) return;
+      if (!rawName) return;
 
-    setUser({
-      name: safeUserName(rawName),
-      points: points,
-    });
-  } catch (e) {
-    console.warn("header loadUserFromStorage error:", e);
-    setUser({ name: "", points: 0 });
+      setUser({
+        name: safeUserName(rawName),
+        points: points,
+      });
+    } catch (e) {
+      console.warn("header loadUserFromStorage error:", e);
+      setUser({ name: "", points: 0 });
+    }
   }
-}
-
-
 
   useEffect(() => {
     loadUserFromStorage();
@@ -152,8 +204,8 @@ export default function Header() {
     <header
       className="
         w-full flex flex-row justify-between items-center flex-nowrap gap-2 sm:gap-3
-        px-3 sm:px-6 py-3 sm:py-4 bg-transparent 
-        border-b border-[#d4af37]/20 
+        px-3 sm:px-6 py-3 sm:py-4 bg-transparent
+        border-b border-[#d4af37]/20
         text-white font-sans backdrop-blur-xl
       "
       style={{
@@ -168,25 +220,41 @@ export default function Header() {
         aria-label="FindAllEasy"
         title="FindAllEasy"
       >
-       <img
-  src={logo}
-  alt="FindAllEasy"
-  className="
-    h-6 sm:h-7 md:h-8 lg:h-9
-    w-auto
-    max-w-[44vw] sm:max-w-none
-  "
-  style={{ filter: "drop-shadow(0 0 6px rgba(212,175,55,0.35))" }}
-  draggable={false}
-/>
+        <div
+          className="
+            flex items-center gap-1.5 sm:gap-2
+            drop-shadow-[0_0_6px_rgba(212,175,55,0.35)]
+            whitespace-nowrap
+          "
+        >
+          <span
+            className="
+              font-extrabold tracking-tight leading-none
+              text-[18px] sm:text-[20px] md:text-[22px] lg:text-[24px]
+              max-w-[44vw] sm:max-w-none
+              overflow-hidden text-ellipsis
+            "
+          >
+            <span className="text-white">Find</span>
+            <span className="text-[#d4af37]">All</span>
+            <span className="text-white">Easy</span>
+          </span>
+
+          <SnapIcon
+            className="
+              text-[#d4af37]
+              w-5 h-5 sm:w-6 sm:h-6
+              -translate-y-[1px]
+              flex-shrink-0
+            "
+          />
+        </div>
       </button>
 
       {/* RIGHT SIDE */}
       <div className="flex flex-nowrap items-center justify-end gap-2 sm:gap-4 flex-shrink-0">
-
         {/* 🌍 LANGUAGE PICKER */}
         <div className="relative" ref={langRef}>
-
           <button
             onClick={() => setOpenLang(!openLang)}
             className="
@@ -202,28 +270,26 @@ export default function Header() {
             "
           >
             <Globe size={18} />
-            <span className="uppercase text-sm">
-              {langLabel}
-            </span>
+            <span className="uppercase text-sm">{langLabel}</span>
           </button>
 
           {openLang && (
             <div
               className="
-                absolute 
+                absolute
                 top-full mt-2 right-0
                 sm:top-1/2 sm:-translate-y-1/2
                 sm:right-full sm:mr-3 sm:mt-0
                 bg-black/45 backdrop-blur-2xl
                 border border-[#d4af37]/15
-                rounded-3xl 
-	                px-3 py-2 
-	                flex flex-nowrap gap-2
-	                max-w-[88vw] sm:max-w-none
-	                overflow-y-auto overflow-x-hidden
-	                whitespace-nowrap
-	                [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
-	                justify-start
+                rounded-3xl
+                px-3 py-2
+                flex flex-nowrap gap-2
+                max-w-[88vw] sm:max-w-none
+                overflow-y-auto overflow-x-hidden
+                whitespace-nowrap
+                [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
+                justify-start
                 z-50 animate-fadeIn
               "
             >
@@ -237,11 +303,7 @@ export default function Header() {
                     hover:scale-[1.10]
                     hover:bg-[#d4af37] hover:text-black
                     transition-all
-                    ${
-                      i18n.language === lng
-                        ? "bg-[#d4af37]/35 text-black"
-                        : ""
-                    }
+                    ${i18n.language === lng ? "bg-[#d4af37]/35 text-black" : ""}
                   `}
                 >
                   {LANG_LABELS[lng]}
@@ -255,7 +317,7 @@ export default function Header() {
         <button
           onClick={() => setWalletOpen(true)}
           className="
-            p-2 rounded-full border border-[#d4af37]/60 
+            p-2 rounded-full border border-[#d4af37]/60
             text-[#d4af37] bg-black/20 backdrop-blur-lg
             hover:bg-[#d4af37]/20 hover:text-black
             transition-all
@@ -269,7 +331,7 @@ export default function Header() {
           <button
             onClick={() => setUserOpen(!userOpen)}
             className="
-              p-2 rounded-full 
+              p-2 rounded-full
               border border-[#d4af37]/60 text-[#d4af37]
               bg-black/20 backdrop-blur-lg
               hover:bg-[#d4af37]/20 hover:text-black
@@ -282,7 +344,7 @@ export default function Header() {
           {userOpen && (
             <div
               className="
-                absolute right-0 top-12 
+                absolute right-0 top-12
                 bg-black/75 backdrop-blur-xl
                 border border-[#d4af37]/35 rounded-2xl
                 p-4 shadow-[0_0_18px_rgba(212,175,55,0.25)]
@@ -300,7 +362,7 @@ export default function Header() {
                   <button
                     onClick={handleLogout}
                     className="
-                      w-full border border-[#d4af37]/60 rounded-lg 
+                      w-full border border-[#d4af37]/60 rounded-lg
                       text-[#d4af37] hover:bg-[#d4af37]/25 py-1 transition-all
                     "
                   >
@@ -310,13 +372,12 @@ export default function Header() {
               ) : (
                 <button
                   onClick={() => {
-                    // UI hijack yok: auth açılınca menüler kapanır
                     setUserOpen(false);
                     setOpenLang(false);
                     setShowAuth(true);
                   }}
                   className="
-                    w-full border border-[#d4af37]/60 rounded-lg 
+                    w-full border border-[#d4af37]/60 rounded-lg
                     text-[#d4af37] hover:bg-[#d4af37]/25 py-1 transition-all
                   "
                 >
