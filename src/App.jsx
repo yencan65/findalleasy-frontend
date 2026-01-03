@@ -190,6 +190,13 @@ export default function App() {
   const voiceRecRef = useRef(null);
   const voiceToastTimer = useRef(null);
 
+  // === Search UX state ===
+  // Kullanıcı arama yapılıyor mu bilmiyordu → artık net.
+  const [searchBusy, setSearchBusy] = useState(false);
+  const [visionBusy, setVisionBusy] = useState(false);
+  const [visionConfirm, setVisionConfirm] = useState(null); // { query, used, weak }
+  const searchInputRef = useRef(null);
+
   const showVoiceToast = (msg, kind = "info", ttl = 2200) => {
     try {
       if (voiceToastTimer.current) clearTimeout(voiceToastTimer.current);
@@ -202,59 +209,73 @@ export default function App() {
 
   // === Arama ===
  async function doSearch(q, opts = {}) {
-  const raw = q ?? value;
-  const query = String(raw || "").trim();
-  if (!query) return;
+    const raw = q ?? value;
+    const query = String(raw ?? "").trim();
+    if (!query) return null;
 
-  const source = String(opts?.source || "input");
-  const skipUnified = Boolean(opts?.skipUnified);
-
-  // 🔥 TEK BEYİN
-  if (!skipUnified) {
-    await runUnifiedSearch(query, { source });
-  }
-
-    const region =
-      (typeof window !== "undefined" &&
-        window.localStorage &&
-        localStorage.getItem("region")) ||
-      "TR";
-    const backend = API_BASE || "";
-
-    // Global state’e yaz + vitrin event’leri → Vitrin + Sono aynı hizada
-    try {
-      localStorage.setItem("lastQuery", query);
-    } catch {
-      // sessiz geç
-    }
-    if (typeof window !== "undefined") {
-      // Direkt arama event’i (Vitrin dinliyor)
-      window.dispatchEvent(
-        new CustomEvent("fae.vitrine.search", {
-          detail: { query },
-        })
+    // 🧯 Klasik JS bug: yanlışlıkla object yollanırsa "[object Object]" olur.
+    if (/^\[object\s+Object\]$/i.test(query) || query.toLowerCase().includes("[object object]")) {
+      showVoiceToast(
+        t("search.badQuery", {
+          defaultValue: "Arama metni bozuldu (\"[object Object]\"). Lütfen tekrar deneyin.",
+        }),
+        "warn",
+        2600
       );
-      // Tam yenile
-      window.dispatchEvent(new Event("fae.vitrine.refresh"));
+      return null;
     }
 
+    const source = String(opts?.source || "input");
+    const skipUnified = Boolean(opts?.skipUnified);
+
+    // Arama başladıysa, olası kamera onay barını kapat
+    setVisionConfirm(null);
+
+    setSearchBusy(true);
     try {
+      // 🔥 TEK BEYİN
+      if (!skipUnified) {
+        await runUnifiedSearch(query, { source });
+      }
+
+      const region =
+        (typeof window !== "undefined" && window.localStorage && localStorage.getItem("region")) ||
+        "TR";
+      const backend = API_BASE || "";
+
+      // Global state’e yaz + vitrin event’leri → Vitrin + Sono aynı hizada
+      try {
+        localStorage.setItem("lastQuery", query);
+      } catch {
+        // sessiz geç
+      }
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("fae.vitrine.search", { detail: { query } }));
+        window.dispatchEvent(new Event("fae.vitrine.refresh"));
+      }
+
       const res = await fetch(`${backend}/api/search`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-query,
-q: query,
-category: "product",
-group: "product",
+          query,
+          q: query,
+          category: "product",
+          group: "product",
           region,
           locale: i18n.language || "tr",
         }),
       });
 
       if (!res.ok) {
-        // Backend 4xx/5xx geldi ama UI patlamasın
         console.warn("Arama isteği başarısız:", res.status);
+        showVoiceToast(
+          t("search.searchError", {
+            defaultValue: "Arama isteği başarısız oldu. Birazdan tekrar deneyin.",
+          }),
+          "error",
+          2600
+        );
         return null;
       }
 
@@ -262,7 +283,16 @@ group: "product",
       return j;
     } catch (err) {
       console.warn("Arama hatası:", err);
+      showVoiceToast(
+        t("search.searchError", {
+          defaultValue: "Arama sırasında hata oluştu. Lütfen tekrar deneyin.",
+        }),
+        "error",
+        2600
+      );
       return null;
+    } finally {
+      setSearchBusy(false);
     }
   }
 
@@ -368,7 +398,7 @@ group: "product",
           idleTimer = setTimeout(() => {
             const q = (finalText || interim || "").trim();
             if (q) commit(q);
-          }, 550);
+          }, 420);
         } catch (err) {
           console.warn("Speech onresult error:", err);
         }
@@ -494,6 +524,14 @@ group: "product",
 
     const backend = API_BASE || "";
 
+    // Kamera/galeri analizi sürecini kullanıcıya görünür yap
+    setVisionBusy(true);
+    showVoiceToast(
+      t("search.imageAnalyzing", { defaultValue: "Görsel analiz ediliyor…" }),
+      "info",
+      1800
+    );
+
     try {
       const r = await fetch(`${backend}/api/vision`, {
         method: "POST",
@@ -519,14 +557,31 @@ group: "product",
       if (j?.query) {
         const q = String(j.query).trim();
         if (!q) return;
+
+        const used = String(j?.meta?.used || "").trim();
+        const qLower = q.toLowerCase();
+        const weak = qLower === "ürün" || qLower === "urun" || q.length < 3 || /^\[object\s+object\]$/i.test(q);
+
+        // Önce input'u dolduralım.
         setValue(q);
-		 // 🔥 TEK BEYİN
-  await runUnifiedSearch(q, { source: "camera" });
-        doSearch(q, { skipUnified: true });
+
+        // Serp lens gibi daha “tahmini” kaynaklarda kullanıcı onayı iste.
+        if (weak || used.includes("serp_lens")) {
+          setVisionConfirm({ query: q, used: used || null, weak });
+          setTimeout(() => {
+            try { searchInputRef.current?.focus?.(); } catch {}
+          }, 0);
+          return;
+        }
+
+        // Güvenli/temiz sonuç: otomatik arama
+        await runUnifiedSearch(q, { source: "camera" });
+        doSearch(q, { skipUnified: true, source: "camera" });
       }
     } catch (err) {
       console.warn("Vision arama hatası:", err);
     } finally {
+      setVisionBusy(false);
       // aynı dosyayı tekrar seçebilmek için input değerini sıfırla
       if (e.target) e.target.value = "";
     }
@@ -616,9 +671,14 @@ group: "product",
             {/* Input (ikon solda, çerçevesiz) */}
             <div className="relative flex-1 min-w-0">
               <input
+                ref={searchInputRef}
                 id="search-input"
                 value={value}
-                onChange={(e) => setValue(e.target.value)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setValue(v);
+                  setVisionConfirm((prev) => (prev ? { ...prev, query: v } : prev));
+                }}
                 onKeyDown={(e) => e.key === "Enter" && doSearch()}
                 placeholder={placeholders_[currentPlaceholder] || t("search.search")}
                 className="w-full h-11 sm:h-12 rounded-xl pl-9 sm:pl-11 pr-4 text-white placeholder:text-white/40 outline-none border border-[#D9A441]/45 focus:border-[#D9A441]/70 bg-[#0B0E12]/45 backdrop-blur"
@@ -669,6 +729,60 @@ group: "product",
               </button>
             </div>
           </div>
+        </div>
+
+        {/* ◆ Arama / Kamera durum göstergesi (kullanıcıya net geri bildirim) */}
+        <div className="w-full max-w-[760px] -mt-1 mb-2">
+          {visionBusy ? (
+            <div className="flex items-center justify-center gap-2 text-[12px] sm:text-[13px] text-white/80 select-none">
+              <div className="w-3 h-3 rounded-full border border-[#D9A441] border-t-transparent animate-spin" />
+              <span>{t("search.imageAnalyzing", { defaultValue: "Görsel analiz ediliyor..." })}</span>
+            </div>
+          ) : searchBusy ? (
+            <div className="flex items-center justify-center gap-2 text-[12px] sm:text-[13px] text-white/80 select-none">
+              <div className="w-3 h-3 rounded-full border border-[#D9A441] border-t-transparent animate-spin" />
+              <span>{t("search.searching", { defaultValue: "Arama yapılıyor..." })}</span>
+            </div>
+          ) : visionConfirm ? (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-xl border border-[#D9A441]/35 bg-black/25 px-3 py-2">
+              <div className="text-[12px] sm:text-[13px] text-white/85">
+                <span className="text-white/70">
+                  {visionConfirm?.weak
+                    ? t("search.imageWeakGuess", { defaultValue: "Emin olamadım, ama şöyle görünüyor:" })
+                    : t("search.imageDetectedPrefix", { defaultValue: "Görüntüden anladığım:" })}
+                </span>{" "}
+                <span className="text-[#D9A441] font-semibold">{String(value || visionConfirm?.query || "").trim() || t("search.search", { defaultValue: "Ara" })}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    const q = String(value || visionConfirm?.query || "").trim();
+                    setVisionConfirm(null);
+                    if (q) doSearch(q, { source: "camera" });
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-[#D9A441] text-black text-[12px] font-semibold hover:brightness-105 active:scale-95 transition"
+                >
+                  {t("search.confirmSearch", { defaultValue: "Ara" })}
+                </button>
+                <button
+                  onClick={() => {
+                    try {
+                      searchInputRef.current?.focus?.();
+                    } catch {}
+                  }}
+                  className="px-3 py-1.5 rounded-lg border border-[#D9A441]/45 text-white text-[12px] hover:bg-white/5 active:scale-95 transition"
+                >
+                  {t("search.editQuery", { defaultValue: "Düzenle" })}
+                </button>
+                <button
+                  onClick={() => setVisionConfirm(null)}
+                  className="px-3 py-1.5 rounded-lg border border-white/20 text-white/80 text-[12px] hover:bg-white/5 active:scale-95 transition"
+                >
+                  {t("search.cancel", { defaultValue: "İptal" })}
+                </button>
+              </div>
+            </div>
+          ) : null}
         </div>
 
 {/* ◆ Akıllı Selam */}

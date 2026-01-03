@@ -84,6 +84,15 @@ const resources = {
         camera: "Kamera ile ara",
         qr: "QR ile ara",
         search: "Ara",
+        searching: "Arama yapılıyor…",
+        searchError: "Arama başarısız. Lütfen tekrar dene.",
+        badQuery: "Arama metni hatalı. Lütfen tekrar dene.",
+        imageAnalyzing: "Görsel analiz ediliyor…",
+        imageDetected: "Görüntüden anladığım: {{query}}",
+        searchNow: "Ara",
+        edit: "Düzenle",
+        cancel: "İptal",
+        cameraError: "Görsel analizi başarısız. Lütfen tekrar dene.",
         voiceNotSupported: "Tarayıcın ses tanımayı desteklemiyor!",
         voiceStarted: "Sesli arama başladı — şimdi konuşabilirsin.",
         voiceDone: "Tamam — arıyorum.",
@@ -409,7 +418,16 @@ const resources = {
         voiceStarted: "Voice search started — you can speak now.",
         voiceDone: "Got it — searching.",
         voiceStopped: "Voice search stopped.",
-        voiceError: "Voice search error."
+        voiceError: "Voice search error.",
+        searching: "Searching…",
+        searchError: "Search failed. Please try again.",
+        badQuery: "Invalid search text. Please try again.",
+        imageAnalyzing: "Analyzing image…",
+        imageDetected: "From the image, I think: {{query}}",
+        searchNow: "Search",
+        edit: "Edit",
+        cancel: "Cancel",
+        cameraError: "Image analysis failed. Please try again."
       },
 
       // ✅ qrScanner (EN)
@@ -731,7 +749,16 @@ const resources = {
         voiceStarted: "La recherche vocale a démarré — vous pouvez parler.",
         voiceDone: "Compris — je recherche.",
         voiceStopped: "Recherche vocale arrêtée.",
-        voiceError: "Erreur de recherche vocale."
+        voiceError: "Erreur de recherche vocale.",
+        searching: "Recherche…",
+        searchError: "La recherche a échoué. Réessayez.",
+        badQuery: "Texte de recherche invalide. Réessayez.",
+        imageAnalyzing: "Analyse de l'image…",
+        imageDetected: "D'après l'image : {{query}}",
+        searchNow: "Rechercher",
+        edit: "Modifier",
+        cancel: "Annuler",
+        cameraError: "Analyse d'image échouée. Réessayez."
       },
 
       // ✅ qrScanner (FR)
@@ -1061,7 +1088,16 @@ const resources = {
         voiceStarted: "Голосовой поиск начался — говорите.",
         voiceDone: "Понял — ищу.",
         voiceStopped: "Голосовой поиск остановлен.",
-        voiceError: "Ошибка голосового поиска."
+        voiceError: "Ошибка голосового поиска.",
+        searching: "Идёт поиск…",
+        searchError: "Поиск не удался. Попробуйте ещё раз.",
+        badQuery: "Некорректный запрос. Попробуйте ещё раз.",
+        imageAnalyzing: "Анализ изображения…",
+        imageDetected: "По изображению похоже на: {{query}}",
+        searchNow: "Поиск",
+        edit: "Редактировать",
+        cancel: "Отмена",
+        cameraError: "Анализ изображения не удался. Попробуйте ещё раз."
       },
 
       // ✅ qrScanner (RU)
@@ -1382,7 +1418,16 @@ const resources = {
         voiceStarted: "بدأ البحث الصوتي — يمكنك التحدث الآن.",
         voiceDone: "تم — جارٍ البحث.",
         voiceStopped: "تم إيقاف البحث الصوتي.",
-        voiceError: "حدث خطأ في البحث الصوتي."
+        voiceError: "حدث خطأ في البحث الصوتي.",
+        searching: "جارٍ البحث…",
+        searchError: "فشل البحث. حاول مرة أخرى.",
+        badQuery: "نص بحث غير صالح. حاول مرة أخرى.",
+        imageAnalyzing: "جارٍ تحليل الصورة…",
+        imageDetected: "من الصورة أظن: {{query}}",
+        searchNow: "ابحث",
+        edit: "تعديل",
+        cancel: "إلغاء",
+        cameraError: "فشل تحليل الصورة. حاول مرة أخرى."
       },
 
       // ✅ qrScanner (AR)
