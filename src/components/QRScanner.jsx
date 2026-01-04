@@ -24,7 +24,7 @@ function safeDestroy(scanner) {
 }
 
 export default function QRScanner({ onDetect, onClose }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { setStatus, clearStatus } = useStatusBus();
   const STATUS_SRC = "qr";
   const STATUS_PRIO = 30;
@@ -86,21 +86,31 @@ export default function QRScanner({ onDetect, onClose }) {
   // ==========================================================
   //  QR / Barkod → ürün adı normalize (backend)
   // ==========================================================
-  const fetchProductInfoFromCode = useCallback(async (code) => {
-    const backend = API_BASE || "";
-    const safe = String(code || "").trim();
-    if (!safe) return "";
+  const fetchProductInfoFromCode = useCallback(
+    async (code) => {
+      const backend = API_BASE || "";
+      const safe = String(code || "").trim();
+      if (!safe) return "";
 
-    const res = await fetch(`${backend}/api/product-info/product`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ qr: safe }),
-    });
+      try {
+        const res = await fetch(`${backend}/api/product-info/product`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ qr: safe, locale: i18n?.language || "tr" }),
+        });
 
-    const data = await res.json().catch(() => ({}));
-    const productName = data?.product?.name || data?.productName || "";
-    return String(productName || safe).trim();
-  }, []);
+        if (!res.ok) return safe;
+
+        const data = await res.json().catch(() => ({}));
+        // ✅ Conflict çözümü: title fallback'i korunuyor
+        const productName = data?.product?.name || data?.product?.title || data?.productName || "";
+        return String(productName || safe).trim();
+      } catch (err) {
+        return safe;
+      }
+    },
+    [i18n?.language]
+  );
 
   // ==========================================================
   //  KAMERA KONTROLÜ

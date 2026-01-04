@@ -152,6 +152,7 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
   const [listening, setListening] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [searching, setSearching] = useState(false);
+  const [pendingVoice, setPendingVoice] = useState(null);
 
   // Global status bus: tüm async işler tek standart bildirim diliyle konuşsun
   const { setStatus, clearStatus } = useStatusBus();
@@ -606,8 +607,16 @@ useEffect(() => {
 
     const clean = transcript.trim();
     if (clean) {
-      flashMsg(t("ai.voiceDone", { defaultValue: "Tamam. Arıyorum…" }), 1200);
-      processQuery(clean);
+      // ✅ Sesli komut: asla otomatik arama yapma. Önce kullanıcıya onay sor.
+      setPendingVoice(clean);
+      try {
+        if (inputRef.current) inputRef.current.value = clean;
+      } catch {}
+      flashMsg(
+        t("ai.voiceConfirmToast", { defaultValue: "Duydum — aramam için onay ver." }),
+        1600,
+        "muted"
+      );
     } else {
       // boş çıktı: kullanıcının "ne oldu?" demesin
       flashMsg(t("ai.noSpeech", { defaultValue: "Ses algılanamadı." }), 1400);
@@ -847,6 +856,7 @@ useEffect(() => {
     const text = String(val || "").trim();
 
     if (!text) return;
+    setPendingVoice(null);
     inputRef.current.value = "";
     await processQuery(text);
   }
@@ -968,6 +978,58 @@ useEffect(() => {
             ))}
             <div ref={messagesEndRef} />
           </div>
+
+          {/* ✅ Sesli komut onayı (otomatik arama YOK) */}
+          {pendingVoice ? (
+            <div className="mb-2 p-2 rounded-xl border border-[#d4af37]/30 bg-black/40">
+              <div className="text-xs text-white/70">
+                {t("ai.voiceHeardPrefix", { defaultValue: "Sesli komuttan anladığım:" })}{" "}
+                <span className="text-[#d4af37] font-semibold">{String(pendingVoice || "").trim()}</span>
+              </div>
+              <div className="text-xs text-white/60 mt-1">
+                {t("ai.voiceConfirmQuestion", { defaultValue: "Bunu mu arayayım?" })}
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <button
+                  type="button"
+                  className="px-3 py-1 rounded-lg bg-[#d4af37] text-black text-xs font-semibold"
+                  onClick={async () => {
+                    const q = String(pendingVoice || "").trim();
+                    if (!q) return;
+                    setPendingVoice(null);
+                    try { if (inputRef.current) inputRef.current.value = ""; } catch {}
+                    await processQuery(q);
+                  }}
+                >
+                  {t("search.confirmSearch", { defaultValue: "Ara" })}
+                </button>
+                <button
+                  type="button"
+                  className="px-3 py-1 rounded-lg border border-[#d4af37]/50 text-[#d4af37] text-xs"
+                  onClick={() => {
+                    // Düzenle: input'ta kalsın, focus ver
+                    setPendingVoice(null);
+                    setTimeout(() => {
+                      try { inputRef.current?.focus?.(); } catch {}
+                    }, 0);
+                  }}
+                >
+                  {t("search.editQuery", { defaultValue: "Düzenle" })}
+                </button>
+                <button
+                  type="button"
+                  className="px-3 py-1 rounded-lg border border-white/20 text-white/70 text-xs"
+                  onClick={() => {
+                    setPendingVoice(null);
+                    try { if (inputRef.current) inputRef.current.value = ""; } catch {}
+                    flashMsg(t("search.cancel", { defaultValue: "İptal" }), 900, "muted");
+                  }}
+                >
+                  {t("search.cancel", { defaultValue: "İptal" })}
+                </button>
+              </div>
+            </div>
+          ) : null}
 
           {/* INPUT ALANI - FORM YAPISI */}
           <form onSubmit={handleFormSubmit} className="flex items-center gap-2">

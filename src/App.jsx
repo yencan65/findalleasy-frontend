@@ -14,7 +14,7 @@ import camera from "/sono-assets/camera-apple.svg";
 import sonoFace from "/sono-assets/sono-face.svg";
 import { createUseRewards } from "./hooks/useRewards";
 import QRScanner from "./components/QRScanner.jsx";
-import { QrCode, Search as SearchIcon } from "lucide-react";
+import { QrCode, Search as SearchIcon, X } from "lucide-react";
 import TelemetryPanel from "./components/Admin/TelemetryPanel";
 import SystemTelemetryPanel from "./components/SystemTelemetryPanel";
 import { runUnifiedSearch } from "./utils/searchBridge";
@@ -48,6 +48,17 @@ const safeDisplayName = (raw) => {
   if (/@/.test(s)) return ""; // email ile hitap etme
   return s.replace(/[<>]/g, "").slice(0, 40);
 };
+
+function mapSpeechLang(locale) {
+  const l = String(locale || "").toLowerCase();
+  if (l.startsWith("tr")) return "tr-TR";
+  if (l.startsWith("fr")) return "fr-FR";
+  if (l.startsWith("ru")) return "ru-RU";
+  if (l.startsWith("ar")) return "ar-SA";
+  if (l.startsWith("en")) return "en-US";
+  return "en-US";
+}
+
 
 export default function App() {
   const [qrScanOpen, setQrScanOpen] = useState(false);
@@ -169,6 +180,7 @@ export default function App() {
   const [searchBusy, setSearchBusy] = useState(false);
   const [visionBusy, setVisionBusy] = useState(false);
   const [visionConfirm, setVisionConfirm] = useState(null); // { query, used, weak }
+  const [voiceConfirm, setVoiceConfirm] = useState(null); // { query }
   const searchInputRef = useRef(null);
 
   const showVoiceToast = (msg, kind = "info", ttl = 2200) => {
@@ -204,6 +216,7 @@ export default function App() {
 
     // Arama başladıysa, olası kamera onay barını kapat
     setVisionConfirm(null);
+    setVoiceConfirm(null);
 
     setSearchBusy(true);
     try {
@@ -228,18 +241,23 @@ export default function App() {
         window.dispatchEvent(new Event("fae.vitrine.refresh"));
       }
 
-      const res = await fetch(`${backend}/api/search`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query,
-          q: query,
-          category: "product",
-          group: "product",
-          region,
-          locale: i18n.language || "tr",
-        }),
-      });
+      const postSearch = async (qq) => {
+        const res = await fetch(`${backend}/api/search`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query: qq,
+            q: qq,
+            category: "product",
+            group: "product",
+            region,
+            locale: i18n.language || "tr",
+          }),
+        });
+        return res;
+      };
+
+      const res = await postSearch(query);
 
       if (!res.ok) {
         console.warn("Arama isteği başarısız:", res.status);
@@ -254,6 +272,37 @@ export default function App() {
       }
 
       const j = await res.json().catch(() => null);
+
+      // ✅ QR/Barkod fallback: bazı barkodlar direkt rakamla sonuç döndürmeyebilir.
+      // Bir kez daha "ean <code>" ile deneriz.
+      const isBarcode = /^\d{8,14}$/.test(query);
+      const itemsLen = Array.isArray(j?.items) ? j.items.length : 0;
+      const tried = Boolean(opts?._barcodeFallbackTried);
+      if (isBarcode && itemsLen === 0 && !tried) {
+        const q2 = `ean ${query}`;
+
+        // vitrin + global state ikinci sorguya da uyumlu olsun
+        try {
+          localStorage.setItem("lastQuery", q2);
+        } catch {}
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("fae.vitrine.search", { detail: { query: q2 } }));
+          window.dispatchEvent(new Event("fae.vitrine.refresh"));
+        }
+
+        try {
+          if (!skipUnified) {
+            await runUnifiedSearch(q2, { source: `${source}-barcode-fallback` });
+          }
+        } catch {}
+
+        const res2 = await postSearch(q2);
+        if (res2.ok) {
+          const j2 = await res2.json().catch(() => null);
+          return j2;
+        }
+      }
+
       return j;
     } catch (err) {
       console.warn("Arama hatası:", err);
@@ -286,6 +335,9 @@ export default function App() {
       return;
     }
 
+    // Yeni bir dinleme başlatırken eski onayı kapat
+    setVoiceConfirm(null);
+
     // Zaten dinliyorsak: tekrar basınca durdur
     if (voiceListening && voiceRecRef.current) {
       try {
@@ -305,7 +357,7 @@ export default function App() {
       const rec = new Rec();
       voiceRecRef.current = rec;
 
-      rec.lang = i18n.language || "tr-TR";
+      rec.lang = mapSpeechLang(i18n.language);
       rec.interimResults = true;       // ✅ daha hızlı tepki
       rec.continuous = true;           // ✅ kısa boşluklarda kesilmesin
       rec.maxAlternatives = 1;
@@ -324,19 +376,24 @@ export default function App() {
         } catch {}
 
         setValue(clean);
+        setVoiceConfirm({ query: clean });
         showVoiceToast(
-          t("search.voiceDone", { defaultValue: "Tamam — arıyorum." }),
-          "ok",
-          1400
+          t("search.voiceConfirmToast", {
+            defaultValue: "Duydum — aramam için onay ver.",
+          }),
+          "info",
+          1800
         );
 
-        try {
-          await doSearch(clean, { source: "voice" });
-        } finally {
+        setTimeout(() => {
           try {
-            rec.stop();
+            searchInputRef.current?.focus?.();
           } catch {}
-        }
+        }, 0);
+
+        try {
+          rec.stop();
+        } catch {}
       };
 
       rec.onstart = () => {
@@ -612,7 +669,7 @@ export default function App() {
       ) : null}
 
       <main
-        className="flex-1 flex flex-col items-center justify-start w-full px-4 pt-10 sm:pt-14 pb-8"
+        className="flex-1 flex flex-col items-center justify-start w-full px-4 pt-10 sm:pt-14 pb-28 sm:pb-8"
       >
         {/* ◆ SLOGAN */}
         <h2 className="flex flex-wrap justify-center items-center gap-x-2 gap-y-1 text-[18px] sm:text-[20px] md:text-[24px] lg:text-[29px] font-semibold text-center select-none px-2 leading-tight">
@@ -641,9 +698,9 @@ export default function App() {
 
         {/* ◆ Arama Çubuğu (mobil + desktop tek yapı: ikon solda, çerçevesiz; input çerçevesi altın) */}
         <div className="w-full max-w-[760px] mt-3 sm:mt-4 mb-3">
-          <div className="flex items-center gap-1 sm:gap-2 w-full flex-nowrap">
-            {/* Input (ikon solda, çerçevesiz) */}
-            <div className="relative flex-1 min-w-0">
+          <div className="flex flex-col gap-2 w-full">
+            {/* Input (ikon solda; clear X sağda) */}
+            <div className="relative w-full">
               <input
                 ref={searchInputRef}
                 id="search-input"
@@ -655,7 +712,7 @@ export default function App() {
                 }}
                 onKeyDown={(e) => e.key === "Enter" && doSearch()}
                 placeholder={t("ph.searchProduct", { defaultValue: "Ürün veya hizmet ara" })}
-                className="w-full h-11 sm:h-12 rounded-xl pl-9 sm:pl-11 pr-4 text-white placeholder:text-white/40 outline-none border border-[#D9A441]/45 focus:border-[#D9A441]/70 bg-[#0B0E12]/45 backdrop-blur"
+                className="w-full h-11 sm:h-12 rounded-xl pl-9 sm:pl-11 pr-11 sm:pr-12 text-white placeholder:text-white/40 outline-none border border-[#D9A441]/45 focus:border-[#D9A441]/70 bg-[#0B0E12]/45 backdrop-blur"
               />
 
               <button
@@ -667,10 +724,29 @@ export default function App() {
               >
                 <SearchIcon className="w-4 h-4 sm:w-5 sm:h-5 text-[#D9A441]" aria-hidden />
               </button>
+
+              {/* Tek dokunuşla temizle */}
+              {String(value || "").trim() ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setValue("");
+                    setVisionConfirm(null);
+                    try {
+                      searchInputRef.current?.focus?.();
+                    } catch {}
+                  }}
+                  className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-md bg-transparent hover:bg-white/5 active:scale-95 transition"
+                  aria-label={t("actions.clear", { defaultValue: "Temizle" })}
+                  title={t("actions.clear", { defaultValue: "Temizle" })}
+                >
+                  <X className="w-4 h-4 sm:w-5 sm:h-5 text-white/60" aria-hidden />
+                </button>
+              ) : null}
             </div>
 
-            {/* Sağ aksiyonlar: Ses / Kamera / QR */}
-            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+            {/* Ses / Kamera / QR → bir alt satır */}
+            <div className="flex items-center justify-center sm:justify-end gap-2">
               <button
                 onClick={startMic}
                 className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition ${voiceListening ? "ring-2 ring-[#D9A441]/40 bg-[#D9A441]/10" : ""}`}
@@ -716,6 +792,53 @@ export default function App() {
             <div className="flex items-center justify-center gap-2 text-[12px] sm:text-[13px] text-white/80 select-none">
               <div className="w-3 h-3 rounded-full border border-[#D9A441] border-t-transparent animate-spin" />
               <span>{t("search.searching", { defaultValue: "Arama yapılıyor..." })}</span>
+            </div>
+          ) : voiceConfirm ? (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl border border-[#D9A441]/35 bg-black/25 px-3 py-2">
+              <div className="text-[12px] sm:text-[13px] text-white/85">
+                <span className="text-white/70">
+                  {t("search.voiceHeardPrefix", { defaultValue: "Sesli komuttan anladığım:" })}
+                </span>{" "}
+                <span className="text-[#D9A441] font-semibold">{voiceConfirm?.query}</span>
+                <span className="text-white/70">
+                  {" "}
+                  — {t("search.voiceConfirmQuestion", { defaultValue: "Bunu mu arayayım?" })}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={async () => {
+                    const q = String(voiceConfirm?.query || value || "").trim();
+                    setVoiceConfirm(null);
+                    if (!q) return;
+                    await runUnifiedSearch(q, { source: "voice" });
+                    doSearch(q, { skipUnified: true, source: "voice" });
+                  }}
+                  className="text-xs px-3 py-1 rounded-lg border border-[#D9A441]/60 text-[#f5d76e] hover:bg-[#D9A441]/10"
+                >
+                  {t("search.confirmSearch", { defaultValue: "Ara" })}
+                </button>
+
+                <button
+                  onClick={() => {
+                    setVoiceConfirm(null);
+                    setTimeout(() => {
+                      try { searchInputRef.current?.focus?.(); } catch {}
+                    }, 0);
+                  }}
+                  className="text-xs px-3 py-1 rounded-lg border border-white/20 text-white/80 hover:bg-white/5"
+                >
+                  {t("search.editQuery", { defaultValue: "Düzenle" })}
+                </button>
+
+                <button
+                  onClick={() => setVoiceConfirm(null)}
+                  className="text-xs px-3 py-1 rounded-lg border border-white/15 text-white/60 hover:bg-white/5"
+                >
+                  {t("search.cancel", { defaultValue: "Vazgeç" })}
+                </button>
+              </div>
             </div>
           ) : visionConfirm ? (
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-xl border border-[#D9A441]/35 bg-black/25 px-3 py-2">
@@ -838,6 +961,23 @@ export default function App() {
         }
       } catch {
         // JSON değilse düz metin olarak devam
+      }
+
+      // ✅ Barkod/QR sayı ise (EAN/UPC): backend'den ürün adı çözümle + garanti fallback
+      if (/^\d{8,14}$/.test(q)) {
+        try {
+          const backend = API_BASE || "";
+          const rr = await fetch(`${backend}/api/product-info/product`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ qr: q, locale: i18n.language }),
+          });
+          const jj = await rr.json().catch(() => ({}));
+          const pn = String(jj?.product?.name || jj?.product?.title || jj?.productName || "").trim();
+          if (pn && !/^\d{8,14}$/.test(pn)) q = pn;
+        } catch {}
+        // hala sayıysa: arama motorlarına yardımcı ol
+        if (/^\d{8,14}$/.test(q)) q = `ean ${q}`;
       }
 
       if (!q) return;

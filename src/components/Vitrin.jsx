@@ -538,6 +538,47 @@ export default function Vitrin() {
     return v !== null ? Math.round(v * 10) / 10 : null;
   }
 
+  function getSummaryText(item) {
+    if (!item) return "";
+    const pick = (...vals) => {
+      for (const v of vals) {
+        if (typeof v === "string" && v.trim()) return v.trim();
+        if (Array.isArray(v)) {
+          const s = v
+            .map((x) => (typeof x === "string" ? x.trim() : ""))
+            .filter(Boolean)
+            .join(" • ");
+          if (s) return s;
+        }
+      }
+      return "";
+    };
+
+    const raw = item?.raw || item?._raw || item?.meta || null;
+
+    let s = pick(
+      item?.summary,
+      item?.description,
+      item?.desc,
+      item?.snippet,
+      raw?.snippet,
+      raw?.description,
+      raw?.summary,
+      raw?.about_this_result?.snippet,
+      raw?.about_this_result?.description,
+      raw?.rich_snippet?.top?.extensions,
+      raw?.extensions,
+      raw?.highlights
+    );
+
+    s = String(s || "").replace(/\s+/g, " ").trim();
+    if (!s) return "";
+    if (s.length > 240) s = s.slice(0, 237).trim() + "…";
+    return s;
+  }
+
+
+
   // ✅ (patch) İçeride isim çakışmasın diye alias
   function getFinalPriceLegacy(item) {
     return getFinalPrice(item);
@@ -816,6 +857,8 @@ export default function Vitrin() {
     const q5 = getSafeQuality5(item);
     const trust = getSafeTrust(item);
 
+    const summary = getSummaryText(item);
+
     return (
       <div
         onClick={onClick}
@@ -823,7 +866,7 @@ export default function Vitrin() {
           w-full
           max-w-[670px]
           mx-auto
-          bg-black/40 rounded-2xl p-5
+          bg-black/40 rounded-2xl p-4 sm:p-5
           border border-[#d4af37]/35
           shadow-[0_0_22px_rgba(212,175,55,0.25)]
           backdrop-blur-xl
@@ -834,7 +877,7 @@ export default function Vitrin() {
           flex flex-col sm:flex-row gap-4 sm:gap-5 items-stretch sm:items-center
         "
       >
-        <div className="w-full sm:w-[160px] h-[140px] sm:h-[160px] rounded-xl overflow-hidden bg-black/40 flex items-center justify-center">
+        <div className="w-full sm:w-[160px] h-[120px] sm:h-[160px] rounded-xl overflow-hidden bg-black/40 flex items-center justify-center">
           {img ? (
             <img src={img} alt={safeTitle} className="w-full h-full object-contain" />
           ) : (
@@ -857,6 +900,18 @@ export default function Vitrin() {
                   {prov ? <span className="uppercase tracking-wide">{prov}</span> : null}
                 </div>
               ) : null}
+
+              <div
+                className="mt-2 text-[12px] sm:text-[13px] text-white/70 leading-snug"
+                style={{
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
+                }}
+              >
+                {summary || t("common.summaryFallback", { defaultValue: "Özet bilgi yok" })}
+              </div>
             </div>
 
             {price != null ? (
@@ -867,7 +922,7 @@ export default function Vitrin() {
               </div>
             ) : (
               <div className="flex flex-col items-start sm:items-end min-w-[80px]">
-                <span className="text-white/35 text-[0.85rem]">Fiyat yok</span>
+                <span className="text-white/35 text-[0.85rem]">{t("common.noPrice", { defaultValue: "Fiyat yok" })}</span>
               </div>
             )}
           </div>

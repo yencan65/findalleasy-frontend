@@ -89,12 +89,20 @@ const resources = {
         badQuery: "Arama metni hatalı. Lütfen tekrar dene.",
         imageAnalyzing: "Görsel analiz ediliyor…",
         imageDetected: "Görüntüden anladığım: {{query}}",
+        // ✅ Kamera onay barı (App.jsx ile uyumlu)
+        imageDetectedPrefix: "Görüntüden anladığım:",
+        imageWeakGuess: "Emin olamadım, ama şöyle görünüyor:",
+        confirmSearch: "Ara",
+        editQuery: "Düzenle",
         searchNow: "Ara",
         edit: "Düzenle",
         cancel: "İptal",
         cameraError: "Görsel analizi başarısız. Lütfen tekrar dene.",
         voiceNotSupported: "Tarayıcın ses tanımayı desteklemiyor!",
         voiceStarted: "Sesli arama başladı — şimdi konuşabilirsin.",
+        voiceHeardPrefix: "Sesli komuttan anladığım:",
+        voiceConfirmQuestion: "Bunu mu arayayım?",
+        voiceConfirmToast: "Duydum — aramam için onay ver.",
         voiceDone: "Tamam — arıyorum.",
         voiceStopped: "Sesli arama durduruldu.",
         voiceError: "Sesli arama hatası."
@@ -206,12 +214,15 @@ const resources = {
 
       common: {
         loading: "Yükleniyor…",
-        noImage: "Görsel yok"
+        noImage: "Görsel yok",
+        noPrice: "Fiyat yok",
+        summaryFallback: "Özet bilgi yok"
       },
 
       actions: {
         goToReservation: "Tıkla",
-        close: "Kapat"
+        close: "Kapat",
+        clear: "Temizle"
       },
 
       footerFull: {
@@ -226,6 +237,9 @@ const resources = {
         send: "Gönder",
         placeholder: "Mesaj yaz...",
         listening: "Dinleniyorum…",
+        voiceHeardPrefix: "Sesli komuttan anladığım:",
+        voiceConfirmQuestion: "Bunu mu arayayım?",
+        voiceConfirmToast: "Duydum — aramam için onay ver.",
         voiceDone: "Tamam. Arıyorum…",
         searching: "Arıyorum…",
         searchError: "Arama sırasında bir hata oldu.",
@@ -427,6 +441,9 @@ const resources = {
         search: "Search",
         voiceNotSupported: "Your browser does not support speech recognition!",
         voiceStarted: "Voice search started — you can speak now.",
+        voiceHeardPrefix: "I heard:",
+        voiceConfirmQuestion: "Search for this?",
+        voiceConfirmToast: "Heard you — confirm to search.",
         voiceDone: "Got it — searching.",
         voiceStopped: "Voice search stopped.",
         voiceError: "Voice search error.",
@@ -435,6 +452,11 @@ const resources = {
         badQuery: "Invalid search text. Please try again.",
         imageAnalyzing: "Analyzing image…",
         imageDetected: "From the image, I think: {{query}}",
+        // ✅ Camera confirm bar (App.jsx)
+        imageDetectedPrefix: "From the image, I understood:",
+        imageWeakGuess: "Not 100% sure, but it looks like:",
+        confirmSearch: "Search",
+        editQuery: "Edit",
         searchNow: "Search",
         edit: "Edit",
         cancel: "Cancel",
@@ -547,12 +569,15 @@ const resources = {
 
       common: {
         loading: "Loading…",
-        noImage: "No image"
+        noImage: "No image",
+        noPrice: "No price",
+        summaryFallback: "No summary"
       },
 
       actions: {
         goToReservation: "Click",
-        close: "Close"
+        close: "Close",
+        clear: "Clear"
       },
 
       footerFull: {
@@ -567,6 +592,9 @@ const resources = {
         send: "Send",
         placeholder: "Type a message...",
         listening: "Listening…",
+        voiceHeardPrefix: "I heard:",
+        voiceConfirmQuestion: "Search for this?",
+        voiceConfirmToast: "Heard you — confirm to search.",
         voiceDone: "Okay. Searching…",
         searching: "Searching…",
         searchError: "Search error.",
@@ -769,6 +797,9 @@ const resources = {
         voiceNotSupported:
           "Votre navigateur ne supporte pas la reconnaissance vocale.",
         voiceStarted: "La recherche vocale a démarré — vous pouvez parler.",
+        voiceHeardPrefix: "J’ai compris :",
+        voiceConfirmQuestion: "Lancer la recherche ?",
+        voiceConfirmToast: "J’ai compris — confirme pour rechercher.",
         voiceDone: "Compris — je recherche.",
         voiceStopped: "Recherche vocale arrêtée.",
         voiceError: "Erreur de recherche vocale.",
@@ -777,6 +808,11 @@ const resources = {
         badQuery: "Texte de recherche invalide. Réessayez.",
         imageAnalyzing: "Analyse de l'image…",
         imageDetected: "D'après l'image : {{query}}",
+        // ✅ Barre de confirmation caméra (App.jsx)
+        imageDetectedPrefix: "D'après l'image, j'ai compris :",
+        imageWeakGuess: "Pas sûr à 100 %, mais on dirait :",
+        confirmSearch: "Rechercher",
+        editQuery: "Modifier",
         searchNow: "Rechercher",
         edit: "Modifier",
         cancel: "Annuler",
@@ -895,12 +931,15 @@ const resources = {
 
       common: {
         loading: "Chargement…",
-        noImage: "Aucune image"
+        noImage: "Aucune image",
+        noPrice: "Pas de prix",
+        summaryFallback: "Pas de résumé"
       },
 
       actions: {
         goToReservation: "Cliquez",
-        close: "Fermer"
+        close: "Fermer",
+        clear: "Effacer"
       },
 
       footerFull: {
@@ -915,6 +954,9 @@ const resources = {
         send: "Envoyer",
         placeholder: "Écrire un message...",
         listening: "J'écoute…",
+        voiceHeardPrefix: "J’ai compris :",
+        voiceConfirmQuestion: "Lancer la recherche ?",
+        voiceConfirmToast: "J’ai compris — confirme pour rechercher.",
         voiceDone: "D’accord. Je cherche…",
         searching: "Je cherche…",
         searchError: "Erreur de recherche.",
@@ -1119,6 +1161,9 @@ const resources = {
         voiceNotSupported:
           "Браузер не поддерживает распознавание речи.",
         voiceStarted: "Голосовой поиск начался — говорите.",
+        voiceHeardPrefix: "Я услышала:",
+        voiceConfirmQuestion: "Искать это?",
+        voiceConfirmToast: "Услышала — подтверди, чтобы искать.",
         voiceDone: "Понял — ищу.",
         voiceStopped: "Голосовой поиск остановлен.",
         voiceError: "Ошибка голосового поиска.",
@@ -1127,6 +1172,11 @@ const resources = {
         badQuery: "Некорректный запрос. Попробуйте ещё раз.",
         imageAnalyzing: "Анализ изображения…",
         imageDetected: "По изображению похоже на: {{query}}",
+        // ✅ Панель подтверждения камеры (App.jsx)
+        imageDetectedPrefix: "По изображению я понял:",
+        imageWeakGuess: "Не уверен, но похоже на:",
+        confirmSearch: "Искать",
+        editQuery: "Редактировать",
         searchNow: "Поиск",
         edit: "Редактировать",
         cancel: "Отмена",
@@ -1240,12 +1290,15 @@ const resources = {
 
       common: {
         loading: "Загрузка…",
-        noImage: "Нет изображения"
+        noImage: "Нет изображения",
+        noPrice: "Нет цены",
+        summaryFallback: "Нет описания"
       },
 
       actions: {
         goToReservation: "Нажать",
-        close: "Закрыть"
+        close: "Закрыть",
+        clear: "Очистить"
       },
 
       footerFull: {
@@ -1260,6 +1313,9 @@ const resources = {
         send: "Отправить",
         placeholder: "Введите сообщение...",
         listening: "Слушаю…",
+        voiceHeardPrefix: "Я услышала:",
+        voiceConfirmQuestion: "Искать это?",
+        voiceConfirmToast: "Услышала — подтверди, чтобы искать.",
         voiceDone: "Понял. Ищу…",
         searching: "Ищу…",
         searchError: "Ошибка поиска.",
@@ -1460,6 +1516,9 @@ const resources = {
         search: "بحث",
         voiceNotSupported: "المتصفح لا يدعم التعرف على الصوت.",
         voiceStarted: "بدأ البحث الصوتي — يمكنك التحدث الآن.",
+        voiceHeardPrefix: "سمعت:",
+        voiceConfirmQuestion: "هل أبحث عن هذا؟",
+        voiceConfirmToast: "سمعتك — أكّد لأبحث.",
         voiceDone: "تم — جارٍ البحث.",
         voiceStopped: "تم إيقاف البحث الصوتي.",
         voiceError: "حدث خطأ في البحث الصوتي.",
@@ -1468,6 +1527,11 @@ const resources = {
         badQuery: "نص بحث غير صالح. حاول مرة أخرى.",
         imageAnalyzing: "جارٍ تحليل الصورة…",
         imageDetected: "من الصورة أظن: {{query}}",
+        // ✅ شريط تأكيد الكاميرا (App.jsx)
+        imageDetectedPrefix: "مما فهمته من الصورة:",
+        imageWeakGuess: "لست متأكدًا تمامًا، لكن يبدو أنه:",
+        confirmSearch: "بحث",
+        editQuery: "تعديل",
         searchNow: "ابحث",
         edit: "تعديل",
         cancel: "إلغاء",
@@ -1583,12 +1647,15 @@ const resources = {
 
       common: {
         loading: "جارٍ التحميل…",
-        noImage: "لا توجد صورة"
+        noImage: "لا توجد صورة",
+        noPrice: "لا يوجد سعر",
+        summaryFallback: "لا توجد خلاصة"
       },
 
       actions: {
         goToReservation: "اضغط",
-        close: "إغلاق"
+        close: "إغلاق",
+        clear: "مسح"
       },
 
       footerFull: {
@@ -1603,6 +1670,9 @@ const resources = {
         send: "إرسال",
         placeholder: "اكتب رسالة...",
         listening: "أستمع…",
+        voiceHeardPrefix: "سمعت:",
+        voiceConfirmQuestion: "هل أبحث عن هذا؟",
+        voiceConfirmToast: "سمعتك — أكّد لأبحث.",
         voiceDone: "حسنًا. جارٍ البحث…",
         searching: "جارٍ البحث…",
         searchError: "خطأ في البحث.",
