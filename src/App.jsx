@@ -698,9 +698,9 @@ export default function App() {
 
         {/* ◆ Arama Çubuğu (mobil + desktop tek yapı: ikon solda, çerçevesiz; input çerçevesi altın) */}
         <div className="w-full max-w-[760px] mt-3 sm:mt-4 mb-3">
-          <div className="flex flex-col gap-2 w-full">
+          <div className="flex flex-col gap-2 w-full md:flex-row md:items-center md:gap-3">
             {/* Input (ikon solda; clear X sağda) */}
-            <div className="relative w-full">
+            <div className="relative w-full md:flex-1">
               <input
                 ref={searchInputRef}
                 id="search-input"
@@ -746,7 +746,7 @@ export default function App() {
             </div>
 
             {/* Ses / Kamera / QR → bir alt satır */}
-            <div className="flex items-center justify-center sm:justify-end gap-2">
+            <div className="flex items-center justify-end gap-2">
               <button
                 onClick={startMic}
                 className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition ${voiceListening ? "ring-2 ring-[#D9A441]/40 bg-[#D9A441]/10" : ""}`}
