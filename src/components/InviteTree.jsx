@@ -7,24 +7,24 @@ export default function InviteTree({ onClose }) {
   const { user } = useAuth();
 
   const [data, setData] = useState(null);
-  const [err, setErr] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user?.id) return;
 
     setLoading(true);
-    setErr(null);
+    // Bu ekranda ekstra uyarı mesajı göstermiyoruz.
 
     fetchInviteTree(user.id)
       .then((res) => {
         if (!res?.ok) {
-          setErr(res?.message || "Davet ağacı alınamadı");
           return;
         }
         setData(res);
       })
-      .catch(() => setErr("Sunucu hatası"))
+      .catch((e) => {
+        console.error(e);
+      })
       .finally(() => setLoading(false));
   }, [user]);
 
@@ -51,7 +51,6 @@ export default function InviteTree({ onClose }) {
       </div>
 
       {loading && <div>Yükleniyor...</div>}
-      {err && <div className="text-red-400 mb-3">{err}</div>}
 
       {data && (
         <>
