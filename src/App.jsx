@@ -625,7 +625,7 @@ export default function App() {
   }, [i18n.language, t]);
 
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-[#0b2a4a] sm:bg-[#0b0e14] text-white font-sans overflow-x-hidden">
+    <div className="min-h-[100dvh] flex flex-col bg-transparent text-white font-sans overflow-x-hidden">
       <Header />
       <NetworkStatusBanner />
 
