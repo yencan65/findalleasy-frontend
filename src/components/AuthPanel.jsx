@@ -46,7 +46,12 @@ export default function AuthPanel({ visible, onClose, onLoginSuccess }) {
       localStorage.setItem("userEmail", email);
       onLoginSuccess && onLoginSuccess(j);
       setLoading(false); setMsg(""); onClose();
-    }catch(e){ console.error(e); setMsg("Sunucuya ulaşılamadı."); setLoading(false); }
+    }catch(e){
+      // İnternet yoksa uyarıyı global banner gösterir. Burada ekstra mesaj yok.
+      console.error(e);
+      setMsg("");
+      setLoading(false);
+    }
   }
 
   // Google için referral'ı state ile taşı
