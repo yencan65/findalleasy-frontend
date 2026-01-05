@@ -8,13 +8,7 @@
   --bg: #0b0e14;
 }
 
-/* Mobilde arka plan: gece mavisi (kullanıcı şikayetini keser) */
-@media (max-width: 640px) {
-  :root {
-    --bg: #071c33;
-  }
-
-}
+/* ✅ Mobil / Tablet / PC aynı arka plan dili (tek kaynak) */
 
 
 /* === Scroll unlock (legal/admin pages) === */
