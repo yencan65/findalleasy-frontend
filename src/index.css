@@ -87,12 +87,14 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 2px solid rgba(212, 175, 55, 0.90);
-  box-shadow: 0 1px 12px rgba(212, 175, 55, 0.10);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.22);
+  box-shadow: none;
   position: sticky;
   top: 0;
   z-index: 50;
-  background: #000 !important;
+  background: rgba(11, 14, 20, 0.82) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .logo {
@@ -278,11 +280,13 @@ header {
 footer {
   margin-top: auto;
   width: 100%;
-  border-top: 2px solid rgba(212, 175, 55, 0.90);
-  box-shadow: 0 -1px 12px rgba(212, 175, 55, 0.10);
+  border-top: 1px solid rgba(212, 175, 55, 0.18);
+  box-shadow: none;
   text-align: center;
   padding: 1rem 0;
-  background: #000 !important;
+  background: rgba(11, 14, 20, 0.88) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   color: #aaa;
   font-size: clamp(0.8rem, 1vw, 0.9rem);
 }
