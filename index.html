@@ -59,35 +59,10 @@
   
     <!-- ✅ Structured data (helps reviewers + SEO) -->
     <script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "WebSite",
-  "name": "FindAllEasy",
-  "url": "https://findalleasy.com/",
-  "potentialAction": {
-    "@type": "SearchAction",
-    "target": "https://findalleasy.com/?q={search_term_string}",
-    "query-input": "required name=search_term_string"
-  },
-  "publisher": {
-    "@type": "Organization",
-    "name": "FindAllEasy",
-    "url": "https://findalleasy.com/",
-    "logo": {
-      "@type": "ImageObject",
-      "url": "https://findalleasy.com/icon-512.png"
-    },
-    "contactPoint": [
-      {
-        "@type": "ContactPoint",
-        "contactType": "customer support",
-        "email": "findalleasy@gmail.com",
-        "availableLanguage": [
-          "tr",
-          "en",
-          "fr",
-          "ru",
-          "ar"
+{"@context":"https://schema.org","@type":"WebSite","name":"FindAllEasy","url":"https://findalleasy.com/","potentialAction": {"@type":"SearchAction","target":"https://findalleasy.com/?q={search_term_string}","query-input":"required name=search_term_string"
+  },"publisher": {"@type":"Organization","name":"FindAllEasy","url":"https://findalleasy.com/","logo": {"@type":"ImageObject","url":"https://findalleasy.com/icon-512.png"
+    },"contactPoint": [
+      {"@type":"ContactPoint","contactType":"customer support","email":"findalleasy@gmail.com","availableLanguage": ["tr","en","fr","ru","ar"
         ]
       }
     ]
@@ -96,7 +71,7 @@
     </script>
   </head>
 
-  <body class="bg-darkblue text-white">
+  <body class="text-white">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
