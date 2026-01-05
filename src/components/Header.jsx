@@ -204,7 +204,7 @@ export default function Header() {
     <header
       className="
         w-full flex flex-row justify-between items-center flex-nowrap gap-2 sm:gap-3
-        px-3 sm:px-6 py-3 sm:py-4 bg-transparent
+        px-3 sm:px-6 py-3 sm:py-4 bg-black
         border-b border-[#d4af37]/20
         text-white font-sans backdrop-blur-xl
       "
