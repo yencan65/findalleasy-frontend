@@ -161,7 +161,8 @@ export default function AuthModal({ onClose, onLoggedIn, onLoginSuccess }) {
 
       onClose?.();
     } catch (err) {
-      alert(`${t("networkError")} → ${err.message}`);
+      // İnternet yoksa uyarıyı global banner gösterir. Burada ekstra uyarı yok.
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -221,8 +222,9 @@ export default function AuthModal({ onClose, onLoggedIn, onLoginSuccess }) {
 
       localStorage.setItem("last_registered_email", targetEmail);
       window.dispatchEvent(new Event("auth-changed"));
-    } catch {
-      alert(t("networkError"));
+    } catch (err) {
+      // İnternet yoksa uyarıyı global banner gösterir. Burada ekstra uyarı yok.
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -262,8 +264,9 @@ export default function AuthModal({ onClose, onLoggedIn, onLoginSuccess }) {
 
       clearStoredReferral();
       setTab("login");
-    } catch {
-      alert(t("networkError"));
+    } catch (err) {
+      // İnternet yoksa uyarıyı global banner gösterir. Burada ekstra uyarı yok.
+      console.error(err);
     } finally {
       setActivationLoading(false);
     }
@@ -295,8 +298,9 @@ export default function AuthModal({ onClose, onLoggedIn, onLoginSuccess }) {
       }
 
       alert(t("auth.resendSuccess"));
-    } catch {
-      alert(t("networkError"));
+    } catch (err) {
+      // İnternet yoksa uyarıyı global banner gösterir. Burada ekstra uyarı yok.
+      console.error(err);
     } finally {
       setResendLoading(false);
     }
@@ -329,8 +333,9 @@ export default function AuthModal({ onClose, onLoggedIn, onLoginSuccess }) {
 
       alert(t("resetCodeSent"));
       setForgotStep(1);
-    } catch {
-      alert(t("networkError"));
+    } catch (err) {
+      // İnternet yoksa uyarıyı global banner gösterir. Burada ekstra uyarı yok.
+      console.error(err);
     } finally {
       setForgotLoading(false);
     }
@@ -370,8 +375,9 @@ export default function AuthModal({ onClose, onLoggedIn, onLoginSuccess }) {
       setTab("login");
       setForgotStep(0);
       setPassword("");
-    } catch {
-      alert(t("networkError"));
+    } catch (err) {
+      // İnternet yoksa uyarıyı global banner gösterir. Burada ekstra uyarı yok.
+      console.error(err);
     } finally {
       setResetLoading(false);
     }
