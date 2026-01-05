@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { API_BASE } from "./utils/api";
 import Header from "./components/Header.jsx";
+import NetworkStatusBanner from "./components/NetworkStatusBanner.jsx";
 import AIAssistant from "./components/AIAssistant.jsx";
 import Vitrin from "./components/Vitrin.jsx";
 import Footer from "./components/Footer.jsx";
@@ -272,36 +273,6 @@ export default function App() {
       }
 
       const j = await res.json().catch(() => null);
-
-      // ✅ QR/Barkod fallback: bazı barkodlar direkt rakamla sonuç döndürmeyebilir.
-      // Bir kez daha "ean <code>" ile deneriz.
-      const isBarcode = /^\d{8,14}$/.test(query);
-      const itemsLen = Array.isArray(j?.items) ? j.items.length : 0;
-      const tried = Boolean(opts?._barcodeFallbackTried);
-      if (isBarcode && itemsLen === 0 && !tried) {
-        const q2 = `ean ${query}`;
-
-        // vitrin + global state ikinci sorguya da uyumlu olsun
-        try {
-          localStorage.setItem("lastQuery", q2);
-        } catch {}
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(new CustomEvent("fae.vitrine.search", { detail: { query: q2 } }));
-          window.dispatchEvent(new Event("fae.vitrine.refresh"));
-        }
-
-        try {
-          if (!skipUnified) {
-            await runUnifiedSearch(q2, { source: `${source}-barcode-fallback` });
-          }
-        } catch {}
-
-        const res2 = await postSearch(q2);
-        if (res2.ok) {
-          const j2 = await res2.json().catch(() => null);
-          return j2;
-        }
-      }
 
       return j;
     } catch (err) {
@@ -654,11 +625,12 @@ export default function App() {
   }, [i18n.language, t]);
 
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-[#0b0e14] text-white font-sans overflow-x-hidden">
+    <div className="min-h-[100dvh] flex flex-col bg-[#0b2a4a] sm:bg-[#0b0e14] text-white font-sans overflow-x-hidden">
       <Header />
+      <NetworkStatusBanner />
 
       {voiceToast ? (
-        <div className="fixed top-[72px] sm:top-[84px] left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
+        <div className="fixed top-[108px] sm:top-[124px] left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
           <div
             className={`px-3 py-2 rounded-xl border bg-black/70 backdrop-blur text-xs shadow
               ${voiceToast.kind === "error" ? "border-red-500/30 text-red-100" : voiceToast.kind === "ok" ? "border-emerald-500/25 text-emerald-50" : "border-[#D9A441]/25 text-white"}`}>
@@ -963,43 +935,59 @@ export default function App() {
         // JSON değilse düz metin olarak devam
       }
 
-      // ✅ Barkod/QR sayı ise (EAN/UPC): backend'den ürün adı çözümle + garanti fallback
-      if (/^\d{8,14}$/.test(q)) {
-        try {
-          const backend = API_BASE || "";
-          const rr = await fetch(`${backend}/api/product-info/product`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ qr: q, locale: i18n.language }),
-          });
-          const jj = await rr.json().catch(() => ({}));
-          const pn = String(jj?.product?.name || jj?.product?.title || jj?.productName || "").trim();
-          if (pn && !/^\d{8,14}$/.test(pn)) q = pn;
-        } catch {}
-        // hala sayıysa: arama motorlarına yardımcı ol
-        if (/^\d{8,14}$/.test(q)) q = `ean ${q}`;
-      }
-
+      const isBarcode = /^\d{8,14}$/.test(String(q || "").trim());
       if (!q) return;
 
-      // 🔥 TEK BEYİN: AI unified pipeline
+      // ✅ Barkod ise: artık FE'de product-info çözümleme yok.
+      // Tek çağrı: /api/search → backend S200 barcode TWO-STAGE (barcode + resolved-name merge)
+      if (isBarcode) {
+        try {
+          setValue(q);
+        } catch {}
+
+        const r = await doSearch(q, { skipUnified: true, source: "qr" });
+
+        const rq = String(r?._meta?.resolvedQuery || r?._meta?.upstreamMeta?.resolvedQuery || "").trim();
+        const bestTitle = String(r?.items?.[0]?.title || r?.results?.[0]?.title || "").trim();
+        const humanQ = rq && !/^\d{8,14}$/.test(rq) ? rq : (bestTitle || q);
+
+        // UI: barkod yerine isim göstermek için
+        try {
+          if (humanQ && humanQ !== q) setValue(humanQ);
+        } catch {}
+
+        // Unified (AI + vitrin) artık "isim" ile tetiklenebilir.
+        try {
+          await runUnifiedSearch(humanQ || q, {
+            source: "qr",
+            categoryHint: "product",
+            meta: { barcode: q },
+          });
+        } catch {}
+
+        // Global state: kullanıcıya isim kalsın
+        try {
+          localStorage.setItem("lastQuery", humanQ || q);
+        } catch {}
+
+        // Vitrin tetikleyicisi
+        try {
+          window.dispatchEvent(
+            new CustomEvent("fae.vitrine.search", {
+              detail: { query: humanQ || q },
+            })
+          );
+          window.dispatchEvent(new Event("fae.vitrine.refresh"));
+        } catch {}
+
+        return;
+      }
+
+      // 🔥 TEK BEYİN: normal QR text
       await runUnifiedSearch(q, { source: "qr" });
 
-      // 🔥 Global state
-      try {
-        localStorage.setItem("lastQuery", q);
-      } catch {}
-
-      // 🔥 Vitrin tetikleyicisi
-      window.dispatchEvent(
-        new CustomEvent("fae.vitrine.search", {
-          detail: { query: q },
-        })
-      );
-      window.dispatchEvent(new Event("fae.vitrine.refresh"));
-
       // 🔥 APP beynine arama
-      doSearch(q, { skipUnified: true });
+      doSearch(q, { skipUnified: true, source: "qr" });
     }}
     onClose={() => setQrScanOpen(false)}
   />

@@ -5,7 +5,15 @@
 /* === GENEL === */
 :root {
   --gold: #d4af37;
-  --bg: #1b1d23;
+  --bg: #0b0e14;
+}
+
+/* Mobilde arka plan: gece mavisi (kullanıcı şikayetini keser) */
+@media (max-width: 640px) {
+  :root {
+    --bg: #071c33;
+  }
+
 }
 
 
