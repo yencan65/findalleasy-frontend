@@ -13,12 +13,21 @@ const greetIconByHour = () => {
 export default function SmartGreetingBar({ name = "Efendim" }) {
   const { t } = useTranslation();
   
-  const triggers = [
+  const rawTriggers = [
     t("smartGreeting.trigger1"),
     t("smartGreeting.trigger2"),
-    t("smartGreeting.trigger3"), 
-    t("smartGreeting.trigger4")
+    t("smartGreeting.trigger3"),
+    t("smartGreeting.trigger4"),
   ];
+
+  // i18n anahtarları yoksa i18next bazen anahtarı geri döndürür; onları filtrele.
+  const triggers = rawTriggers
+    .map(v => (typeof v === "string" ? v.trim() : ""))
+    .filter(v => v && !/^smartGreeting\.trigger[1-4]$/.test(v));
+
+  // Son çare: vitrin placeholder metni
+  if (!triggers.length) triggers.push(t("trigger.customShowcase"));
+
 
   const [currentTrigger, setCurrentTrigger] = useState(0);
   const [fade, setFade] = useState(true);
@@ -39,14 +48,15 @@ export default function SmartGreetingBar({ name = "Efendim" }) {
     <div className="w-full max-w-6xl mx-auto mb-2 mt-4">
       <div className="flex items-center gap-3 text-sm">
         {/* Sabit selamlama kutusu - VİTRİN İLE AYNI GENİŞLİKTE */}
-        <div className="px-3 py-2 rounded-md bg-white/5 border border-white/10 min-w-[200px]">
-          {greetIconByHour()} <span className="ml-2">{t("smartGreeting.hello", { name })}</span>
+        <div className="px-3 py-2 rounded-md bg-white/5 border border-white/10 min-w-[200px] flex items-center gap-2 overflow-hidden">
+          {greetIconByHour()}
+            <span className="truncate">{t("smartGreeting.hello", { name })}</span>
         </div>
         
         {/* Dinamik tetikleyici cümle - SABİT ALAN */}
         <div className="flex-1 min-h-[20px]">
           <span
-            className={`text-white/90 transition-opacity duration-500 ease-in-out ${
+            className={`text-white/90 transition-opacity duration-500 ease-in-out truncate block w-full leading-5 ${
               fade ? "opacity-100" : "opacity-0"
             }`}
           >
