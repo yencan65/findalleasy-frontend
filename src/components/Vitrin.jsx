@@ -965,7 +965,7 @@ export default function Vitrin() {
             />
           ) : (
             <div className="rounded-2xl border border-dashed border-white/15 text-xs text-white/40 p-4 flex items-center justify-center h-full min-h-[160px]">
-              <span className="truncate w-full text-center">{t("trigger.customShowcase", { defaultValue: "Ürün/hizmet yazın; en uygun ve güvenilir seçeneği bulalım." })}</span>
+              <span className="truncate w-full text-center">{t("smartGreeting.trigger1", { defaultValue: "Ürün/hizmet detayını yaz — en uygun ve güvenilir seçenekleri getiriyoruz." })}</span>
             </div>
           )}
         </div>
