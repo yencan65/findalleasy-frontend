@@ -877,7 +877,7 @@ export default function Vitrin() {
           flex flex-row gap-3 sm:gap-5 items-center
         "
       >
-        <div className="w-[96px] h-[96px] sm:w-[160px] sm:h-[160px] rounded-xl overflow-hidden flex-none bg-black/40 flex items-center justify-center">
+        <div className="w-[96px] h-[96px] sm:w-[160px] sm:h-[160px] rounded-xl overflow-hidden flex-none bg-black/40 flex items-center justify-center overflow-hidden">
           {img ? (
             <img src={img} alt={safeTitle} className="w-full h-full object-contain" />
           ) : (
@@ -965,7 +965,7 @@ export default function Vitrin() {
             />
           ) : (
             <div className="rounded-2xl border border-dashed border-white/15 text-xs text-white/40 p-4 flex items-center justify-center h-full min-h-[160px]">
-              {t("trigger.customShowcase", { defaultValue: "Kişisel vitrinini hazırlıyorum..." })}
+              <span className="truncate w-full text-center">{t("trigger.customShowcase", { defaultValue: "Ürün/hizmet yazın; en uygun ve güvenilir seçeneği bulalım." })}</span>
             </div>
           )}
         </div>
