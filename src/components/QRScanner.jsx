@@ -196,13 +196,20 @@ export default function QRScanner({ onDetect, onClose }) {
         }
       }, 800);
 
-      let query = text;
-      setPhase("normalizing");
-      try {
-        const normalized = await fetchProductInfoFromCode(text);
-        if (normalized) query = normalized;
-      } catch (err) {
-        console.warn("QR/Barcode normalize skip:", err?.message || err);
+      const raw = String(text || "").trim();
+      const compact = raw.replace(/\s+/g, "");
+      const isBarcode = /^\d{8,14}$/.test(compact);
+      let query = isBarcode ? compact : raw;
+
+      // ✅ Barcode: FE'de isim çözümleme yapma. Backend S200 barcode two-stage bunu yönetiyor.
+      if (!isBarcode) {
+        setPhase("normalizing");
+        try {
+          const normalized = await fetchProductInfoFromCode(raw);
+          if (normalized) query = normalized;
+        } catch (err) {
+          console.warn("QR/Barcode normalize skip:", err?.message || err);
+        }
       }
 
       setPhase("handoff");
