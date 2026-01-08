@@ -9,9 +9,9 @@
     </filter>
   </defs>
 
-  <text x="9" y="34" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif" font-size="29" font-weight="700" fill="#F5F6F8">Find</text>
-  <text x="80" y="34" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif" font-size="29" font-weight="700" fill="#D4AA37" filter="url(#glow)">All</text>
-  <text x="120" y="34" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif" font-size="29" font-weight="700" fill="#F5F6F8">Easy</text>
+  <text x="9" y="34" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif" font-size="29" font-weight="700" fill="#111111">Find</text>
+  <text x="80" y="34" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif" font-size="29" font-weight="700" fill="#111111">All</text>
+  <text x="120" y="34" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif" font-size="29" font-weight="700" fill="#111111">Easy</text>
 
   <g transform="translate(200 7) scale(0.5312)" stroke="#D4AA37" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)">
     <path d="M12 42 L12 32 L20 24 L30 28 L28 46"/>

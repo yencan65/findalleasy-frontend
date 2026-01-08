@@ -204,9 +204,9 @@ export default function Header() {
     <header
       className="
         w-full flex flex-row justify-between items-center flex-nowrap gap-2 sm:gap-3
-        px-3 sm:px-6 py-3 sm:py-4 bg-black
+        px-3 sm:px-6 py-3 sm:py-4 bg-[#d9d9d9]
         border-b border-[#d4af37]/20
-        text-white font-sans backdrop-blur-xl
+        text-black font-sans backdrop-blur-xl
       "
       style={{
         boxShadow: "0 8px 28px rgba(212,175,55,0.07)",
@@ -235,9 +235,9 @@ export default function Header() {
               overflow-hidden text-ellipsis
             "
           >
-            <span className="text-white">Find</span>
-            <span className="text-[#d4af37]">All</span>
-            <span className="text-white">Easy</span>
+            <span className="text-[#111]">Find</span>
+            <span className="text-[#111]">All</span>
+            <span className="text-[#111]">Easy</span>
           </span>
 
           <SnapIcon
