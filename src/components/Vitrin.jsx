@@ -56,6 +56,25 @@ async function handleAffiliateRedirect(item, source = "unknown", user = null) {
 
     // ✅ New canonical redirect path (S16/S200): backend generates clickId, injects subid, stores click, then 302.
     // ZERO DELETE: eski sendClick + direct url fallback korunuyor.
+    // ✅ No-price items (seed-only / price-on-seller): go direct to provider page
+    const price = getFinalPrice(item);
+    if (price == null) {
+      const direct =
+        item?.affiliateUrl ||
+        item?.deeplink ||
+        item?.finalUrl ||
+        item?.originUrl ||
+        item?.url;
+      if (direct) {
+        window.open(direct, "_blank", "noopener,noreferrer");
+        // fire-and-forget internal click analytics (if enabled)
+        try {
+          await sendClick({ item, source, user: user?.id || null });
+        } catch {}
+        return;
+      }
+    }
+
     const outUrl = buildAffiliateRedirectUrl(item, user?.id || null);
     if (outUrl) {
       window.open(outUrl, "_blank", "noopener,noreferrer");
