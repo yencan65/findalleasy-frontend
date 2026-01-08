@@ -21,13 +21,6 @@ const resources = {
       cameraSearch: "Kamera ile ara",
       sloganFull: "Yazman yeterli, gerisini Sono halleder.",
 
-      net: {
-        offlineTitle: "İnternet bağlantınız yok",
-        offlineDesc: "Bağlantınızı kontrol edin. İnternet gelene kadar bu uyarı kapanmaz.",
-        onlineTitle: "İnternet bağlantınız geldi",
-        onlineDesc: "Devam edebilirsiniz.",
-      },
-
       site: {
         about: "Hakkımızda",
         how: "Nasıl Çalışır?",
@@ -140,14 +133,14 @@ const resources = {
 
       smartGreeting: {
         hello: "Merhaba {{name}}",
-        t1: "Ürün/hizmet detayını yaz — en uygun ve güvenilir seçenekleri getiriyoruz.",
-        t2: "🎙 Sesli arama: konuş, aramayı ben tamamlayayım.",
-        t3: "📷 Kamera & 🔳 QR/Barkod: tara, ürünü anında bul.",
-        t4: "Sono AI sonuçları özetler ve en güvenilir satıcıyı öne çıkarır.",
-        trigger1: "Ürün/hizmet detayını yaz — en uygun ve güvenilir seçenekleri getiriyoruz.",
-        trigger2: "🎙 Sesli arama: konuş, aramayı ben tamamlayayım.",
-        trigger3: "📷 Kamera & 🔳 QR/Barkod: tara, ürünü anında bul.",
-        trigger4: "Sono AI sonuçları özetler ve en güvenilir satıcıyı öne çıkarır."
+        t1: "Bölgende en çok tıklanan fırsatları gösteriyorum",
+        t2: "En güvenilir satıcıdan en uygun fiyat",
+        t3: "Tek tıkla karşılaştır, zamandan kazan",
+        t4: "İstersen başka ülkelere de bakabilirsin",
+        trigger1: "Bölgende en çok tıklanan fırsatları gösteriyorum",
+        trigger2: "En güvenilir satıcıdan en uygun fiyat",
+        trigger3: "Tek tıkla karşılaştır, zamandan kazan",
+        trigger4: "İstersen başka ülkelere de bakabilirsin"
       },
 
       slogan: {
@@ -167,7 +160,7 @@ const resources = {
         youTypeIFind: "Sen yaz, ben bulayım.",
         readyToSave: "Zaman ve para kazanmaya hazır mısın?",
         aiWithYou: "Yapay zeka her adımda yanında.",
-        customShowcase: "Ürün/hizmet detayını yaz — en uygun ve güvenilir seçenekleri getiriyoruz."
+        customShowcase: "Kişisel vitrinini hazırlıyorum..."
       },
 
       header: {
@@ -222,7 +215,7 @@ const resources = {
       common: {
         loading: "Yükleniyor…",
         noImage: "Görsel yok",
-        noPrice: "Fiyat yok",
+        noPrice: "Fiyat satıcıda",
         summaryFallback: "Özet bilgi yok"
       },
 
@@ -384,13 +377,6 @@ const resources = {
       cameraSearch: "Search with camera",
       sloganFull: "Just type — Sono will handle the rest.",
 
-      net: {
-        offlineTitle: "No internet connection",
-        offlineDesc: "Please check your connection. This warning stays until you’re back online.",
-        onlineTitle: "Connection restored",
-        onlineDesc: "You can continue.",
-      },
-
       site: {
         about: "About",
         how: "How it works",
@@ -502,14 +488,14 @@ const resources = {
 
       smartGreeting: {
         hello: "Hello {{name}}",
-        t1: "Type the product/service — we’ll bring the best and most trusted options.",
-        t2: "🎙 Voice search: speak, I’ll finish the search.",
-        t3: "📷 Camera & 🔳 QR/Barcode: scan and find instantly.",
-        t4: "Sono AI summarizes results and highlights the most trusted seller.",
-        trigger1: "Type the product/service — we’ll bring the best and most trusted options.",
-        trigger2: "🎙 Voice search: speak, I’ll finish the search.",
-        trigger3: "📷 Camera & 🔳 QR/Barcode: scan and find instantly.",
-        trigger4: "Sono AI summarizes results and highlights the most trusted seller."
+        t1: "Showing top clicked deals in your area",
+        t2: "Best price from the most reliable seller",
+        t3: "Compare instantly, save time",
+        t4: "You can also check other countries",
+        trigger1: "Showing top clicked deals in your area",
+        trigger2: "Best price from the most reliable seller",
+        trigger3: "Compare instantly, save time",
+        trigger4: "You can also check other countries"
       },
 
       slogan: {
@@ -529,7 +515,7 @@ const resources = {
         youTypeIFind: "You type, I find.",
         readyToSave: "Ready to save time and money?",
         aiWithYou: "AI is with you.",
-        customShowcase: "Type the product/service — we’ll bring the best and most trusted options."
+        customShowcase: "Preparing your personalized showcase..."
       },
 
       header: {
@@ -584,7 +570,7 @@ const resources = {
       common: {
         loading: "Loading…",
         noImage: "No image",
-        noPrice: "No price",
+        noPrice: "Price on seller",
         summaryFallback: "No summary"
       },
 
@@ -745,13 +731,6 @@ const resources = {
       cameraSearch: "Rechercher avec la caméra",
       sloganFull: "Tapez simplement — Sono s’occupe du reste.",
 
-      net: {
-        offlineTitle: "Pas de connexion Internet",
-        offlineDesc: "Vérifie ta connexion. Cet avertissement restera jusqu’au retour d’Internet.",
-        onlineTitle: "Connexion rétablie",
-        onlineDesc: "Tu peux continuer.",
-      },
-
       site: {
         about: "À propos",
         how: "Comment ça marche ?",
@@ -868,14 +847,14 @@ const resources = {
 
       smartGreeting: {
         hello: "Bonjour {{name}}",
-        t1: "Décris le produit/service — on te montre les options les plus fiables et avantageuses.",
-        t2: "🎙 Recherche vocale : parle, je complète la recherche.",
-        t3: "📷 Caméra & 🔳 QR/code‑barres : scanne, trouve instantanément.",
-        t4: "Sono AI résume les résultats et met en avant le vendeur le plus fiable.",
-        trigger1: "Décris le produit/service — on te montre les options les plus fiables et avantageuses.",
-        trigger2: "🎙 Recherche vocale : parle, je complète la recherche.",
-        trigger3: "📷 Caméra & 🔳 QR/code‑barres : scanne, trouve instantanément.",
-        trigger4: "Sono AI résume les résultats et met en avant le vendeur le plus fiable."
+        t1: "Je montre les offres populaires dans ta région",
+        t2: "Meilleur prix du vendeur le plus fiable",
+        t3: "Compare en un clic, gagne du temps",
+        t4: "Tu peux aussi regarder d'autres pays",
+        trigger1: "Je montre les offres populaires dans ta région",
+        trigger2: "Meilleur prix du vendeur le plus fiable",
+        trigger3: "Compare en un clic, gagne du temps",
+        trigger4: "Tu peux aussi regarder d'autres pays"
       },
 
       slogan: {
@@ -895,7 +874,7 @@ const resources = {
         youTypeIFind: "Tu écris, je trouve.",
         readyToSave: "Prêt à économiser ?",
         aiWithYou: "L’IA est avec toi.",
-        customShowcase: "Décris le produit/service — on te montre les options les plus fiables et avantageuses."
+        customShowcase: "Je prépare ta vitrine personnalisée..."
       },
 
       header: {
@@ -953,7 +932,7 @@ const resources = {
       common: {
         loading: "Chargement…",
         noImage: "Aucune image",
-        noPrice: "Pas de prix",
+        noPrice: "Prix chez le vendeur",
         summaryFallback: "Pas de résumé"
       },
 
@@ -1116,13 +1095,6 @@ const resources = {
       cameraSearch: "Поиск по камере",
       sloganFull: "Просто напишите — остальное сделает Sono.",
 
-      net: {
-        offlineTitle: "Нет подключения к интернету",
-        offlineDesc: "Проверьте соединение. Это сообщение будет видно, пока интернет не появится.",
-        onlineTitle: "Соединение восстановлено",
-        onlineDesc: "Можно продолжать.",
-      },
-
       site: {
         about: "О нас",
         how: "Как это работает?",
@@ -1236,15 +1208,15 @@ const resources = {
       },
 
       smartGreeting: {
-        hello: "Привет, {{name}}",
-        t1: "Опиши товар/услугу — покажем лучшие и самые надёжные варианты.",
-        t2: "🎙 Голосовой поиск: говори, я завершу запрос.",
-        t3: "📷 Камера & 🔳 QR/штрих‑код: сканируй — найдём сразу.",
-        t4: "Sono AI подытожит и выделит самого надёжного продавца.",
-        trigger1: "Опиши товар/услугу — покажем лучшие и самые надёжные варианты.",
-        trigger2: "🎙 Голосовой поиск: говори, я завершу запрос.",
-        trigger3: "📷 Камера & 🔳 QR/штрих‑код: сканируй — найдём сразу.",
-        trigger4: "Sono AI подытожит и выделит самого надёжного продавца."
+        hello: "Привет {{name}}",
+        t1: "Показываю топ-предложения в твоём регионе",
+        t2: "Лучшая цена от проверенного продавца",
+        t3: "Сравнивай быстро — экономь время",
+        t4: "Можно посмотреть другие страны",
+        trigger1: "Показываю топ-предложения в твоём регионе",
+        trigger2: "Лучшая цена от проверенного продавца",
+        trigger3: "Сравнивай быстро — экономь время",
+        trigger4: "Можно посмотреть другие страны"
       },
 
       slogan: {
@@ -1264,7 +1236,7 @@ const resources = {
         youTypeIFind: "Ты пишешь — я нахожу.",
         readyToSave: "Готов экономить?",
         aiWithYou: "ИИ рядом.",
-        customShowcase: "Опиши товар/услугу — покажем лучшие и самые надёжные варианты."
+        customShowcase: "Готовлю твою витрину..."
       },
 
       header: {
@@ -1319,7 +1291,7 @@ const resources = {
       common: {
         loading: "Загрузка…",
         noImage: "Нет изображения",
-        noPrice: "Нет цены",
+        noPrice: "Цена у продавца",
         summaryFallback: "Нет описания"
       },
 
@@ -1480,13 +1452,6 @@ const resources = {
       cameraSearch: "بحث بالكاميرا",
       sloganFull: "اكتب فقط — وسيتكفّل Sono بالباقي.",
 
-      net: {
-        offlineTitle: "لا يوجد اتصال بالإنترنت",
-        offlineDesc: "يرجى التحقق من الاتصال. سيبقى هذا التنبيه حتى يعود الإنترنت.",
-        onlineTitle: "تمت استعادة الاتصال",
-        onlineDesc: "يمكنك المتابعة.",
-      },
-
       site: {
         about: "من نحن",
         how: "كيف يعمل؟",
@@ -1597,15 +1562,15 @@ const resources = {
       },
 
       smartGreeting: {
-        hello: "مرحباً {{name}}",
-        t1: "اكتب تفاصيل المنتج/الخدمة — سنعرض لك الأفضل والأكثر موثوقية.",
-        t2: "🎙 بحث صوتي: تكلّم وسأكمل البحث.",
-        t3: "📷 الكاميرا و 🔳 QR/الباركود: امسح لتجد فورًا.",
-        t4: "Sono AI يلخّص النتائج ويبرز البائع الأكثر موثوقية.",
-        trigger1: "اكتب تفاصيل المنتج/الخدمة — سنعرض لك الأفضل والأكثر موثوقية.",
-        trigger2: "🎙 بحث صوتي: تكلّم وسأكمل البحث.",
-        trigger3: "📷 الكاميرا و 🔳 QR/الباركود: امسح لتجد فورًا.",
-        trigger4: "Sono AI يلخّص النتائج ويبرز البائع الأكثر موثوقية."
+        hello: "مرحبًا {{name}}",
+        t1: "أعرض أشهر العروض في منطقتك",
+        t2: "أفضل سعر من أكثر البائعين موثوقية",
+        t3: "قارن فورًا ووفر الوقت",
+        t4: "يمكنك أيضًا استكشاف دول أخرى",
+        trigger1: "أعرض أشهر العروض في منطقتك",
+        trigger2: "أفضل سعر من أكثر البائعين موثوقية",
+        trigger3: "قارن فورًا ووفر الوقت",
+        trigger4: "يمكنك أيضًا استكشاف دول أخرى"
       },
 
       slogan: {
@@ -1625,7 +1590,7 @@ const resources = {
         youTypeIFind: "أنت تكتب وأنا أجد.",
         readyToSave: "جاهز لتوفير الوقت والمال؟",
         aiWithYou: "الذكاء الاصطناعي معك.",
-        customShowcase: "اكتب تفاصيل المنتج/الخدمة — سنعرض لك الأفضل والأكثر موثوقية."
+        customShowcase: "أُحضّر واجهتك المخصصة..."
       },
 
       header: {
@@ -1683,7 +1648,7 @@ const resources = {
       common: {
         loading: "جارٍ التحميل…",
         noImage: "لا توجد صورة",
-        noPrice: "لا يوجد سعر",
+        noPrice: "السعر عند البائع",
         summaryFallback: "لا توجد خلاصة"
       },
 
