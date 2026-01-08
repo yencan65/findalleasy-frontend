@@ -625,7 +625,7 @@ export default function App() {
   }, [i18n.language, t]);
 
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-transparent text-[#111] font-sans overflow-x-hidden">
+    <div className="min-h-[100dvh] flex flex-col bg-transparent text-white font-sans overflow-x-hidden">
       <Header />
       <NetworkStatusBanner />
 
@@ -634,7 +634,7 @@ export default function App() {
           <div
             className={`px-3 py-2 rounded-xl border bg-black/70 backdrop-blur text-xs shadow
               ${voiceToast.kind === "error" ? "border-red-500/30 text-red-100" : voiceToast.kind === "ok" ? "border-emerald-500/25 text-emerald-50" : "border-[#D9A441]/25 text-white"}`}>
-            <span className="mr-2 text-[#111]">🎤</span>
+            <span className="mr-2 text-[#D9A441]">🎤</span>
             {voiceToast.msg}
           </div>
         </div>
@@ -645,8 +645,8 @@ export default function App() {
       >
         {/* ◆ SLOGAN */}
         <h2 className="flex flex-wrap justify-center items-center gap-x-2 gap-y-1 text-[18px] sm:text-[20px] md:text-[24px] lg:text-[29px] font-semibold text-center select-none px-2 leading-tight">
-          <span className="text-[#111]">{t("yazman yeterli,")}</span>
-          <span className="text-[#111]">{t("gerisini")}</span>
+          <span className="text-white">{t("yazman yeterli,")}</span>
+          <span className="text-[#d4af37]">{t("gerisini")}</span>
 
           <div
             className="relative group transition-transform duration-500 hover:scale-110"
@@ -665,7 +665,7 @@ export default function App() {
             />
           </div>
 
-          <span className="text-[#111]">{t("halleder.")}</span>
+          <span className="text-[#d4af37]">{t("halleder.")}</span>
         </h2>
 
         {/* ◆ Arama Çubuğu (mobil + desktop tek yapı: ikon solda, çerçevesiz; input çerçevesi altın) */}
@@ -684,13 +684,13 @@ export default function App() {
                 }}
                 onKeyDown={(e) => e.key === "Enter" && doSearch()}
                 placeholder={t("ph.searchProduct", { defaultValue: "Ürün veya hizmet ara" })}
-                className="w-full h-11 sm:h-12 rounded-xl pl-9 sm:pl-11 pr-11 sm:pr-12 text-[#111] placeholder:text-black/40 outline-none border border-[#111]/60 focus:border-[#111] bg-white shadow-[0_6px_18px_rgba(0,0,0,0.06)]"
+                className="w-full h-11 sm:h-12 rounded-xl pl-9 sm:pl-11 pr-11 sm:pr-12 text-white placeholder:text-white/40 outline-none border border-[#D9A441]/45 focus:border-[#D9A441]/70 bg-[#0B0E12]/45 backdrop-blur"
               />
 
               <button
                 id="search-button"
                 onClick={doSearch}
-                className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 p-1.5 rounded-md border border-[#111]/30 bg-transparent hover:bg-black/5 active:scale-95 transition"
+                className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 p-1 rounded-md bg-transparent hover:bg-white/5 active:scale-95 transition"
                 aria-label={t("search.search")}
                 title={t("search.search")}
               >
@@ -708,11 +708,11 @@ export default function App() {
                       searchInputRef.current?.focus?.();
                     } catch {}
                   }}
-                  className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-md bg-transparent hover:bg-black/5 active:scale-95 transition"
+                  className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-md bg-transparent hover:bg-white/5 active:scale-95 transition"
                   aria-label={t("actions.clear", { defaultValue: "Temizle" })}
                   title={t("actions.clear", { defaultValue: "Temizle" })}
                 >
-                  <X className="w-4 h-4 sm:w-5 sm:h-5 text-black/50" aria-hidden />
+                  <X className="w-4 h-4 sm:w-5 sm:h-5 text-white/60" aria-hidden />
                 </button>
               ) : null}
             </div>
@@ -721,7 +721,7 @@ export default function App() {
             <div className="flex items-center justify-end gap-2">
               <button
                 onClick={startMic}
-                className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl border border-[#111]/60 bg-white/75 hover:bg-black/5 flex items-center justify-center transition ${voiceListening ? "ring-2 ring-[#D9A441]/40 bg-[#D9A441]/10" : ""}`}
+                className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition ${voiceListening ? "ring-2 ring-[#D9A441]/40 bg-[#D9A441]/10" : ""}`}
                 title={t("search.voice")}
                 aria-label={t("search.voice")}
               >
@@ -734,7 +734,7 @@ export default function App() {
 
               <button
                 onClick={openCamera}
-                className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl border border-[#111]/60 bg-white/75 hover:bg-black/5 flex items-center justify-center transition"
+                className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
                 title={t("search.camera")}
                 aria-label={t("search.camera")}
               >
@@ -743,7 +743,7 @@ export default function App() {
 
               <button
                 onClick={startQRScanner}
-                className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl border border-[#111]/60 bg-white/75 hover:bg-black/5 flex items-center justify-center transition"
+                className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
                 title={t("search.qr")}
                 aria-label={t("search.qr")}
               >
@@ -756,23 +756,23 @@ export default function App() {
         {/* ◆ Arama / Kamera durum göstergesi (kullanıcıya net geri bildirim) */}
         <div className="w-full max-w-[760px] -mt-1 mb-2">
           {visionBusy ? (
-            <div className="flex items-center justify-center gap-2 text-[12px] sm:text-[13px] text-black/70 select-none">
-              <div className="w-3 h-3 rounded-full border border-[#111] border-t-transparent animate-spin" />
+            <div className="flex items-center justify-center gap-2 text-[12px] sm:text-[13px] text-white/80 select-none">
+              <div className="w-3 h-3 rounded-full border border-[#D9A441] border-t-transparent animate-spin" />
               <span>{t("search.imageAnalyzing", { defaultValue: "Görsel analiz ediliyor..." })}</span>
             </div>
           ) : searchBusy ? (
-            <div className="flex items-center justify-center gap-2 text-[12px] sm:text-[13px] text-black/70 select-none">
-              <div className="w-3 h-3 rounded-full border border-[#111] border-t-transparent animate-spin" />
+            <div className="flex items-center justify-center gap-2 text-[12px] sm:text-[13px] text-white/80 select-none">
+              <div className="w-3 h-3 rounded-full border border-[#D9A441] border-t-transparent animate-spin" />
               <span>{t("search.searching", { defaultValue: "Arama yapılıyor..." })}</span>
             </div>
           ) : voiceConfirm ? (
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl border border-[#111]/25 bg-white/75 shadow-[0_10px_30px_rgba(0,0,0,0.06)] px-3 py-2">
-              <div className="text-[12px] sm:text-[13px] text-black/80">
-                <span className="text-black/60">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl border border-[#D9A441]/35 bg-black/25 px-3 py-2">
+              <div className="text-[12px] sm:text-[13px] text-white/85">
+                <span className="text-white/70">
                   {t("search.voiceHeardPrefix", { defaultValue: "Sesli komuttan anladığım:" })}
                 </span>{" "}
                 <span className="text-[#D9A441] font-semibold">{voiceConfirm?.query}</span>
-                <span className="text-black/60">
+                <span className="text-white/70">
                   {" "}
                   — {t("search.voiceConfirmQuestion", { defaultValue: "Bunu mu arayayım?" })}
                 </span>
@@ -799,23 +799,23 @@ export default function App() {
                       try { searchInputRef.current?.focus?.(); } catch {}
                     }, 0);
                   }}
-                  className="text-xs px-3 py-1 rounded-lg border border-[#111]/20 text-black/80 hover:bg-black/5"
+                  className="text-xs px-3 py-1 rounded-lg border border-white/20 text-white/80 hover:bg-white/5"
                 >
                   {t("search.editQuery", { defaultValue: "Düzenle" })}
                 </button>
 
                 <button
                   onClick={() => setVoiceConfirm(null)}
-                  className="text-xs px-3 py-1 rounded-lg border border-[#111]/15 text-black/50 hover:bg-black/5"
+                  className="text-xs px-3 py-1 rounded-lg border border-white/15 text-white/60 hover:bg-white/5"
                 >
                   {t("search.cancel", { defaultValue: "Vazgeç" })}
                 </button>
               </div>
             </div>
           ) : visionConfirm ? (
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-xl border border-[#111]/25 bg-white/75 shadow-[0_10px_30px_rgba(0,0,0,0.06)] px-3 py-2">
-              <div className="text-[12px] sm:text-[13px] text-black/80">
-                <span className="text-black/60">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-xl border border-[#D9A441]/35 bg-black/25 px-3 py-2">
+              <div className="text-[12px] sm:text-[13px] text-white/85">
+                <span className="text-white/70">
                   {visionConfirm?.weak
                     ? t("search.imageWeakGuess", { defaultValue: "Emin olamadım, ama şöyle görünüyor:" })
                     : t("search.imageDetectedPrefix", { defaultValue: "Görüntüden anladığım:" })}
@@ -839,13 +839,13 @@ export default function App() {
                       searchInputRef.current?.focus?.();
                     } catch {}
                   }}
-                  className="px-3 py-1.5 rounded-lg border border-[#D9A441]/45 text-black/80 text-[12px] hover:bg-black/5 active:scale-95 transition"
+                  className="px-3 py-1.5 rounded-lg border border-[#D9A441]/45 text-white text-[12px] hover:bg-white/5 active:scale-95 transition"
                 >
                   {t("search.editQuery", { defaultValue: "Düzenle" })}
                 </button>
                 <button
                   onClick={() => setVisionConfirm(null)}
-                  className="px-3 py-1.5 rounded-lg border border-[#111]/20 text-black/70 text-[12px] hover:bg-black/5 active:scale-95 transition"
+                  className="px-3 py-1.5 rounded-lg border border-white/20 text-white/80 text-[12px] hover:bg-white/5 active:scale-95 transition"
                 >
                   {t("search.cancel", { defaultValue: "İptal" })}
                 </button>
@@ -883,7 +883,7 @@ export default function App() {
 
           return (
           <div className="w-full flex justify-center mt-2 mb-2 select-none">
-  <p className="text-[13px] sm:text-[14px] text-black/80 text-center flex items-center gap-2">
+  <p className="text-[13px] sm:text-[14px] text-white/90 text-center flex items-center gap-2">
     <span>{greeting}</span>
     {name ? <span>{name}</span> : null}
     <span className="text-[#d4af37]">||</span>

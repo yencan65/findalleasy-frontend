@@ -39,7 +39,7 @@ export default function LegalShell({
     ? homeLabel
     : t("legal.home", { defaultValue: "← Home" });
   return (
-    <div className="min-h-screen w-full bg-transparent text-[#111]">
+    <div className="min-h-screen w-full bg-transparent text-white">
       <Header />
 
       <main className="w-full px-4 py-10">
