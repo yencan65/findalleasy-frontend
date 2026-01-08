@@ -215,7 +215,7 @@ const resources = {
       common: {
         loading: "Yükleniyor…",
         noImage: "Görsel yok",
-        noPrice: "Fiyat yok",
+        noPrice: "Fiyat satıcıda",
         summaryFallback: "Özet bilgi yok"
       },
 
@@ -570,7 +570,7 @@ const resources = {
       common: {
         loading: "Loading…",
         noImage: "No image",
-        noPrice: "No price",
+        noPrice: "Price at seller",
         summaryFallback: "No summary"
       },
 
@@ -932,7 +932,7 @@ const resources = {
       common: {
         loading: "Chargement…",
         noImage: "Aucune image",
-        noPrice: "Pas de prix",
+        noPrice: "Prix chez le vendeur",
         summaryFallback: "Pas de résumé"
       },
 
@@ -1291,7 +1291,7 @@ const resources = {
       common: {
         loading: "Загрузка…",
         noImage: "Нет изображения",
-        noPrice: "Нет цены",
+        noPrice: "Цена у продавца",
         summaryFallback: "Нет описания"
       },
 
@@ -1648,7 +1648,7 @@ const resources = {
       common: {
         loading: "جارٍ التحميل…",
         noImage: "لا توجد صورة",
-        noPrice: "لا يوجد سعر",
+        noPrice: "السعر عند البائع",
         summaryFallback: "لا توجد خلاصة"
       },
 

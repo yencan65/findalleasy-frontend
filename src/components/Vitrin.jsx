@@ -922,7 +922,7 @@ export default function Vitrin() {
               </div>
             ) : (
               <div className="flex flex-col items-end min-w-[80px]">
-                <span className="text-white/35 text-[0.85rem]">{t("common.noPrice", { defaultValue: "Fiyat yok" })}</span>
+                <span className="text-white/35 text-[0.85rem]">{t("common.noPrice", { defaultValue: "Fiyat satıcıda" })}</span>
               </div>
             )}
           </div>
