@@ -121,7 +121,7 @@ export async function runUnifiedSearch(
     meta = null,
 
     skipVitrin = false,
-    skipAI = false,
+    skipAI = true,
   } = {}
 ) {
   const clean = normalizeQuery(query);
@@ -133,12 +133,15 @@ export async function runUnifiedSearch(
   }
 
   // Sadece vitrin tetiklemek için kullanılıyorsa
-  if (skipAI) return null;
+  if (skipAI) {
+    return { ai: null, vitrin: null };
+  }
 
-  // 2) AI pipeline'a gönder (mevcut davranış)
+  // 2) AI pipeline'a gönder (opsiyonel)
   let aiData = null;
 
-  try {
+  if (!skipAI) {
+    try {
     const body = {
       message: clean,
       locale,
@@ -193,8 +196,9 @@ export async function runUnifiedSearch(
         })
       );
     } catch {}
-  } catch (err) {
-    console.warn("runUnifiedSearch (AI) hata:", err);
+    } catch (err) {
+      console.warn("runUnifiedSearch (AI) hata:", err);
+    }
   }
 
   // =============================================================
@@ -233,13 +237,6 @@ export function pushQueryToVitrine(query, source = "unknown") {
     window.dispatchEvent(new CustomEvent("fae.vitrine.search", { detail }));
   } catch {}
 
-  try {
-    window.dispatchEvent(new CustomEvent("vitrine-search", { detail }));
-  } catch {}
-
-  try {
-    window.dispatchEvent(new CustomEvent("fie:vitrin", { detail }));
-  } catch {}
 }
 
 export function getLastQuery() {

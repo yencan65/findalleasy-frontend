@@ -603,8 +603,7 @@ useEffect(() => {
         }
 
         // Güvenli/temiz sonuç: otomatik arama
-        await runUnifiedSearch(q, { source: "camera" });
-        doSearch(q, { skipUnified: true, source: "camera" });
+        doSearch(q, { source: "camera" });
       }
     } catch (err) {
       console.warn("Vision arama hatası:", err);
@@ -810,8 +809,7 @@ useEffect(() => {
                     const q = String(voiceConfirm?.query || value || "").trim();
                     setVoiceConfirm(null);
                     if (!q) return;
-                    await runUnifiedSearch(q, { source: "voice" });
-                    doSearch(q, { skipUnified: true, source: "voice" });
+                    doSearch(q, { source: "voice" });
                   }}
                   className="text-xs px-3 py-1 rounded-lg border border-[#D9A441]/60 text-[#f5d76e] hover:bg-[#D9A441]/10"
                 >
@@ -971,7 +969,7 @@ useEffect(() => {
           setValue(q);
         } catch {}
 
-        const r = await doSearch(q, { skipUnified: true, source: "qr" });
+        const r = await doSearch(q, { source: "qr" });
 
         const rq = String(r?._meta?.resolvedQuery || r?._meta?.upstreamMeta?.resolvedQuery || "").trim();
         const bestTitle = String(r?.items?.[0]?.title || r?.results?.[0]?.title || "").trim();
@@ -1010,10 +1008,7 @@ useEffect(() => {
       }
 
       // 🔥 TEK BEYİN: normal QR text
-      await runUnifiedSearch(q, { source: "qr" });
-
-      // 🔥 APP beynine arama
-      doSearch(q, { skipUnified: true, source: "qr" });
+      doSearch(q, { source: "qr" });
     }}
     onClose={() => setQrScanOpen(false)}
   />
@@ -1025,11 +1020,8 @@ useEffect(() => {
       const q = String(text || value || "").trim();
       if (!q) return;
 
-      // ⭐ TEK BEYİN
-      await runUnifiedSearch(q, { source: "ai" });
-
-      // ⭐ APP'in kendi arama hattını çağır
-      doSearch(q, { skipUnified: true });
+      // ⭐ Tek arama: App'in kendi hattı
+      doSearch(q, { source: "ai" });
     }}
     key={i18n.language}
   />

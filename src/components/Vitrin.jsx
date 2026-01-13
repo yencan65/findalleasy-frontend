@@ -466,6 +466,18 @@ export default function Vitrin() {
       const q = e.detail?.query?.trim();
       if (!q) return;
 
+      // 🔒 Dedupe: aynı sorgu üst üste gelirse (çift event / çift tetik) tek sefer çalışsın
+      const now = Date.now();
+      try {
+        if (typeof window !== "undefined") {
+          const lastQ = window.__fae_lastHandledQuery || "";
+          const lastAt = Number(window.__fae_lastHandledAt || 0);
+          if (lastQ === q && now - lastAt < 1500) return;
+          window.__fae_lastHandledQuery = q;
+          window.__fae_lastHandledAt = now;
+        }
+      } catch {}
+
       try {
         if (typeof window !== "undefined") {
           if (window.localStorage) window.localStorage.setItem("lastQuery", q);
@@ -498,9 +510,6 @@ export default function Vitrin() {
 
     if (typeof window !== "undefined") {
       window.addEventListener("fae.vitrine.search", unifiedHandleSearch);
-      window.addEventListener("vitrine-search", unifiedHandleSearch);
-      window.addEventListener("ai.search", unifiedHandleSearch);
-
       window.addEventListener("fae.vitrine.refresh", refreshHandler);
       window.addEventListener("fie:vitrin", handleFIE);
     }
@@ -508,8 +517,6 @@ export default function Vitrin() {
     return () => {
       if (typeof window !== "undefined") {
         window.removeEventListener("fae.vitrine.search", unifiedHandleSearch);
-        window.removeEventListener("vitrine-search", unifiedHandleSearch);
-        window.removeEventListener("ai.search", unifiedHandleSearch);
 
         window.removeEventListener("fae.vitrine.refresh", refreshHandler);
         window.removeEventListener("fie:vitrin", handleFIE);

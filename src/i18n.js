@@ -92,6 +92,7 @@ const resources = {
         // ✅ Kamera onay barı (App.jsx ile uyumlu)
         imageDetectedPrefix: "Görüntüden anladığım:",
         imageWeakGuess: "Emin olamadım, ama şöyle görünüyor:",
+        confirmQuestion: "Bu aramayı yapmak istiyor musunuz?",
         confirmSearch: "Ara",
         editQuery: "Düzenle",
         searchNow: "Ara",
@@ -455,6 +456,7 @@ const resources = {
         // ✅ Camera confirm bar (App.jsx)
         imageDetectedPrefix: "From the image, I understood:",
         imageWeakGuess: "Not 100% sure, but it looks like:",
+        confirmQuestion: "Do you want to perform this search?",
         confirmSearch: "Search",
         editQuery: "Edit",
         searchNow: "Search",
@@ -811,6 +813,7 @@ const resources = {
         // ✅ Barre de confirmation caméra (App.jsx)
         imageDetectedPrefix: "D'après l'image, j'ai compris :",
         imageWeakGuess: "Pas sûr à 100 %, mais on dirait :",
+        confirmQuestion: "Voulez-vous lancer cette recherche ?",
         confirmSearch: "Rechercher",
         editQuery: "Modifier",
         searchNow: "Rechercher",
@@ -1175,6 +1178,7 @@ const resources = {
         // ✅ Панель подтверждения камеры (App.jsx)
         imageDetectedPrefix: "По изображению я понял:",
         imageWeakGuess: "Не уверен, но похоже на:",
+        confirmQuestion: "Вы хотите выполнить этот поиск?",
         confirmSearch: "Искать",
         editQuery: "Редактировать",
         searchNow: "Поиск",
@@ -1530,6 +1534,7 @@ const resources = {
         // ✅ شريط تأكيد الكاميرا (App.jsx)
         imageDetectedPrefix: "مما فهمته من الصورة:",
         imageWeakGuess: "لست متأكدًا تمامًا، لكن يبدو أنه:",
+        confirmQuestion: "هل تريد إجراء هذا البحث؟",
         confirmSearch: "بحث",
         editQuery: "تعديل",
         searchNow: "ابحث",

@@ -2,7 +2,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useStatusBus } from "../context/StatusBusContext";
-import { runUnifiedSearch } from "../utils/searchBridge";
 import { initSonoActionEngine } from "../engines/sonoActionEngine";
 import { API_BASE } from "../utils/api";
 /**
@@ -12,37 +11,17 @@ import { API_BASE } from "../utils/api";
  */
 
 // AI bir arama önerisi yaptığında vitrine yönlendirme (HERKÜL SÜRÜMÜ - GÜÇLENDİRİLMİŞ)
-function pushQueryToVitrine(text) {
+function pushQueryToVitrine(text, source = "ai") {
   const clean = String(text || "").trim();
   if (!clean) return;
 
-  if (typeof window === "undefined" || typeof localStorage === "undefined") return;
-
   try {
-    localStorage.setItem("lastQuery", clean);
-
-    if (window.__ai_to_vitrine_lock) return;
-    window.__ai_to_vitrine_lock = true;
-    setTimeout(() => (window.__ai_to_vitrine_lock = false), 120);
-
-
-    // Modern event (yeni sistem)
+    if (typeof window === "undefined") return;
     window.dispatchEvent(
-      new CustomEvent("fae.vitrine.search", { detail: { query: clean } })
+      new CustomEvent("fae.vitrine.search", {
+        detail: { query: clean, source },
+      })
     );
-
-    // Legacy event (eski sistem)
-    window.dispatchEvent(
-      new CustomEvent("vitrine-search", { detail: { query: clean } })
-    );
-
-    // Universal event (AI → vitrine JSON)
-    window.dispatchEvent(
-      new CustomEvent("fie:vitrin", { detail: { query: clean } })
-    );
-
-    // Refresh event
-    window.dispatchEvent(new Event("fae.vitrine.refresh"));
   } catch (e) {
     console.warn("pushQueryToVitrine error:", e);
   }
@@ -666,9 +645,27 @@ useEffect(() => {
     const intent = detectIntent(text);
     contextMemory.add(text);
 
-    // Intent bazlı vitrin tetikleyici
+    // Intent bazlı davranış
     if (intent === "product_search") {
-      pushQueryToVitrine(text);
+      // ✅ Ürün/hizmet araması: /api/ai ÇAĞIRMA (kredi yakma). Sadece vitrine arama tetikle.
+      setSearching(true);
+      flashMsg(t("ai.searching", { defaultValue: "Arıyorum…" }), 0);
+      try {
+        if (typeof onProductSearch === "function") {
+          await onProductSearch(text);
+        } else if (typeof onSuggest === "function") {
+          await onSuggest(text);
+        } else {
+          pushQueryToVitrine(text, "ai");
+        }
+        flashMsg("", 450);
+      } catch (err) {
+        console.warn("AI product_search trigger fail:", err?.message || err);
+        flashMsg(t("ai.searchError", { defaultValue: "Arama sırasında bir hata oldu." }), 1800, "danger");
+      } finally {
+        setSearching(false);
+      }
+      return;
     } else if (intent === "action") {
       // S12: aksiyon niyeti için event fırlatıyoruz (ileride başka yerde yakalanabilir)
       try {
@@ -700,25 +697,6 @@ useEffect(() => {
 
       return updated;
     });
-
-    // 🔥 Arama başladığını görsel olarak göster
-    setSearching(true);
-    flashMsg(t("ai.searching", { defaultValue: "Arıyorum…" }), 0);
-    let searchErr = false;
-    try {
-      // 🔥 TEK BEYİN — tüm AI mesajları vitrine unified olarak gider
-      await runUnifiedSearch(text, { source: "ai" });
-    } catch (err) {
-      searchErr = true;
-      console.warn("AI unified search fail:", err?.message || err);
-      flashMsg(t("ai.searchError", { defaultValue: "Arama sırasında bir hata oldu." }), 1800, "danger");
-    }
-    try {
-      triggerSearchFromAI(text);
-    } catch {}
-    setSearching(false);
-    if (!searchErr) flashMsg("", 450);
-
 
     // 4) Hassas veri filtresi
     const sensitive = [
@@ -761,11 +739,8 @@ useEffect(() => {
 // Unified search çağrısından sonra vitrin tetiklenmiş mi kontrol e
 
       // 7) onSuggest / onProductSearch override
-      if (typeof onProductSearch === "function") {
-  await onProductSearch(text);
-} else if (typeof onSuggest === "function") {
-  await onSuggest(text);
-} else {
+      // Not: onSuggest/onProductSearch sadece product_search için kullanılır (yukarıda return).
+      {
         // 8) Backend Chat / AI API Çağrısı
         const backend = API_BASE || "";
 
@@ -793,9 +768,6 @@ useEffect(() => {
         });
 
         const j = await res.json();
-
-        if (j?.detectedQuery) triggerSearchFromAI(j.detectedQuery);
-
         if (j?.cards) {
           try {
             if (typeof window !== "undefined") {
