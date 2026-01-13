@@ -533,21 +533,12 @@ export default function Vitrin() {
     return [raw];
   }
 
-    function getSafeTrust(item) {
-    const ts = item?.trustScore;
-    const ps = item?.providerScore;
-
+  function getSafeTrust(item) {
     const v =
-      typeof ts === "number" && Number.isFinite(ts) ? ts :
-      typeof ps === "number" && Number.isFinite(ps) ? ps :
-      null;
-
-    if (v === null) return null;
-
-    const clamped = Math.min(1, Math.max(0, v));
-    if (clamped <= 0) return null;
-
-    return Math.round(clamped * 100);
+      typeof item?.trustScore === "number" && item.trustScore >= 0
+        ? item.trustScore
+        : 0.75;
+    return Math.round(Math.min(1, Math.max(0, v)) * 100);
   }
 
   function getSafeRating(item) {
@@ -990,7 +981,7 @@ export default function Vitrin() {
             <VerifiedBadge />
             {rating !== null && <span>⭐ {rating}/5</span>}
             {q5 !== null && <span>✔ {q5}/5</span>}
-            {trust != null && <span>🛡 {trust}/100</span>}
+            <span>🛡 {trust}/100</span>
           </div>
         </div>
       </div>
