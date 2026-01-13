@@ -192,10 +192,89 @@ export default function App() {
     voiceToastTimer.current = setTimeout(() => setVoiceToast(null), ttl);
   };
 
+const ttsLastAtRef = useRef(0);
+
+function mapTtsLang(lang) {
+  const l = String(lang || "tr").toLowerCase();
+  if (l.startsWith("tr")) return "tr-TR";
+  if (l.startsWith("en")) return "en-US";
+  if (l.startsWith("de")) return "de-DE";
+  if (l.startsWith("fr")) return "fr-FR";
+  if (l.startsWith("ru")) return "ru-RU";
+  if (l.startsWith("ar")) return "ar-SA";
+  return "tr-TR";
+}
+
+function speak(text) {
+  try {
+    if (typeof window === "undefined") return;
+    const synth = window.speechSynthesis;
+    if (!synth) return;
+
+    const msg = String(text || "").trim();
+    if (!msg) return;
+
+    const now = Date.now();
+    if (now - (ttsLastAtRef.current || 0) < 250) return;
+    ttsLastAtRef.current = now;
+
+    try { synth.cancel(); } catch {}
+
+    const u = new SpeechSynthesisUtterance(msg);
+    u.lang = mapTtsLang(i18n.language || "tr");
+    u.rate = 1;
+    u.pitch = 1;
+    u.volume = 1;
+
+    synth.speak(u);
+  } catch {}
+}
+
+useEffect(() => {
+  if (typeof window === "undefined") return;
+
+  function onVitrineResults(e) {
+    const d = e?.detail || {};
+    const status = String(d.status || "").toLowerCase();
+
+    // UI net olsun: event geldiyse artık "busy" bitmiştir.
+    setSearchBusy(false);
+
+    if (status === "success") {
+      const msg = t("vitrine.resultsReady", {
+        defaultValue: "Sonuçlar vitrinde hazır. Teşekkürler.",
+      });
+      showVoiceToast(msg, "success", 2200);
+      speak(msg);
+      return;
+    }
+
+    if (status === "empty") {
+      const msg = t("vitrine.noResults", {
+        defaultValue: "Üzgünüm, sonuç bulunamadı. Başka bir şey deneyin.",
+      });
+      showVoiceToast(msg, "warn", 2600);
+      speak(msg);
+      return;
+    }
+
+    if (status === "error") {
+      const msg = t("vitrine.resultsError", {
+        defaultValue: "Arama sırasında hata oluştu. Lütfen tekrar deneyin.",
+      });
+      showVoiceToast(msg, "error", 2600);
+      speak(msg);
+    }
+  }
+
+  window.addEventListener("fae.vitrine.results", onVitrineResults);
+  return () => window.removeEventListener("fae.vitrine.results", onVitrineResults);
+}, [i18n.language, t]);
+
   const fileRef = useRef(null);
 
   // === Arama ===
- async function doSearch(q, opts = {}) {
+  async function doSearch(q, opts = {}) {
     const raw = q ?? value;
     const query = String(raw ?? "").trim();
     if (!query) return null;
@@ -204,7 +283,7 @@ export default function App() {
     if (/^\[object\s+Object\]$/i.test(query) || query.toLowerCase().includes("[object object]")) {
       showVoiceToast(
         t("search.badQuery", {
-          defaultValue: "Arama metni bozuldu (\"[object Object]\"). Lütfen tekrar deneyin.",
+          defaultValue: 'Arama metni bozuldu ("[object Object]"). Lütfen tekrar deneyin.',
         }),
         "warn",
         2600
@@ -212,69 +291,16 @@ export default function App() {
       return null;
     }
 
-    const source = String(opts?.source || "input");
-    const skipUnified = Boolean(opts?.skipUnified);
-
-    // Arama başladıysa, olası kamera onay barını kapat
-    setVisionConfirm(null);
-    setVoiceConfirm(null);
+    const source = String(opts?.source || "manual");
 
     setSearchBusy(true);
     try {
-      // 🔥 TEK BEYİN
-      if (!skipUnified) {
-        await runUnifiedSearch(query, { source });
-      }
-
-      const region =
-        (typeof window !== "undefined" && window.localStorage && localStorage.getItem("region")) ||
-        "TR";
-      const backend = API_BASE || "";
-
-      // Global state’e yaz + vitrin event’leri → Vitrin + Sono aynı hizada
-      try {
-        localStorage.setItem("lastQuery", query);
-      } catch {
-        // sessiz geç
-      }
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("fae.vitrine.search", { detail: { query } }));
-        window.dispatchEvent(new Event("fae.vitrine.refresh"));
-      }
-
-      const postSearch = async (qq) => {
-        const res = await fetch(`${backend}/api/search`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            query: qq,
-            q: qq,
-            category: "product",
-            group: "product",
-            region,
-            locale: i18n.language || "tr",
-          }),
-        });
-        return res;
-      };
-
-      const res = await postSearch(query);
-
-      if (!res.ok) {
-        console.warn("Arama isteği başarısız:", res.status);
-        showVoiceToast(
-          t("search.searchError", {
-            defaultValue: "Arama isteği başarısız oldu. Birazdan tekrar deneyin.",
-          }),
-          "error",
-          2600
-        );
-        return null;
-      }
-
-      const j = await res.json().catch(() => null);
-
-      return j;
+      // ✅ TEK HAT: ne /api/search, ne çift event.
+      const out = await runUnifiedSearch(query, {
+        source,
+        locale: i18n.language || "tr",
+      });
+      return out;
     } catch (err) {
       console.warn("Arama hatası:", err);
       showVoiceToast(

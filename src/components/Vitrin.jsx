@@ -666,6 +666,21 @@ export default function Vitrin() {
 
       const queryForBody = getLastQuery() || lastQuery || "";
 
+      const dispatchVitrineResults = (status, extra = {}) => {
+        try {
+          if (typeof window === "undefined") return;
+          window.dispatchEvent(
+            new CustomEvent("fae.vitrine.results", {
+              detail: {
+                status,
+                query: queryForBody,
+                ...extra,
+              },
+            })
+          );
+        } catch {}
+      };
+
       const body = {
         query: queryForBody,
       q: queryForBody,
@@ -695,6 +710,7 @@ export default function Vitrin() {
         setBest([]);
         setSmart([]);
         setOthers([]);
+        dispatchVitrineResults("error", { httpStatus: r.status });
         return;
       }
 
@@ -710,6 +726,11 @@ export default function Vitrin() {
         } else {
           setBest((p) => (p.length ? p : bestOne));
         }
+        dispatchVitrineResults(bestOne.length ? "success" : "empty", {
+          count: items.length,
+          bestCount: bestOne.length,
+          mode: "health",
+        });
         return;
       }
 
@@ -777,6 +798,14 @@ export default function Vitrin() {
           setOthers([]);
         }
 
+        const totalCount = (bestArr?.length || 0) + (smartArr?.length || 0) + (othersArr?.length || 0);
+        dispatchVitrineResults(totalCount ? "success" : "empty", {
+          count: totalCount,
+          bestCount: bestArr?.length || 0,
+          smartCount: smartArr?.length || 0,
+          othersCount: othersArr?.length || 0,
+        });
+
         if (typeof window !== "undefined") {
           window.dispatchEvent(
             new CustomEvent("sono:best-updated", {
@@ -790,12 +819,14 @@ export default function Vitrin() {
         setBest([]);
         setSmart([]);
         setOthers([]);
+        dispatchVitrineResults("empty", { count: 0 });
       }
     } catch (err) {
       console.error("Vitrin yüklenirken hata:", err);
       setBest([]);
       setSmart([]);
       setOthers([]);
+      dispatchVitrineResults("error", { error: String(err?.message || err) });
     } finally {
       if (typeof window !== "undefined") window.__vitrineLoading = false;
       setLoading(false);

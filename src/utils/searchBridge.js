@@ -202,34 +202,8 @@ export async function runUnifiedSearch(
   // =============================================================
   let vitrinData = null;
 
-  try {
-    const res = await fetchWithTimeout(
-      `${API}${VITRINE_ENDPOINT}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: clean, locale }),
-      },
-      25000 // yavaş adapter için uzun timeout
-    );
-
-    if (res?.ok) {
-      vitrinData = await res.json().catch(() => null);
-    }
-  } catch (err) {
-    console.warn("Vitrin API hata:", err);
-  }
-  // =============================================
-// YENİ → VİTRİN DATA'YI GERÇEK VİTRİNE YOLLA
-// =============================================
-try {
-  if (vitrinData?.items?.length) {
-    pushCardsToVitrine(vitrinData.items, "vitrin-api");
-  }
-} catch (err) {
-  console.warn("pushCardsToVitrine hata:", err);
-}
-
+  // ❌ /api/vitrin/dynamic fetch kaldırıldı.
+  // Vitrin artık sadece 'fae.vitrine.search' event'i üzerinden kendi fetch hattını çalıştırır.
 
   // ===========================
   // 4) Birleşik final output
