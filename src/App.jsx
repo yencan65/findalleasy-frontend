@@ -579,7 +579,32 @@ useEffect(() => {
 
       const j = await r.json().catch(() => null);
       if (!j || j.ok === false) {
-        showVoiceToast(t("search.cameraError", { defaultValue: "Kamera araması sonucu alınamadı." }), "error", 2200);
+        const code = String(j?.error || "").trim();
+        if (code === "NO_MATCH") {
+          showVoiceToast(
+            t("search.imageNoMatch", {
+              defaultValue:
+                "Görseli net anlayamadım. Daha yakından/aydınlık çekip tekrar deneyin ya da metinle arayın.",
+            }),
+            "error",
+            2600
+          );
+        } else if (code === "VISION_DISABLED") {
+          showVoiceToast(
+            t("cameraVisionDisabled", {
+              defaultValue:
+                "Görsel tanıma şu an kapalı görünüyor. Şimdilik metinle arayın; anahtar gelince kamera otomatik çalışır.",
+            }),
+            "error",
+            2800
+          );
+        } else {
+          showVoiceToast(
+            t("search.cameraError", { defaultValue: "Kamera araması sonucu alınamadı." }),
+            "error",
+            2200
+          );
+        }
         return;
       }
       if (j?.query) {

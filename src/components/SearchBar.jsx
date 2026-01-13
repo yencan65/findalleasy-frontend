@@ -242,14 +242,35 @@ async function onPickFile(e) {
     await doSearch(finalQuery, "camera");
   } catch (err) {
     console.error("Vision error:", err);
-    flashMsg(
-      t("cameraVisionDisabled", {
-        defaultValue:
-          "Kamera ile arama hattı hazır ama görsel tanıma kapalı görünüyor. Şimdilik metinle arayın; API anahtarı gelince kamera otomatik çalışır.",
-      }),
-      3500,
-      "danger"
-    );
+        const code = String(err?.message || "").trim();
+
+    if (code === "NO_MATCH") {
+      flashMsg(
+        t("search.imageNoMatch", {
+          defaultValue:
+            "Görseli net anlayamadım. Daha yakından/aydınlık çekip tekrar deneyin ya da metinle arayın.",
+        }),
+        3200,
+        "danger"
+      );
+    } else if (code === "VISION_DISABLED") {
+      flashMsg(
+        t("cameraVisionDisabled", {
+          defaultValue:
+            "Kamera ile arama hattı hazır ama görsel tanıma kapalı görünüyor. Şimdilik metinle arayın; API anahtarı gelince kamera otomatik çalışır.",
+        }),
+        3500,
+        "danger"
+      );
+    } else {
+      flashMsg(
+        t("search.imageError", {
+          defaultValue: "Görsel arama hatası. Lütfen tekrar dene.",
+        }),
+        2800,
+        "danger"
+      );
+    }
   } finally {
     // Eğer arama hattına devrettiysek, loading'i doSearch yönetir.
     if (!kickedSearch) setLoading(false);
