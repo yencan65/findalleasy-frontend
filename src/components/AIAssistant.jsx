@@ -1004,6 +1004,12 @@ useEffect(() => {
           ) : null}
 
           {/* INPUT ALANI - FORM YAPISI */}
+          {(searching || thinking) ? (
+            <div className="mb-2 text-xs text-[#d4af37] opacity-90">
+              {thinking ? t("ai.analyzing", { defaultValue: "Analiz yapılıyor…" }) : t("ai.searching", { defaultValue: "Arama yapılıyor…" })}
+            </div>
+          ) : null}
+
           <form onSubmit={handleFormSubmit} className="flex items-center gap-2">
             <button
               type="button"
