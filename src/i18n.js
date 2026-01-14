@@ -361,7 +361,17 @@ const resources = {
           canceled: "İptal edildi"
         }
       }
-    }
+    
+      "vitrine.resultsReady": "Sonuçlar vitrinde hazır. Teşekkürler.",
+      "vitrine.noResults": "Üzgünüm, sonuç bulunamadı. Başka bir şey deneyin.",
+      "vitrine.resultsError": "Arama sırasında hata oluştu. Lütfen tekrar deneyin.",
+      "ai.analyzing": "Analiz yapılıyor…",
+      "ai.searching": "Arama yapılıyor…",
+      "ai.placeholder": "Mesaj yaz...",
+      "search.voiceDone": "Tamam — arıyorum.",
+      "search.imageDetected": "Görüntüden anladığım: {{query}}",
+      "cameraVisionDisabled": "Kamera ile arama şu anda kullanılamıyor. Metinle arayın; API anahtarı gelince kamera otomatik çalışır.",
+}
   },
 
   // ======================== ENGLISH ========================
@@ -716,7 +726,17 @@ const resources = {
           canceled: "Canceled"
         }
       }
-    }
+    
+      "vitrine.resultsReady": "Results are ready in the showcase. Thanks.",
+      "vitrine.noResults": "Sorry, no results found. Try something else.",
+      "vitrine.resultsError": "An error occurred during the search. Please try again.",
+      "ai.analyzing": "Analyzing…",
+      "ai.searching": "Searching…",
+      "ai.placeholder": "Type a message...",
+      "search.voiceDone": "Okay — searching.",
+      "search.imageDetected": "From the image, I think it's: {{query}}",
+      "cameraVisionDisabled": "Camera search is currently unavailable. Search with text; when the API key is added, camera will work automatically.",
+}
   },
 
   // ======================== FRENCH ========================
@@ -1081,7 +1101,17 @@ const resources = {
           canceled: "Annulé"
         }
       }
-    }
+    
+      "vitrine.resultsReady": "Les résultats sont prêts dans la vitrine. Merci.",
+      "vitrine.noResults": "Désolé, aucun résultat trouvé. Essayez autre chose.",
+      "vitrine.resultsError": "Une erreur s'est produite pendant la recherche. Veuillez réessayer.",
+      "ai.analyzing": "Analyse en cours…",
+      "ai.searching": "Recherche en cours…",
+      "ai.placeholder": "Écrire un message...",
+      "search.voiceDone": "D'accord — je recherche.",
+      "search.imageDetected": "D'après l'image : {{query}}",
+      "cameraVisionDisabled": "La recherche par caméra est indisponible pour le moment. Recherchez avec du texte ; dès que la clé API sera ajoutée, la caméra fonctionnera automatiquement.",
+}
   },
 
   // ======================== RUSSIAN ========================
@@ -1439,7 +1469,17 @@ const resources = {
           canceled: "Отменено"
         }
       }
-    }
+    
+      "vitrine.resultsReady": "Результаты готовы в витрине. Спасибо.",
+      "vitrine.noResults": "Извините, ничего не найдено. Попробуйте другое.",
+      "vitrine.resultsError": "Во время поиска произошла ошибка. Пожалуйста, попробуйте ещё раз.",
+      "ai.analyzing": "Анализируем…",
+      "ai.searching": "Ищем…",
+      "ai.placeholder": "Напишите сообщение...",
+      "search.voiceDone": "Хорошо — ищу.",
+      "search.imageDetected": "По изображению получилось: {{query}}",
+      "cameraVisionDisabled": "Поиск по камере сейчас недоступен. Ищите текстом; когда появится API‑ключ, камера заработает автоматически.",
+}
   },
 
   // ======================== ARABIC ========================
@@ -1796,7 +1836,17 @@ const resources = {
           canceled: "أُلغي"
         }
       }
-    }
+    
+      "vitrine.resultsReady": "النتائج جاهزة في الواجهة. شكرًا لك.",
+      "vitrine.noResults": "عذرًا، لم يتم العثور على نتائج. جرّب شيئًا آخر.",
+      "vitrine.resultsError": "حدث خطأ أثناء البحث. يرجى المحاولة مرة أخرى.",
+      "ai.analyzing": "جارٍ التحليل…",
+      "ai.searching": "جارٍ البحث…",
+      "ai.placeholder": "اكتب رسالة...",
+      "search.voiceDone": "حسنًا — أبحث الآن.",
+      "search.imageDetected": "من الصورة فهمت: {{query}}",
+      "cameraVisionDisabled": "البحث بالكاميرا غير متاح حاليًا. ابحث بالنص؛ وعند إضافة مفتاح API ستعمل الكاميرا تلقائيًا.",
+}
   }
 };
 
