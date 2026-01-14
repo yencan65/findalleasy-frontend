@@ -390,7 +390,7 @@ async function onPickFile(e) {
       }
     });
 
-    const r = await fetch("/api/vision?diag=0", {
+    const r = await fetch(`${API_BASE || ""}/api/vision?diag=0`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ imageBase64: b64, locale: i18n?.language || "tr" }),
