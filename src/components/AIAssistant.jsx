@@ -649,7 +649,7 @@ useEffect(() => {
     if (intent === "product_search") {
       // ✅ Ürün/hizmet araması: /api/ai ÇAĞIRMA (kredi yakma). Sadece vitrine arama tetikle.
       setSearching(true);
-      flashMsg(t("ai.searching", { defaultValue: "Arıyorum…" }), 0);
+      flashMsg(t("ai.analyzing", { defaultValue: "Analiz yapılıyor…" }), 0);
       try {
         if (typeof onProductSearch === "function") {
           await onProductSearch(text);
