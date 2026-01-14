@@ -1,7 +1,17 @@
 // src/components/SonoChat.jsx
 import React, { useEffect, useState, useCallback } from "react";
+import i18n from "../i18n";
 
 export default function SonoChat() {
+  const mapTtsLang = (lng) => {
+    const L = String(lng || "tr").toLowerCase();
+    if (L.startsWith("ar")) return "ar-SA";
+    if (L.startsWith("ru")) return "ru-RU";
+    if (L.startsWith("fr")) return "fr-FR";
+    if (L.startsWith("en")) return "en-US";
+    return "tr-TR";
+  };
+
   const [messages, setMessages] = useState([]);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
 
@@ -14,8 +24,20 @@ export default function SonoChat() {
       if (!voiceEnabled) return;
       if (!window.speechSynthesis) return;
 
-      const utter = new SpeechSynthesisUtterance(text);
-      utter.lang = "tr-TR";
+      const msg = String(text || "").trim();
+      if (!msg) return;
+
+      const now = Date.now();
+      try {
+        const g = (window.__fae_tts_last = window.__fae_tts_last || { key: "", t: 0 });
+        if (g.key === msg && now - g.t < 8000) return;
+        window.__fae_tts_last = { key: msg, t: now };
+      } catch {}
+
+      try { window.speechSynthesis.cancel(); } catch {}
+
+      const utter = new SpeechSynthesisUtterance(msg);
+      utter.lang = mapTtsLang(i18n.language || "tr");
       window.speechSynthesis.speak(utter);
     },
     [voiceEnabled]
