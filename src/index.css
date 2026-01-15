@@ -4,28 +4,16 @@
 
 /* === GENEL === */
 :root {
-  /* === Brand accent === */
   --gold: #d4af37;
-
-  /* === Soft "Buket 205" inspired theme (ferah) === */
---bg0: #e1e7d9;  /* light sage */
---bg1: #c8d1b8;  /* mid sage */
---bg2: #edf2e7;  /* light top/bottom */
-  --text: #0f0f0f; /* body text */
-  --muted: rgba(15, 15, 15, 0.62);
-
-  /* Panels (search bar, vitrin card) */
---panel: rgba(255, 255, 255, 0.68);
---panel2: rgba(255, 255, 255, 0.55);
-  --panel-border: rgba(212, 175, 55, 0.26);
-
-  /* Header/Footer */
---hf-bg: rgba(20, 22, 17, 0.60);  /* soft charcoal-green */
---hf-border: rgba(212, 175, 55, 0.16);
-
-  /* Icons in BODY (not header/footer) */
-  --icon: rgba(15, 15, 15, 0.88);
-  --icon-hover: rgba(0, 0, 0, 1);
+  /* Kaktüs 25 (sage) theme */
+  --bg-sage: #8b957c;
+  --bg-sage-mid: #9ea990;
+  --bg-sage-light: #b8c1aa;
+  --ink: #14170f;
+  --chrome: rgba(18, 22, 15, 0.74);
+  --panel: rgba(255, 255, 255, 0.28);
+  --panel2: rgba(255, 255, 255, 0.34);
+  --bg: var(--bg-sage-mid);
 }
 
 /* === Scroll unlock (legal/admin pages) === */
@@ -38,12 +26,13 @@ html,
 body {
   /* ✅ Mobil/Tablet/PC tek dil: arka plan body'den gelir */
   background:
-    radial-gradient(900px 520px at 18% 12%, rgba(212, 175, 55, 0.05), transparent 62%),
-    radial-gradient(820px 480px at 86% 26%, rgba(212, 175, 55, 0.035), transparent 64%),
-    radial-gradient(700px 430px at 50% 92%, rgba(255, 215, 120, 0.025), transparent 66%),
-    linear-gradient(180deg, var(--bg2) 0%, var(--bg0) 50%, var(--bg1) 100%);
-  background-color: var(--bg0);
-  color: var(--text);
+    radial-gradient(900px 520px at 18% 12%, rgba(212, 175, 55, 0.08), transparent 60%),
+    radial-gradient(820px 480px at 86% 26%, rgba(212, 175, 55, 0.06), transparent 62%),
+    radial-gradient(700px 430px at 50% 92%, rgba(212, 175, 55, 0.04), transparent 65%),
+    radial-gradient(1200px 650px at 50% 22%, rgba(255, 255, 255, 0.35), transparent 68%),
+    linear-gradient(180deg, var(--bg-sage-light) 0%, var(--bg-sage-mid) 55%, var(--bg-sage) 100%);
+  background-color: var(--bg);
+  color: var(--ink);
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
   margin: 0;
   padding: 0;
@@ -51,41 +40,6 @@ body {
   overflow-y: hidden;
   -webkit-tap-highlight-color: transparent;
 }
-
-/* === THEME HELPERS (Body) === */
-.fae-soft-panel {
-  background: var(--panel);
-  border: 1px solid var(--panel-border);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.10);
-  color: var(--text);
-}
-
-.fae-soft-panel--subtle { background: var(--panel2); }
-
-.fae-soft-input { color: var(--text); }
-.fae-soft-input::placeholder { color: rgba(15, 15, 15, 0.45); }
-
-.fae-icon-btn {
-  color: var(--icon);
-  transition: color .18s ease, background-color .18s ease, transform .18s ease;
-}
-.fae-icon-btn:hover {
-  color: var(--icon-hover);
-  background: rgba(0,0,0,0.05);
-}
-.fae-icon-btn:active { transform: scale(0.96); }
-
-/* Footer divider (header-like) */
-.footer-line {
-  margin: 0 auto;
-  width: min(1200px, 96%);
-  border: 0;
-  border-top: 1px solid rgba(212, 175, 55, 0.20);
-  opacity: 1;
-}
-
 
 /* === MODAL OPEN (scroll lock) === */
 body.fae-modal-open {
@@ -134,6 +88,15 @@ body.fae-modal-open {
   }
 }
 
+/* === FOOTER SEPARATOR === */
+.footer-line{
+  border:0;
+  height:1px;
+  margin:0;
+  background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.50), transparent);
+  opacity: 0.55;
+}
+
 /* === HEADER === */
 header {
   width: 100%;
@@ -142,12 +105,12 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom:  1px solid var(--hf-border);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.20);
   box-shadow: none;
   position: sticky;
   top: 0;
   z-index: 50;
-  background: var(--hf-bg) !important;
+  background: var(--chrome) !important;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
@@ -335,14 +298,14 @@ header {
 footer {
   margin-top: auto;
   width: 100%;
-  border-top:  1px solid var(--hf-border);
+  border-top: 1px solid rgba(212, 175, 55, 0.18);
   box-shadow: none;
   text-align: center;
   padding: 1rem 0;
-  background: var(--hf-bg) !important;
+  background: rgba(11, 14, 20, 0.88) !important;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  color:  rgba(255,255,255,0.70);
+  color: #aaa;
   font-size: clamp(0.8rem, 1vw, 0.9rem);
 }
 
@@ -438,15 +401,19 @@ iframe {
 
 .fae-dot:nth-child(2) { animation-delay: 0.12s; }
 .fae-dot:nth-child(3) { animation-delay: 0.24s; }
-
-/* ✅ Mobile tweaks: calmer glow, keep content foreground */
+/* ✅ Mobil: Andezit 60 dokusu (gece mavisi yok) */
 @media (max-width: 640px) {
   html, body {
     background:
-      radial-gradient(760px 420px at 18% 12%, rgba(212, 175, 55, 0.035), transparent 66%),
-      radial-gradient(720px 420px at 86% 26%, rgba(212, 175, 55, 0.025), transparent 70%),
-      radial-gradient(620px 360px at 50% 92%, rgba(255, 215, 120, 0.018), transparent 72%),
-      linear-gradient(180deg, var(--bg2) 0%, var(--bg0) 55%, var(--bg1) 100%);
-    background-color: var(--bg0);
+      /* ✅ Irmak 65 — dokulu taş hissi (gece mavisi yok) */
+      linear-gradient(180deg, rgba(0,0,0,0.70) 0%, rgba(0,0,0,0.82) 100%),
+      linear-gradient(135deg, #6D7F82 0%, #566A6D 55%, #6D7F82 100%),
+      /* ince taş dokusu (grain) */
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.28'/%3E%3C/svg%3E");
+
+    background-size: cover, cover, 260px 260px;
+    background-repeat: no-repeat, no-repeat, repeat;
+    background-color: #566A6D;
   }
 }
+
