@@ -204,7 +204,7 @@ export default function Header() {
     <header
       className="
         w-full flex flex-row justify-between items-center flex-nowrap gap-2 sm:gap-3
-        px-3 sm:px-6 py-3 sm:py-4 bg-[#151411]
+        px-3 sm:px-6 py-3 sm:py-4 bg-[#0b0e14]/90
         border-b border-[#d4af37]/20
         text-white font-sans backdrop-blur-xl
       "
@@ -260,7 +260,7 @@ export default function Header() {
             className="
               flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-full
               border border-[#d4af37]/40 text-[#d4af37]
-              bg-[#151411]/25 backdrop-blur-lg
+              bg-black/25 backdrop-blur-lg
               shadow-[inset_0_0_10px_rgba(255,255,255,0.10),0_0_6px_rgba(212,175,55,0.25)]
               transition-all duration-300
               hover:scale-[1.08]
@@ -280,7 +280,7 @@ export default function Header() {
                 top-full mt-2 right-0
                 sm:top-1/2 sm:-translate-y-1/2
                 sm:right-full sm:mr-3 sm:mt-0
-                bg-[#151411]/45 backdrop-blur-2xl
+                bg-black/45 backdrop-blur-2xl
                 border border-[#d4af37]/15
                 rounded-3xl
                 px-3 py-2
@@ -318,7 +318,7 @@ export default function Header() {
           onClick={() => setWalletOpen(true)}
           className="
             p-2 rounded-full border border-[#d4af37]/60
-            text-[#d4af37] bg-[#151411]/20 backdrop-blur-lg
+            text-[#d4af37] bg-black/20 backdrop-blur-lg
             hover:bg-[#d4af37]/20 hover:text-black
             transition-all
           "
@@ -333,7 +333,7 @@ export default function Header() {
             className="
               p-2 rounded-full
               border border-[#d4af37]/60 text-[#d4af37]
-              bg-[#151411]/20 backdrop-blur-lg
+              bg-black/20 backdrop-blur-lg
               hover:bg-[#d4af37]/20 hover:text-black
               transition-all
             "
@@ -345,7 +345,7 @@ export default function Header() {
             <div
               className="
                 absolute right-0 top-12
-                bg-[#151411]/75 backdrop-blur-xl
+                bg-black/75 backdrop-blur-xl
                 border border-[#d4af37]/35 rounded-2xl
                 p-4 shadow-[0_0_18px_rgba(212,175,55,0.25)]
                 text-sm w-56 z-50 animate-fadeIn
