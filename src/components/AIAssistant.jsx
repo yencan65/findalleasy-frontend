@@ -60,74 +60,114 @@ function getPersona(locale) {
     return {
       name: "Sono",
       tone: "Samimi, net, lafı dolandırmayan.",
-      hello: "Merhaba, Sono AI. İstersen hemen senin yerine vitrine bakmaya başlayabilirim.",
+      hello:
+        "Merhaba, ben Sono. Ürün/hizmet arayabilir veya herhangi bir konuda soru sorup bilgi alabilirsin.",
     };
   }
   if (locale.startsWith("fr")) {
     return {
       name: "Sono",
       tone: "Calme, précise, efficace.",
-      hello: "Bonjour, je suis Sono AI. Dites-moi ce que vous cherchez, je fouille pour vous.",
+      hello:
+        "Bonjour, je suis Sono. Cherche un produit/service ou pose-moi une question pour une info rapide.",
     };
   }
   if (locale.startsWith("ru")) {
     return {
       name: "Sono",
       tone: "Спокойная, умная, без лишних слов.",
-      hello: "Привет, я Sono AI. Просто скажите, что нужно найти.",
+      hello:
+        "Привет, я Sono. Ищи товары/услуги или задавай любые вопросы — помогу с информацией.",
     };
   }
   if (locale.startsWith("ar")) {
     return {
       name: "Sono",
       tone: "هادئة، واضحة، مباشرة.",
-      hello: "مرحباً، أنا Sono AI. أخبرني بما تريد وسأتولى الباقي.",
+      hello:
+        "مرحباً، أنا Sono. ابحث عن منتج/خدمة أو اسألني أي سؤال للحصول على معلومات سريعة.",
     };
   }
   return {
     name: "Sono",
     tone: "Friendly, sharp, no-nonsense.",
-    hello: "Hi, I'm Sono AI. Tell me what you want, I’ll handle the hunting.",
+    hello:
+      "Hi, I'm Sono. Search for a product/service or ask me any question for quick info.",
   };
 }
 
 // S11 — Intent Engine (kullanıcı niyetini sınıflandırır)
 function detectIntent(text, locale = "tr") {
-  const raw = String(text || "");
-  const low = raw.toLowerCase().trim();
+  const raw = String(text || "").trim();
+  const low = raw.toLowerCase();
   if (!low) return "info";
 
-  // ⚠️ "ara" kelimesi "kamera" içinde geçiyor; bu yüzden kelime sınırı gibi davranalım.
+  // ⚠️ "ara" kelimesi "kamera" içinde geçiyor; kelime sınırı gibi davranalım.
   const hasWord = (w) => new RegExp(`(^|\\s)${w}(\\s|$)`, "i").test(low);
   const endsQuestion = /[?؟]\s*$/.test(raw);
 
-  // Aksiyon: dil/şehir/QR vb.
+  // Aksiyon: dil/şehir/QR vb. (UI komutları)
   const isAction =
-    /(\bdil(ini)?\b.*\b(değiştir|degistir)\b)|(\blanguage\b.*\b(change|switch)\b)|(\bşehir\b.*\b(değiştir|degistir)\b)|(\bcity\b.*\b(change|switch)\b)|(\bqr\b|\bbarkod\b|\bbarcode\b|\bkamera\b|\bcamera\b)/i.test(low);
+    /(\bdil(ini)?\b.*\b(değiştir|degistir)\b)|(\blanguage\b.*\b(change|switch)\b)|(\bşehir\b.*\b(değiştir|degistir)\b)|(\bcity\b.*\b(change|switch)\b)|(\bville\b.*\b(changer|modifier)\b)|(\bязык\b.*\b(смен|измен)\b)|(\bгород\b.*\b(смен|измен)\b)|(\bلغة\b.*\b(تغيير|بدل)\b)|(\bمدينة\b.*\b(تغيير|بدل)\b)|(\bqr\b|\bbarkod\b|\bbarcode\b|\bkamera\b|\bcamera\b)/i.test(
+      low
+    );
 
   if (isAction) return "action";
 
   // Ürün/hizmet arama sinyalleri (çok dilli)
+  // Not: Burada geniş tutuyoruz; yanlış pozitif olursa altta "info" lehine değil "arama" lehine karar veriyoruz.
   const productSignal =
-    /(en ucuz|fiyat|indirim|kampanya|satın|satinal|satın al|otel|uçak|ucak|bilet|sigorta|kira|kirala|araba|emlak|daire|ev|uçuş|ucus|price|deal|cheapest|discount|buy|purchase|hotel|flight|ticket|insurance|rent|car|real\s*estate|prix|promo|réduction|acheter|hôtel|vol|billet|assurance|louer|цена|купить|отель|рейс|билет|страхов|аренда|سعر|شراء|فندق|رحلة|تذكرة|تأمين|إيجار)/i.test(low) ||
+    /(en ucuz|fiyat|indirim|kampanya|satın|satinal|satın al|otel|uçak|ucak|bilet|sigorta|kira|kirala|araba|kiralık|kargo|kupon|stok|mağaza|magaza|link|ürün|urun|hizmet)/i.test(
+      low
+    ) ||
+    /(price|deal|discount|buy|purchase|hotel|flight|ticket|insurance|rent|car|store|shop|product|service)/i.test(
+      low
+    ) ||
+    /(prix|promo|réduction|acheter|hôtel|vol|billet|assurance|louer|voiture|magasin|produit|service)/i.test(
+      low
+    ) ||
+    /(цена|скидк|купить|отель|рейс|билет|страхов|аренда|магазин|товар|услуг)/i.test(
+      low
+    ) ||
+    /(سعر|خصم|شراء|فندق|رحلة|تذكرة|تأمين|إيجار|متجر|منتج|خدمة)/i.test(low) ||
     hasWord("ara") ||
     hasWord("bul") ||
     /\b(search|find|look\s*up|show)\b/i.test(low);
 
-  // Bilgi/sohbet sinyalleri (çok dilli)
+  // Bilgi/sohbet sinyalleri (çok dilli, geniş)
   const infoSignal =
-    /(nedir|ne demek|nasıl|nasil|açıkla|acikla|anlat|özet|detay|özellik|kullanım|kullanim|hakkında|hakkinda|bilgi ver|how\s*to|what\s*is|explain|define|tell\s+me\s+about|c['’]est\s+quoi|explique|définition|comment|qu['’]est-ce|что\s+такое|объясни|как\s+это|расскажи|ماذا|ما\s+هو|اشرح|كيف|معلومات)/i.test(low);
+    // TR
+    /(\b(hakkında|hakkinda)\b.*\b(bilgi|bilgiler|özet|ozet|detay|açıkla|acikla|anlat)\b)|(\bbilgi\s*(ver|verir|verebilir)\b)|(\b(nedir|bu ne|ne demek|nasıl|nasil|kim(dir)?|ne zaman|nerede|neden|niçin|niçin|hangi|kaç|kac)\b)|(\b(nasıl gidilir|nasil gidilir|nasıl bulunur|nasil bulunur)\b)/i.test(
+      low
+    ) ||
+    // EN
+    /\b(tell me about|information (about|on)|info (about|on)|explain|what is|who is|when|where|why|how (do i|to)|how can i|how to (get|go|find))\b/i.test(
+      low
+    ) ||
+    // FR
+    /\b(informations? sur|parle[- ]moi de|explique|c[’']?est quoi|qu[’']?est-ce que|qui est|quand|où|pourquoi|comment (aller|trouver))\b/i.test(
+      low
+    ) ||
+    // RU
+    /\b(расскажи|объясни|что такое|что это|кто такой|кто это|когда|где|почему|как (добраться|найти))\b/i.test(
+      low
+    ) ||
+    // AR
+    /\b(معلومات عن|اشرح|ما هو|ما هي|من هو|متى|أين|لماذا|كيف|كيف أصل|كيف أجد)\b/i.test(
+      low
+    ) ||
+    endsQuestion;
 
   // Önce arama sinyali > sonra bilgi sinyali (örn: "iphone fiyatı nedir?" arama olmalı)
   if (productSignal) return "product_search";
   if (infoSignal) return "info";
 
-  // Kısa, anahtar-kelime tarzı girdiler: varsayılan arama
+  // Heuristik: Uzun cümleler çoğunlukla bilgi isteğidir (ama arama sinyali yoksa)
   const wordCount = low.split(/\s+/).filter(Boolean).length;
-  if (wordCount <= 3) return "product_search";
+  if (wordCount >= 10) return "info";
 
-  // Soru işaretiyle biten, uzun cümleler genelde bilgi talebi
-  if (endsQuestion) return "info";
+  // Kısa, anahtar-kelime tarzı girdiler: varsayılan arama
+  if (wordCount <= 3) return "product_search";
 
   // Varsayılan: arama
   return "product_search";
