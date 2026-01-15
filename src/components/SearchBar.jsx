@@ -386,7 +386,7 @@ function handleQRDetect(result) {
         className="search-bar-wrapper flex justify-center w-full"
       >
         <div
-          className="flex items-center fae-soft-panel rounded-full px-3 sm:px-4 py-2 
+          className="flex items-center bg-white/35 border border-gold rounded-full px-3 sm:px-4 py-2 
                      w-[520px] max-w-[92%] sm:w-[420px] md:w-[500px] lg:w-[520px]
                      transition-all duration-300 ease-in-out"
         >
@@ -407,7 +407,7 @@ function handleQRDetect(result) {
               onChange={(e) => setValue(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && doSearch()}
               placeholder={placeholders[index]}
-              className="w-full bg-transparent outline-none fae-soft-input text-base px-3 pr-24 sm:pr-3 min-w-[120px]"
+              className="w-full bg-transparent outline-none text-[#14170f] placeholder:text-black/35 text-base px-3 pr-24 sm:pr-3 min-w-[120px]"
             />
 
 
@@ -415,7 +415,7 @@ function handleQRDetect(result) {
               type="button"
               onClick={() => doSearch()}
               disabled={loading}
-              className="sm:hidden absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full border border-[rgba(0,0,0,0.10)] text-[rgba(0,0,0,0.82)] bg-white/35 hover:bg-white/55 flex items-center justify-center shadow-sm transition disabled:opacity-60"
+              className="sm:hidden absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full border border-gold text-[#14170f] bg-transparent hover:bg-[#d4af37]/10 flex items-center justify-center shadow-sm transition disabled:opacity-60"
               aria-label={t("search.search")}
             >
               <Search size={18} />
@@ -426,7 +426,7 @@ function handleQRDetect(result) {
           <button
             type="button"
             onClick={startMic}
-            className="ml-1 fae-icon-btn p-2 rounded-full"
+            className="ml-1 text-[#14170f] hover:text-[#14170f] transition p-2 rounded-full hover:bg-[#d4af37]/10"
             aria-label={t("search.voice", { defaultValue: "Sesli arama" })}
           >
             <Mic className={`w-5 h-5 ${micListening ? "animate-pulse" : ""}`} />
@@ -435,7 +435,7 @@ function handleQRDetect(result) {
           <button
             type="button"
             onClick={openCamera}
-            className="fae-icon-btn p-2 rounded-full"
+            className="text-[#14170f] hover:text-[#14170f] transition p-2 rounded-full hover:bg-[#d4af37]/10"
             aria-label={t("cameraSearch", { defaultValue: "Kamera ile ara" })}
           >
             <Camera className="w-5 h-5" />
@@ -444,7 +444,7 @@ function handleQRDetect(result) {
           <button
             type="button"
             onClick={() => setScannerOpen(true)}
-            className="fae-icon-btn p-2 rounded-full"
+            className="text-[#14170f] hover:text-[#14170f] transition p-2 rounded-full hover:bg-[#d4af37]/10"
             aria-label={t("qrSearch", { defaultValue: "QR ile ara" })}
           >
             <QrCode className="w-5 h-5" />
@@ -454,7 +454,7 @@ function handleQRDetect(result) {
           <button
             onClick={() => doSearch()}
             disabled={loading}
-            className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full border border-gold text-gold bg-transparent hover:bg-white/5 hover:text-white transition disabled:opacity-60"
+            className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full border border-gold text-[#14170f] bg-transparent hover:bg-[#d4af37]/10 hover:text-[#14170f] transition disabled:opacity-60"
           >
             <Search size={18} />
           </button>
