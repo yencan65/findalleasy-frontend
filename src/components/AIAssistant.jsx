@@ -1,1196 +1,1919 @@
-// src/components/AIAssistant.jsx
-import React, { useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { useStatusBus } from "../context/StatusBusContext";
-import { initSonoActionEngine } from "../engines/sonoActionEngine";
-import { API_BASE } from "../utils/api";
-/**
- * ------------------------------------------------------------------
- * YARDIMCI FONKSİYONLAR (VİTRİN TETİKLEYİCİLER)
- * ------------------------------------------------------------------
- */
-
-// AI bir arama önerisi yaptığında vitrine yönlendirme (HERKÜL SÜRÜMÜ - GÜÇLENDİRİLMİŞ)
-function pushQueryToVitrine(text, source = "ai") {
-  const clean = String(text || "").trim();
-  if (!clean) return;
-
-  try {
-    if (typeof window === "undefined") return;
-    window.dispatchEvent(
-      new CustomEvent("fae.vitrine.search", {
-        detail: { query: clean, source },
-      })
-    );
-  } catch (e) {
-    console.warn("pushQueryToVitrine error:", e);
-  }
-}
-
-// AI cevabı içinden tespit edilen sorguyu vitrine gönder
-function triggerSearchFromAI(text) {
-  if (!text) return;
-  pushQueryToVitrine(text);
-}
-
-/**
- * ------------------------------------------------------------------
- * CONTEXT / PERSONA MOTORU (S12)
- * ------------------------------------------------------------------
- */
-
-// S11 — Context Memory Engine (son 5 kullanıcı mesajını tutar)
-const contextMemory = {
-  history: [],
-
-  add(userText) {
-    this.history.push(userText);
-    if (this.history.length > 5) this.history.shift();
-  },
-
-  getContext() {
-    if (!this.history.length) return "";
-    return this.history.join(" | ");
-  },
-};
-
-// S12 — Persona Profili (yalın ama kullanışlı)
-function getPersona(locale) {
-  if (locale.startsWith("tr")) {
-    return {
-      name: "Sono",
-      tone: "Samimi, net, lafı dolandırmayan.",
-      hello: "Merhaba, Sono AI. İstersen hemen senin yerine vitrine bakmaya başlayabilirim.",
-    };
-  }
-  if (locale.startsWith("fr")) {
-    return {
-      name: "Sono",
-      tone: "Calme, précise, efficace.",
-      hello: "Bonjour, je suis Sono AI. Dites-moi ce que vous cherchez, je fouille pour vous.",
-    };
-  }
-  if (locale.startsWith("ru")) {
-    return {
-      name: "Sono",
-      tone: "Спокойная, умная, без лишних слов.",
-      hello: "Привет, я Sono AI. Просто скажите, что нужно найти.",
-    };
-  }
-  if (locale.startsWith("ar")) {
-    return {
-      name: "Sono",
-      tone: "هادئة، واضحة، مباشرة.",
-      hello: "مرحباً، أنا Sono AI. أخبرني بما تريد وسأتولى الباقي.",
-    };
-  }
-  return {
-    name: "Sono",
-    tone: "Friendly, sharp, no-nonsense.",
-    hello: "Hi, I'm Sono AI. Tell me what you want, I’ll handle the hunting.",
-  };
-}
-
-// S11 — Intent Engine (kullanıcı niyetini sınıflandırır)
-function detectIntent(text, locale = "tr") {
-  const raw = String(text || "");
-  const low = raw.toLowerCase().trim();
-  if (!low) return "info";
-
-  // ⚠️ "ara" kelimesi "kamera" içinde geçiyor; bu yüzden kelime sınırı gibi davranalım.
-  const hasWord = (w) => new RegExp(`(^|\\s)${w}(\\s|$)`, "i").test(low);
-  const endsQuestion = /[?؟]\s*$/.test(raw);
-
-  // Aksiyon: dil/şehir/QR vb.
-  const isAction =
-    /(\bdil(ini)?\b.*\b(değiştir|degistir)\b)|(\blanguage\b.*\b(change|switch)\b)|(\bşehir\b.*\b(değiştir|degistir)\b)|(\bcity\b.*\b(change|switch)\b)|(\bqr\b|\bbarkod\b|\bbarcode\b|\bkamera\b|\bcamera\b)/i.test(low);
-
-  if (isAction) return "action";
-
-  // Ürün/hizmet arama sinyalleri (çok dilli)
-  const productSignal =
-    /(en ucuz|fiyat|indirim|kampanya|satın|satinal|satın al|otel|uçak|ucak|bilet|sigorta|kira|kirala|araba|emlak|daire|ev|uçuş|ucus|price|deal|cheapest|discount|buy|purchase|hotel|flight|ticket|insurance|rent|car|real\s*estate|prix|promo|réduction|acheter|hôtel|vol|billet|assurance|louer|цена|купить|отель|рейс|билет|страхов|аренда|سعر|شراء|فندق|رحلة|تذكرة|تأمين|إيجار)/i.test(low) ||
-    hasWord("ara") ||
-    hasWord("bul") ||
-    /\b(search|find|look\s*up|show)\b/i.test(low);
-
-  // Bilgi/sohbet sinyalleri (çok dilli)
-  const infoSignal =
-    /(nedir|ne demek|nasıl|nasil|açıkla|acikla|anlat|özet|detay|özellik|kullanım|kullanim|hakkında|hakkinda|bilgi ver|how\s*to|what\s*is|explain|define|tell\s+me\s+about|c['’]est\s+quoi|explique|définition|comment|qu['’]est-ce|что\s+такое|объясни|как\s+это|расскажи|ماذا|ما\s+هو|اشرح|كيف|معلومات)/i.test(low);
-
-  // Önce arama sinyali > sonra bilgi sinyali (örn: "iphone fiyatı nedir?" arama olmalı)
-  if (productSignal) return "product_search";
-  if (infoSignal) return "info";
-
-  // Kısa, anahtar-kelime tarzı girdiler: varsayılan arama
-  const wordCount = low.split(/\s+/).filter(Boolean).length;
-  if (wordCount <= 3) return "product_search";
-
-  // Soru işaretiyle biten, uzun cümleler genelde bilgi talebi
-  if (endsQuestion) return "info";
-
-  // Varsayılan: arama
-  return "product_search";
-}
-
-export default function AIAssistant({ onSuggest, onProductSearch }) {
-  const { t, i18n } = useTranslation();
-  const locale = (i18n?.language || "tr").toLowerCase();
-  const persona = getPersona(locale);
-
-  // --- STATE TANIMLARI ---
-  const [open, setOpen] = useState(false);
-  const [listening, setListening] = useState(false);
-  const [thinking, setThinking] = useState(false);
-  const [searching, setSearching] = useState(false);
-  const [pendingVoice, setPendingVoice] = useState(null);
-
-  // Global status bus: tüm async işler tek standart bildirim diliyle konuşsun
-  const { setStatus, clearStatus } = useStatusBus();
-  const STATUS_SRC = "assistant";
-  const STATUS_PRIO = 20;
-
-  const publishBusy = (text) =>
-    setStatus(STATUS_SRC, {
-      text,
-      showDots: true,
-      tone: "gold",
-      priority: STATUS_PRIO,
-    });
-
-  // Backwards-compatible helper (bu dosyada bolca kullanılıyor)
-  function flashMsg(text, ms = 0, tone = null) {
-    const msg = String(text || "").trim();
-    if (!msg) {
-      clearStatus(STATUS_SRC);
-      return;
-    }
-
-    // ms>0: kısa bilgilendirme
-    if (ms > 0) {
-      setStatus(STATUS_SRC, {
-        text: msg,
-        showDots: false,
-        tone: tone || "muted",
-        priority: STATUS_PRIO,
-        ttlMs: ms,
-      });
-      return;
-    }
-
-    // ms=0: kalıcı "iş üstünde" modu
-    publishBusy(msg);
-  }
-
-  // Unmount'ta takılı kalmasın
-  useEffect(() => {
-    return () => clearStatus(STATUS_SRC);
-  }, [clearStatus]);
-
-
-  const [messages, setMessages] = useState([]);
-  const messagesRef = useRef([]);
-  const greetedRef = useRef(false);
-
-  // --- REF TANIMLARI ---
-  const wrapRef = useRef(null);
-  const haloRef = useRef(null);
-  const inputRef = useRef(null);
-  const recRef = useRef(null);
-  const micWarmedRef = useRef(false);
-  const lastAssistantSearchRef = useRef({ ts: 0, query: "" });
-  const micTapGuardRef = useRef(0);
-
-  // İstek İptali için Ref (Anti-Race Condition)
-  const abortControllerRef = useRef(null);
-
-  // Otomatik Scroll için Ref
-  const messagesEndRef = useRef(null);
-
-  // Ses Sentezleyicisi
-  const synthRef = useRef(
-    typeof window !== "undefined" ? window.speechSynthesis : null
-  );
-
-// Warm up TTS voices early (first speak can be delayed on some browsers)
-useEffect(() => {
-  if (typeof window === "undefined") return;
-  const synth = window.speechSynthesis;
-  if (!synth || typeof synth.getVoices !== "function") return;
-
-  const warmVoices = () => {
-    try {
-      synth.getVoices();
-    } catch {}
-  };
-
-  warmVoices();
-  // Some browsers populate voices async
-  const handler = () => warmVoices();
-
-  try {
-    synth.addEventListener?.("voiceschanged", handler);
-  } catch {}
-
-  return () => {
-    try {
-      synth.removeEventListener?.("voiceschanged", handler);
-    } catch {}
-  };
-}, []);
-
-
-// Warm up microphone permission early (reduces first-tap delay)
-useEffect(() => {
-  if (!open) return;
-  if (micWarmedRef.current) return;
-  micWarmedRef.current = true;
-
-  (async () => {
-    try {
-      if (typeof navigator === "undefined") return;
-      const md = navigator.mediaDevices;
-      if (!md || typeof md.getUserMedia !== "function") return;
-      const stream = await md.getUserMedia({ audio: true });
-      try {
-        stream.getTracks().forEach((t) => t.stop());
-      } catch {}
-    } catch {
-      // ignore (permission denied / unavailable)
-    }
-  })();
-}, [open]);
-
-  // --- TEMİZLİK (CLEANUP) ---
- // Action engine sadece 1 kere çalışacak
-useEffect(() => {
-  if (!window.__SONO_ACTION_INITED__) {
-	    window.__SONO_ACTION_INITED__ = true; 
-    initSonoActionEngine();
-  }
-}, []);
-
-
-// Cleanup ise tamamen ayrı olmalı
-useEffect(() => {
-  return () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    if (recRef.current) {
-      try {
-        recRef.current.stop();
-      } catch {}
-    }
-  };
-}, []);
-
-
-  // UnifiedSearch → AI mesajı (cooldown + spam koruma)
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    let last = 0;
-
-    const onUnified = (e) => {
-      const q = e.detail?.query;
-      if (!q) return;
-
-      const now = Date.now();
-      if (now - last < 300) return; // 300ms içinde gelen tekrar sinyallerini yok say
-      last = now;
-    };
-
-    window.addEventListener("fae.vitrine.search", onUnified);
-    return () => window.removeEventListener("fae.vitrine.search", onUnified);
-  }, []);
-
-
-// Vitrin sonuçları: assistant başlattıysa hem yazılı hem (gerekirse) sesli bilgilendir
-useEffect(() => {
-  if (typeof window === "undefined") return;
-
-  const onResults = (e) => {
-    const last = lastAssistantSearchRef.current;
-    if (!last || !last.ts) return;
-
-    const now = Date.now();
-    if (now - last.ts > 25000) return; // bayat
-
-    const status = String(e?.detail?.status || "").toLowerCase();
-    let msg = "";
-
-    if (status === "success") {
-      msg = t("vitrine.resultsReady", {
-        defaultValue: "Sonuçlar vitrinde hazır. Teşekkürler.",
-      });
-    } else if (status === "empty") {
-      msg = t("vitrine.noResults", {
-        defaultValue: "Üzgünüm, sonuç bulunamadı. Başka bir şey deneyin.",
-      });
-    } else if (status === "error") {
-      msg = t("vitrine.resultsError", {
-        defaultValue: "Arama sırasında hata oluştu. Lütfen tekrar deneyin.",
-      });
-    } else {
-      return;
-    }
-
-    // yazılı mesaj
-    setMessages((m) => [...m, { from: "ai", text: msg }]);
-
-    // App zaten konuştuysa çakışmayı önle
-    try {
-      const lastSpokenAt = Number(window.__FAE_LAST_VITRIN_SPOKEN_AT || 0);
-      if (!lastSpokenAt || Date.now() - lastSpokenAt > 1200) {
-        speak(msg);
-      }
-    } catch {
-      // ignore
-    }
-
-    // busy kapat
-    flashMsg("", 450);
-    setSearching(false);
-
-    // reset
-    lastAssistantSearchRef.current = { ts: 0, query: "" };
-  };
-
-  window.addEventListener("fae.vitrine.results", onResults);
-  return () => window.removeEventListener("fae.vitrine.results", onResults);
-}, [t, locale]);
-
-  // Mesaj geldiğinde otomatik aşağı kaydır
-  useEffect(() => {
-    if (open && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages, thinking, open]);
-
-
-  // ALTIN HALO + MİKROFON NEFESİ + KONUŞMA DALGALARI (CSS)
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-
-    const ID = "sono-gold-style";
-    if (document.getElementById(ID)) return;
-
-    const s = document.createElement("style");
-    s.id = ID;
-    s.innerHTML = `
-      @keyframes sono-breath {
-        0% { transform: scale(1); opacity:.55; filter: blur(10px); }
-        50% { transform: scale(1.12); opacity:.9; filter: blur(14px); }
-        100% { transform: scale(1); opacity:.55; filter: blur(10px); }
-      }
-
-      .sono-gold-halo {
-        position:absolute; inset:0; border-radius:9999px;
-        background: radial-gradient(35% 35% at 50% 50%, rgba(212,170,55,.92),
-        rgba(212,170,55,.25) 60%, rgba(0,0,0,0) 72%);
-        animation: sono-breath 3.6s ease-in-out infinite;
-        pointer-events:none;
-      }
-
-      @keyframes mic-breathe {
-        0% { box-shadow: 0 0 6px rgba(212,175,55,0.45); transform: scale(1); }
-        50% { box-shadow: 0 0 14px rgba(212,175,55,0.75); transform: scale(1.07); }
-        100% { box-shadow: 0 0 6px rgba(212,175,55,0.45); transform: scale(1); }
-      }
-      .sono-mic-breath { animation: mic-breathe 2.4s ease-in-out infinite; }
-
-      @keyframes speech-wave-1 { 0% { transform:scale(1);opacity:.8;} 100%{transform:scale(1.8);opacity:0;} }
-      @keyframes speech-wave-2 { 0% { transform:scale(1);opacity:.6;} 100%{transform:scale(2.1);opacity:0;} }
-      @keyframes speech-wave-3 { 0% { transform:scale(1);opacity:.4;} 100%{transform:scale(2.4);opacity:0;} }
-
-      .speech-wave-base {
-        position:absolute;
-        inset:-10px;
-        border:2px solid rgba(212,175,55,0.7);
-        border-radius:9999px;
-        pointer-events:none;
-        z-index:5;
-      }
-
-      .speech-wave-1 { animation:speech-wave-1 1.5s ease-out infinite; }
-      .speech-wave-2 { animation:speech-wave-2 1.5s ease-out .3s infinite; }
-      .speech-wave-3 { animation:speech-wave-3 1.5s ease-out .6s infinite; }
-
-      /* KONUMLANDIRMA */
-      .sono-adjusted-position {
-        /* Bubble footer'ın üstünde kalsın (mobil safe-area dahil) */
-        bottom: calc(env(safe-area-inset-bottom, 0px) + 2.25rem) !important;
-        right: 1.25rem !important;
-      }
-      @media (max-width: 768px) {
-        .sono-adjusted-position {
-          bottom: calc(env(safe-area-inset-bottom, 0px) + 5.75rem) !important;
-          right: 0.75rem !important;
-        }
-      }
-      @media (max-width: 480px) {
-        .sono-adjusted-position {
-          bottom: calc(env(safe-area-inset-bottom, 0px) + 6.25rem) !important;
-          right: 0.75rem !important;
-        }
-      }
-
-      /* MİKROFON STİLLERİ */
-      .sono-mic-hover-gold:hover {
-        background: rgba(212, 175, 55, 0.15) !important;
-        border-color: rgba(212, 175, 55, 0.8) !important;
-        box-shadow: 0 0 12px rgba(212, 175, 55, 0.4) !important;
-        transform: scale(1.05);
-        transition: all 0.2s ease-in-out;
-      }
-
-      .sono-mic-hover-gold:hover svg {
-        color: #d4af37 !important;
-        filter: drop-shadow(0 0 4px rgba(212, 175, 55, 0.6));
-      }
-
-      .sono-mic-listening {
-        background: rgba(212, 175, 55, 0.2) !important;
-        border-color: rgba(212, 175, 55, 0.9) !important;
-        box-shadow: 0 0 16px rgba(212, 175, 55, 0.6) !important;
-        animation: pulse-gold 1.5s ease-in-out infinite;
-      }
-
-      @keyframes pulse-gold {
-        0% { box-shadow: 0 0 8px rgba(212, 175, 55, 0.4); }
-        50% { box-shadow: 0 0 20px rgba(212, 175, 55, 0.8); }
-        100% { box-shadow: 0 0 8px rgba(212, 175, 55, 0.4); }
-      }
-
-      /* [YENİ] ÖZEL SCROLLBAR ve OVERSCROLL FIX */
-      .custom-scrollbar {
-         overscroll-behavior: contain;
-      }
-      .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-      .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); border-radius: 4px; }
-      .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.5); border-radius: 4px; }
-      .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(212,175,55,0.8); }
-
-      /* S12: Yüz modları (duygu simülasyonu) */
-      .sono-face-idle {
-        transform: scale(1);
-        filter: drop-shadow(0 0 4px rgba(212,175,55,0.4));
-      }
-      .sono-face-thinking {
-        transform: translateY(-1px) scale(1.02);
-        filter: drop-shadow(0 0 8px rgba(212,175,55,0.7));
-      }
-      .sono-face-listening {
-        transform: translateY(-1px) scale(1.06);
-        filter: drop-shadow(0 0 10px rgba(212,175,55,0.9));
-      }
-    `;
-    document.head.appendChild(s);
-  }, []);
-// Vitrin motoru tetiklendiğinde timestamp güncelle
-useEffect(() => {
-  const handler = () => {
-    window.__FAE_LAST_VITRIN_TS = Date.now();
-  };
-
-  window.addEventListener("fae.vitrine.search", handler);
-  return () => window.removeEventListener("fae.vitrine.search", handler);
-}, []);
-
-  // DIŞ TIKLAMA → KAPAT
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-
-    const onDown = (e) => {
-      if (!wrapRef.current) return;
-      if (!wrapRef.current.contains(e.target)) {
-        setOpen(false);
-        greetedRef.current = false;
-        setTimeout(() => setMessages([]), 150);
-      }
-    };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, []);
-
-  const pulseHalo = () => {
-    if (!haloRef.current) return;
-    haloRef.current.classList.remove("animate-ping-once");
-    void haloRef.current.offsetWidth;
-    haloRef.current.classList.add("animate-ping-once");
-    setTimeout(() => haloRef.current?.classList.remove("animate-ping-once"), 900);
-  };
-
-  // KONUŞMA SENTEZİ (TTS)
-  function speak(text) {
-    try {
-      if (!synthRef.current || typeof window === "undefined") return;
-      const synth = synthRef.current;
-      const u = new SpeechSynthesisUtterance(text);
-
-      const lang =
-        locale.startsWith("tr")
-          ? "tr-TR"
-          : locale.startsWith("fr")
-          ? "fr-FR"
-          : locale.startsWith("ru")
-          ? "ru-RU"
-          : locale.startsWith("ar")
-          ? "ar-SA"
-          : "en-US";
-
-      u.lang = lang;
-
-      // 🎙️ Voice seçimi (bazı tarayıcılarda ilk TTS gecikmesini azaltır)
-      try {
-        const voices = synth.getVoices?.() || [];
-        const lang2 = String(lang).toLowerCase();
-        const short2 = lang2.slice(0, 2);
-        const v =
-          voices.find((x) => String(x?.lang || "").toLowerCase() === lang2) ||
-          voices.find((x) =>
-            String(x?.lang || "").toLowerCase().startsWith(lang2)
-          ) ||
-          voices.find((x) =>
-            String(x?.lang || "").toLowerCase().startsWith(short2)
-          );
-        if (v) u.voice = v;
-      } catch {
-        // ignore
-      }
-
-      // Bazı tarayıcılarda synth "paused" kalabiliyor
-      try {
-        synth.cancel();
-        synth.resume?.();
-      } catch {
-        // ignore
-      }
-
-      synth.speak(u);
-
-      u.onend = () => {
-        const micBtn = document.querySelector(".sono-mic-glow");
-        if (micBtn) {
-          micBtn.classList.remove("sono-mic-breath");
-          void micBtn.offsetWidth;
-          micBtn.classList.add("sono-mic-breath");
-        }
-      };
-    } catch {
-      // sessiz fail
-    }
-  }
-
-
-// SESLİ KOMUT (STT)
-function handleMicPointerDown(e) {
-  try {
-    e.preventDefault?.();
-    e.stopPropagation?.();
-  } catch {}
-  const now = Date.now();
-  if (now - (micTapGuardRef.current || 0) < 700) return;
-  micTapGuardRef.current = now;
-  captureOnce();
-}  async function captureOnce() {
-    if (typeof window === "undefined") return;
-
-    const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!Rec) {
-      alert(
-        t("ai.noSpeech", {
-          defaultValue: "Tarayıcınız sesli komutu desteklemiyor.",
-        })
-      );
-      return;
-    }
-
-    setListening(true);
-    flashMsg(t("ai.listening", { defaultValue: "Dinleniyorum…" }), 0);
-    const rec = new Rec();
-
-    rec.lang =
-      locale.startsWith("tr")
-        ? "tr-TR"
-        : locale.startsWith("fr")
-        ? "fr-FR"
-        : locale.startsWith("ru")
-        ? "ru-RU"
-        : locale.startsWith("ar")
-        ? "ar-SA"
-        : "en-US";
-
-    // ✅ interim+debounce: daha hızlı yakala
-    rec.interimResults = true;
-    rec.continuous = true;
-
-    const transcript = await new Promise((resolve) => {
-      let finalText = "";
-      let idle = null;
-      let done = false;
-
-      const finish = (text) => {
-        if (done) return;
-        done = true;
-        try {
-          clearTimeout(idle);
-        } catch {}
-        resolve(String(text || ""));
-        try {
-          rec.stop();
-        } catch {}
-      };
-
-      rec.onresult = (e) => {
-        try {
-          let interim = "";
-          let finals = "";
-          for (let i = e.resultIndex; i < e.results.length; i++) {
-            const r = e.results[i];
-            const tr = r?.[0]?.transcript || "";
-            if (r.isFinal) finals += tr + " ";
-            else interim += tr + " ";
-          }
-
-          if (finals.trim()) finalText = (finalText + " " + finals).trim();
-          const merged = (finalText || interim || "").trim();
-
-          // kullanıcı duraklayınca yakala
-          clearTimeout(idle);
-          idle = setTimeout(() => {
-            finish(merged);
-          }, 550);
-        } catch {
-          // ignore
-        }
-      };
-
-      rec.onerror = () => {
-        if (!done) finish("");
-      };
-
-      rec.onend = () => {
-        if (!done) finish(finalText);
-      };
-
-      try {
-        rec.start();
-        recRef.current = rec;
-      } catch {
-        finish("");
-      }
-    });
-
-    setListening(false);
-    recRef.current = null;
-
-    const clean = transcript.trim();
-    if (clean) {
-      // ✅ Sesli komut: asla otomatik arama yapma. Önce kullanıcıya onay sor.
-      setPendingVoice(clean);
-      try {
-        if (inputRef.current) inputRef.current.value = clean;
-      } catch {}
-      flashMsg(
-        t("ai.voiceConfirmToast", { defaultValue: "Duydum — aramam için onay ver." }),
-        1600,
-        "muted"
-      );
-    } else {
-      // boş çıktı: kullanıcının "ne oldu?" demesin
-      flashMsg(t("ai.noSpeech", { defaultValue: "Ses algılanamadı." }), 1400);
-    }
-  }
-
-  // ANA BEYİN – S12
-  async function processQuery(text) {
-    const low = text.toLowerCase();
-
-    // 1) Teşekkür Algılama
-    const thanksWords = [
-      "teşekkür",
-      "tesekkur",
-      "sağ ol",
-      "sag ol",
-      "çok sağ ol",
-      "cok sag ol",
-      "thanks",
-      "thank",
-      "thx",
-      "merci",
-      "спасибо",
-      "شكرا",
-      "shukran",
-      "gracias",
-    ];
-
-    if (thanksWords.some((w) => low.includes(w))) {
-      let reply;
-      if (locale.startsWith("tr"))
-        reply = "Rica ederim efendim, her zaman buradayım.";
-      else if (locale.startsWith("fr"))
-        reply = "Avec plaisir, je suis toujours là pour vous.";
-      else if (locale.startsWith("ru"))
-        reply = "Пожалуйста, я всегда рядом, чтобы помочь.";
-      else if (locale.startsWith("ar"))
-        reply = "على الرحب والسعة سيدي، أنا هنا دائمًا لمساعدتك.";
-      else reply = "You're very welcome, I'm always here for you.";
-
-      setMessages((m) => [...m, { from: "ai", text: reply }]);
-      speak(reply);
-      return;
-    }
-
-    // 2) Intent & Context
-    const intent = detectIntent(text, locale);
-    contextMemory.add(text);
-
-    // Intent bazlı davranış
-    if (intent === "product_search") {
-  // ✅ Ürün/hizmet araması: /api/ai ÇAĞIRMA (kredi yakma). Sadece vitrine arama tetikle.
-  setSearching(true);
-  lastAssistantSearchRef.current = { ts: Date.now(), query: text };
-
-  // Kullanıcı aramanın başladığını HEM görsün HEM duysun (dil çevirileri i18n'de)
-  setMessages((m) => [
-    ...m,
-    { from: "ai", text: t("ai.searching", { defaultValue: "Arıyorum…" }) },
-  ]);
-
-  flashMsg(t("ai.analyzing", { defaultValue: "Analiz ediliyor…" }), 0);
-
-  try {
-    if (typeof onProductSearch === "function") {
-      await onProductSearch(text);
-    } else if (typeof onSuggest === "function") {
-      await onSuggest(text);
-    } else {
-      pushQueryToVitrine(text, "ai");
-    }
-    // Sonuç mesajı (hazır / yok / hata) fae.vitrine.results event'inden gelecek.
-  } catch (err) {
-    console.warn("AI product_search trigger fail:", err?.message || err);
-    flashMsg(
-      t("ai.searchError", { defaultValue: "Arama sırasında bir hata oldu." }),
-      1800,
-      "danger"
-    );
-    setMessages((m) => [
-      ...m,
-      {
-        from: "ai",
-        text: t("ai.searchError", {
-          defaultValue: "Arama sırasında bir hata oldu.",
-        }),
+// src/i18n.js
+// Çok dilli i18n yapılandırması – temiz ve tam sürüm (NO DUPLICATE KEYS)
+
+import i18n from "i18next";
+import { initReactI18next } from "react-i18next";
+import LanguageDetector from "i18next-browser-languagedetector";
+import { API_BASE } from "./utils/api";
+
+const resources = {
+  // ======================== TURKISH ========================
+  tr: {
+    translation: {
+      "yazman yeterli,": "Yazman yeterli,",
+      gerisini: "gerisini",
+      "halleder.": "halleder.",
+
+      username: "Kullanıcı",
+      Puan: "Puan",
+
+      loading: "Yükleniyor…",
+      cameraSearch: "Kamera ile ara",
+      sloganFull: "Yazman yeterli, gerisini Sono halleder.",
+
+      site: {
+        about: "Hakkımızda",
+        how: "Nasıl Çalışır?",
+        contact: "İletişim"
       },
-    ]);
-    setSearching(false);
-    lastAssistantSearchRef.current = { ts: 0, query: "" };
-  }
-  return;
-} else if (intent === "action") {
-      // S12: aksiyon niyeti için event fırlatıyoruz (ileride başka yerde yakalanabilir)
-      try {
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(
-            new CustomEvent("fie:action", {
-              detail: {
-                raw: text,
-                locale,
-                context: contextMemory.getContext(),
-              },
-            })
-          );
+
+      // ✅ TEK legal objesi (birleştirildi)
+      legal: {
+        badge: "Legal",
+        home: "← Ana sayfa",
+        updatedAt: "Güncelleme",
+        privacy: "Gizlilik",
+        cookies: "Çerezler",
+        affiliate: "Affiliate Açıklaması",
+        terms: "Kullanım Şartları"
+      },
+
+      fillAllFields: "Lütfen tüm alanları doldurun.",
+      networkError: "Ağ hatası. Lütfen tekrar deneyin.",
+      processFailed: "İşlem başarısız.",
+      emailRequired: "E-posta gerekli.",
+      resetCodeSent: "Doğrulama kodu gönderildi.",
+      missingFields: "Lütfen tüm alanları doldurun.",
+      updateFailed: "Güncelleme başarısız.",
+      passwordUpdated: "Şifre başarıyla güncellendi.",
+
+      voiceSearch: "Sesli arama",
+      visualSearch: "Görsel arama",
+      qrSearch: "QR ile arama",
+
+      badges: {
+        title: "Rozetler",
+        silver: "Gümüş",
+        gold: "Altın",
+        platinum: "Platin",
+        progress: "İlerleme",
+        earnMore:
+          "Daha fazla kazanmak için alışveriş yap veya arkadaş davet et."
+      },
+
+      ph: {
+        searchProduct: "Ürün veya hizmet ara",
+        findHotel: "Otel bul...",
+        compareFlight: "Uçak biletini kıyasla...",
+        exploreElectronics: "Elektroniği keşfet...",
+        findCarRental: "Araç kiralama fırsatlarını bul..."
+      },
+
+      placeholder: {
+        hotel: "Otel ara...",
+        car: "Araç kirala...",
+        food: "Yemek siparişi ver...",
+        tour: "Tur bul...",
+        insurance: "Sigorta karşılaştır...",
+        estate: "Gayrimenkul keşfet...",
+        electronic: "Elektronik ürünleri karşılaştır..."
+      },
+
+      search: {
+        voice: "Sesli arama",
+        camera: "Kamera ile ara",
+        qr: "QR ile ara",
+        search: "Ara",
+        searching: "Arama yapılıyor…",
+        searchError: "Arama başarısız. Lütfen tekrar dene.",
+        badQuery: "Arama metni hatalı. Lütfen tekrar dene.",
+        imageAnalyzing: "Görsel analiz ediliyor…",
+        imageDetected: "Görüntüden anladığım: {{query}}",
+        // ✅ Kamera onay barı (App.jsx ile uyumlu)
+        imageDetectedPrefix: "Görüntüden anladığım:",
+        imageWeakGuess: "Emin olamadım, ama şöyle görünüyor:",
+        confirmQuestion: "Bu aramayı yapmak istiyor musunuz?",
+        confirmSearch: "Ara",
+        editQuery: "Düzenle",
+        searchNow: "Ara",
+        edit: "Düzenle",
+        cancel: "İptal",
+        cameraError: "Görsel analizi başarısız. Lütfen tekrar dene.",
+        voiceNotSupported: "Tarayıcın ses tanımayı desteklemiyor!",
+        voiceStarted: "Sesli arama başladı — şimdi konuşabilirsin.",
+        voiceHeardPrefix: "Sesli komuttan anladığım:",
+        voiceConfirmQuestion: "Bunu mu arayayım?",
+        voiceConfirmToast: "Duydum — aramam için onay ver.",
+        voiceDone: "Tamam — arıyorum.",
+        voiceStopped: "Sesli arama durduruldu.",
+        voiceError: "Sesli arama hatası."
+      },
+
+      // ✅ TEK qrScanner (TR)
+      qrScanner: {
+        noCameraTitle: "Kamera Erişilemiyor",
+        noCameraBody: "Kamera bulunamadı veya erişim izni verilmedi.",
+        retry: "Yeniden Dene",
+        lastRead: "Son okunan:",
+        torchTurnOn: "🔦 Fener Aç",
+        torchTurnOff: "🔦 Fener Kapat",
+        help: "QR veya barkodu kare içine hizalayın. Algıladığında otomatik arama tetiklenir.",
+        starting: "Kamera açılıyor…",
+        scanning: "Taranıyor…",
+        detected: "Kod algılandı.",
+        analyzing: "Kod analiz ediliyor…",
+        startingSearch: "Arama başlatılıyor…",
+        closing: "Kapatılıyor",
+        countdown: "{{count}}sn",
+        httpsRequired: "Kamerayı kullanmak için güvenli bağlantı (HTTPS) gerekli.",
+        videoNotFound: "Video elementi bulunamadı.",
+        cameraDenied: "Kamera erişimi reddedildi: {{msg}}",
+        torchNotSupported: "Bu cihazda fener desteği yok.",
+        torchError: "Fener kontrol edilemedi"
+      },
+
+      smartGreeting: {
+        hello: "Merhaba {{name}}",
+        t1: "Bölgende en çok tıklanan fırsatları gösteriyorum",
+        t2: "En güvenilir satıcıdan en uygun fiyat",
+        t3: "Tek tıkla karşılaştır, zamandan kazan",
+        t4: "İstersen başka ülkelere de bakabilirsin",
+        trigger1: "Bölgende en çok tıklanan fırsatları gösteriyorum",
+        trigger2: "En güvenilir satıcıdan en uygun fiyat",
+        trigger3: "Tek tıkla karşılaştır, zamandan kazan",
+        trigger4: "İstersen başka ülkelere de bakabilirsin"
+      },
+
+      slogan: {
+        full: "Yazman yeterli, gerisini 😊 halleder."
+      },
+
+      greeting: {
+        morning: "Günaydın ☀️",
+        afternoon: "İyi günler 🙂",
+        evening: "İyi akşamlar 🌙",
+        night: "İyi geceler 😴"
+      },
+
+      trigger: {
+        writeSono: "Yazman yeterli, Sono bulsun.",
+        discoverDeals: "En iyi fırsatları keşfet.",
+        youTypeIFind: "Sen yaz, ben bulayım.",
+        readyToSave: "Zaman ve para kazanmaya hazır mısın?",
+        aiWithYou: "Yapay zeka her adımda yanında.",
+        customShowcase: "Kişisel vitrinini hazırlıyorum..."
+      },
+
+      header: {
+        chooseLanguage: "Dil Seç",
+        wallet: "Cüzdan"
+      },
+
+      auth: {
+        login: "Giriş Yap",
+        logout: "Çıkış Yap",
+        register: "Kayıt Ol",
+        forgotPassword: "Şifremi unuttum",
+
+        email: "E-posta",
+        emailRequired: "E-posta gerekli.",
+        password: "Şifre",
+        nameSurname: "Ad Soyad",
+        inviteCode: "Davet Kodu",
+        newPassword: "Yeni Şifre",
+        enterResetCode: "Doğrulama Kodunu Gir",
+        saveNewPassword: "Yeni Şifreyi Kaydet",
+        sendResetCode: "Kod Gönder",
+
+        loading: "Yükleniyor…",
+
+        loginFailed: "Giriş başarısız.",
+        registerFailed: "Kayıt başarısız.",
+        registerSuccess: "Kayıt başarılı, şimdi giriş yapabilirsiniz.",
+        activationMailSent: "Kayıt başarılı! Aktivasyon kodu gönderildi.",
+        activateTitle: "Hesabını Aktifleştir",
+        activationInfoEmail: "adresine gönderilen aktivasyon kodunu gir.",
+        activationInfoNoEmail: "Lütfen aktivasyon e-posta adresini gir.",
+        activationCode: "Aktivasyon Kodu",
+        activateAccount: "Hesabı Aktifleştir",
+        activationCodeRequired: "Aktivasyon kodu gerekli.",
+        activationFailed: "Aktivasyon başarısız.",
+        activationSuccess: "Hesabınız başarıyla aktifleştirildi!",
+        resendCode: "Kodu yeniden gönder",
+        resendFailed: "E-posta gönderilemedi.",
+        resendSuccess: "Aktivasyon e-postası tekrar gönderildi."
+      },
+
+      showcase: {
+        best: "En uygun & güvenilir",
+        preparing: "Öneriler hazırlanıyor...",
+        aiCumulative: "SonoAI Önerileri",
+        personalizing: "Kişiselleştiriliyor…",
+        others: "Diğerleri",
+        noResults: "Henüz sonuç bulunamadı."
+      },
+
+      common: {
+        loading: "Yükleniyor…",
+        noImage: "Görsel yok",
+        noPrice: "Fiyat satıcıda",
+        summaryFallback: "Özet bilgi yok"
+      },
+
+      actions: {
+        goToReservation: "Tıkla",
+        close: "Kapat",
+        clear: "Temizle"
+      },
+
+      footerFull: {
+        left: "Yapay zeka destekli global fiyat karşılaştırma asistanın.",
+        mid: "Zaman ve paradan tasarruf için parmak şıklatman yeter,",
+        right: "gerisini O halleder."
+      },
+
+      ai: {
+        sono: "Sono AI",
+        listen: "Dinle",
+        send: "Gönder",
+        placeholder: "Mesaj yaz...",
+        listening: "Dinleniyorum…",
+        voiceHeardPrefix: "Sesli komuttan anladığım:",
+        voiceConfirmQuestion: "Bunu mu arayayım?",
+        voiceConfirmToast: "Duydum — aramam için onay ver.",
+        voiceDone: "Tamam. Arıyorum…",
+        searching: "Arıyorum…",
+        searchError: "Arama sırasında bir hata oldu.",
+        analyzing: "Analiz ediliyor...",
+        hello: "Merhaba, ben Sono. Ürün/hizmet arayabilir veya herhangi bir konuda soru sorabilirsin.",
+        prepping: "Yanıt hazırlıyorum...",
+        ready: "Hazır.",
+        chatReady: "Cevap hazır.",
+        thanks: "Rica ederim 🌸",
+        talk: "Konuş",
+        error: "Bir hata oluştu.",
+        noAnswer: "Şu an cevap alamadım.",
+        noSpeech: "Tarayıcın ses tanımayı desteklemiyor!",
+        thanksReply: "Rica ederim, her zaman buradayım."
+      },
+
+      net: {
+        offlineTitle: "İnternet bağlantınız yok",
+        offlineDesc: "Bağlantı gelene kadar bu uyarı kapanmaz. İnternet gelince otomatik devam eder.",
+        onlineTitle: "İnternet bağlantınız geldi",
+        onlineDesc: "Devam edebilirsiniz.",
+      },
+
+      vitrine: {
+        resultsReady: "Sonuçlar vitrinde hazır. Teşekkürler.",
+        noResults: "Üzgünüm, sonuç bulunamadı. Başka bir şey deneyin.",
+        resultsError: "Arama sırasında hata oluştu. Lütfen tekrar deneyin.",
+      },
+
+
+      wallet: {
+        statusNote: "Bu panel şu an yalnızca davet linki ve geçmiş içindir.",
+        title: "Cüzdanım",
+        howTo: "Nasıl kazanırım?",
+        invite: "Davet et",
+        inviteCopied: "Davet linkin kopyalandı: ",
+        inviteReady: "Davet linkin hazır: ",
+        enterAmount: "Kupon Tutarı (₺):",
+        couponCreated: "Kupon oluşturuldu: ",
+        expires: "son:",
+        locked: "İlk siparişten sonra açılır.",
+        copied: "Kopyalandı.",
+        ready: "Hazır.",
+        rule: "İlk alışveriş + davet = kazanç.",
+        createCoupon: "Kupon Oluştur",
+        useCoupon: "Kuponu Kullan",
+        couponAmount: "Kupon Tutarı",
+        tree: "Davet Ağacı",
+        noBadges: "Henüz rozet yok.",
+        lockedText: "İlk alışverişten sonra cüzdan açılır.",
+        unlockedText: "Cüzdan indirimi açık.",
+        useDiscount: "İndirimi Kullan",
+        discountApplied: "İndirim uygulandı.",
+        myBadges: "Rozetlerim",
+        errorGeneric: "Bir hata oluştu.",
+        noBalance: "Bakiye yok.",
+        needLogin: "Cüzdanı görmek için lütfen giriş yap.",
+        mustLoginInvite: "Davet oluşturmak için giriş yapmalısın.",
+        mustLoginCoupon: "Kupon oluşturmak için giriş yapmalısın.",
+        mustLoginRedeem: "İndirim kullanmak için giriş yapmalısın.",
+
+        enterCoupon: "Lütfen bir kupon kodu gir.",
+        couponInvalid: "Kupon geçersiz veya kullanılamaz.",
+        couponAppliedCashback:
+          "Kupon uygulandı (önizleme). Ödül/cashback şu an aktif değildir.",
+        couponError: "Kupon doğrulanırken bir hata oluştu.",
+        relatedOrder: "İlişkili sipariş:",
+        inviteError: "Davet linki oluşturulamadı.",
+        noRewardsForCoupon: "Bu işlem için kullanılabilir bir bakiye yok.",
+        couponTooHigh: "Girilen tutar çok yüksek.",
+        redeemError: "İndirim uygulanamadı.",
+        infoAria: "Cüzdan hakkında bilgi",
+
+        infoTitle: "Bu cüzdan nasıl çalışır?",
+        infoWallet:
+          "Bu ekran cüzdan altyapısının önizlemesidir. Şu an ödül/cashback/kupon dağıtımı yoktur; para çekimi (IBAN) de yoktur.",
+        infoCoupon:
+          "Cüzdan özellikleri ileride açılabilir. Şimdilik bu panel bilgilendirme ve davet linki içindir.",
+        infoDiscount:
+          "Şu an yalnızca en iyi fiyatı bulma ve yönlendirme altyapısını test ediyoruz. Cüzdan/ödüllendirme aktif olduğunda burada net şekilde duyurulacaktır.",
+        infoReferral:
+          "Davet altyapısı hazır; ileride aktif olursa davet kazanımları bu ekranda görünecektir.",
+
+        walletTabs: {
+          wallet: "Cüzdan",
+          actions: "Hareketler",
+          orders: "Siparişler"
+        },
+
+        historyTitle: "Cüzdan Hareketleri",
+        historyEmpty: "Henüz kayıtlı bir cüzdan hareketin yok.",
+        historyUnavailable:
+          "Hareket geçmişi henüz hazır değil veya kayıt bulunamadı.",
+        historyError: "Hareket geçmişi yüklenirken bir hata oluştu.",
+        mustLoginHistory:
+          "Cüzdan hareketlerini görmek için giriş yapmalısın.",
+        txOrderRef: "Sipariş:",
+        txUnknownDate: "Tarih yok",
+
+        txType: {
+          deposit: "Yükleme",
+          reward: "Ödül",
+          cashback: "Cashback",
+          coupon: "Kupon",
+          order: "Sipariş",
+          referral: "Davet Ödülü",
+          withdraw: "Çekim"
+        },
+
+        shareWithFriends: "Linki Paylaş",
+
+        share: {
+          whatsapp: "WhatsApp",
+          telegram: "Telegram",
+          x: "X",
+          facebook: "Facebook",
+          instagram: "Instagram"
+        },
+
+        motto:
+          "<span style='color:#FFD700;'>Not:</span> Ödül, cashback ve kupon şu an aktif değil. Şimdilik en iyi fiyatı bulup yönlendirme altyapısını test ediyoruz."
+      },
+
+      orders: {
+        title: "Siparişlerim",
+        empty: "Henüz sistem üzerinden takip edilen bir siparişin yok.",
+        mustLogin: "Siparişlerini görmek için giriş yapmalısın.",
+        status: {
+          pending: "Bekliyor",
+          paid: "Ödendi",
+          shipped: "Kargolandı",
+          completed: "Tamamlandı",
+          canceled: "İptal edildi",
+
         }
-		
-      } catch (e) {
-        console.warn("fie:action event error:", e);
       }
     }
+  },
 
-    // 3) Kullanıcı mesajını ekle + history senkron
-    setMessages((m) => {
-      const updated = [...m, { from: "user", text }];
+  // ======================== ENGLISH ========================
+  en: {
+    translation: {
+      "yazman yeterli,": "Just type,",
+      gerisini: "I'll handle",
+      "halleder.": "the rest.",
 
-      // 🔥 Yeni: SENKRON KORUMA — StrictMode çift render bug fix
-      queueMicrotask(() => {
-        messagesRef.current = updated;
-      });
+      username: "User",
+      Puan: "Points",
 
-      return updated;
-    });
+      loading: "Loading…",
+      cameraSearch: "Search with camera",
+      sloganFull: "Just type — Sono will handle the rest.",
 
-    // 4) Hassas veri filtresi
-    const sensitive = [
-      "şifre",
-      "tc",
-      "iban",
-      "adres",
-      "kredi kartı",
-      "password",
-      "card",
-      "address",
-    ];
-    const silent = sensitive.some((k) => low.includes(k));
+      site: {
+        about: "About",
+        how: "How it works",
+        contact: "Contact"
+      },
 
-    if (!silent) {
-      speak(
-        t("ai.prepping", {
-          defaultValue:
-            "Gerçek AI tavsiyelerini vitrine getiriyorum...",
-        })
-      );
-    }
+      // ✅ merged legal
+      legal: {
+        badge: "Legal",
+        home: "← Home",
+        updatedAt: "Updated",
+        privacy: "Privacy",
+        cookies: "Cookies",
+        affiliate: "Affiliate Disclosure",
+        terms: "Terms of Use"
+      },
 
-    pulseHalo();
-    setThinking(true);
-    flashMsg(t("ai.analyzing", { defaultValue: "Analiz ediliyor..." }), 0);
+      fillAllFields: "Please fill all fields.",
+      networkError: "Network error. Please try again.",
+      processFailed: "Process failed.",
+      emailRequired: "Email required.",
+      resetCodeSent: "Verification code sent.",
+      missingFields: "Please fill all fields.",
+      updateFailed: "Update failed.",
+      passwordUpdated: "Password updated successfully.",
 
-    // 5) Önceki istek abort
-    if (abortControllerRef.current) abortControllerRef.current.abort();
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
+      voiceSearch: "Voice search",
+      visualSearch: "Visual search",
+      qrSearch: "Search by QR",
 
-    try {
-      // 6) Unified Search — Vitrin Beyni
-	  
-   
+      badges: {
+        title: "Badges",
+        silver: "Silver",
+        gold: "Gold",
+        platinum: "Platinum",
+        progress: "Progress",
+        earnMore: "Shop or invite friends to earn more."
+      },
+
+      ph: {
+        searchProduct: "Search for a product or service",
+        findHotel: "Find hotels...",
+        compareFlight: "Compare flights...",
+        exploreElectronics: "Explore electronics...",
+        findCarRental: "Find car rentals..."
+      },
+
+      placeholder: {
+        hotel: "Search hotels...",
+        car: "Find car rentals...",
+        food: "Order food...",
+        tour: "Find tours...",
+        insurance: "Compare insurance...",
+        estate: "Explore real estate...",
+        electronic: "Compare electronics..."
+      },
+
+      search: {
+        voice: "Voice search",
+        camera: "Search with camera",
+        qr: "Search with QR",
+        search: "Search",
+        voiceNotSupported: "Your browser does not support speech recognition!",
+        voiceStarted: "Voice search started — you can speak now.",
+        voiceHeardPrefix: "I heard:",
+        voiceConfirmQuestion: "Search for this?",
+        voiceConfirmToast: "Heard you — confirm to search.",
+        voiceDone: "Got it — searching.",
+        voiceStopped: "Voice search stopped.",
+        voiceError: "Voice search error.",
+        searching: "Searching…",
+        searchError: "Search failed. Please try again.",
+        badQuery: "Invalid search text. Please try again.",
+        imageAnalyzing: "Analyzing image…",
+        imageDetected: "From the image, I think: {{query}}",
+        // ✅ Camera confirm bar (App.jsx)
+        imageDetectedPrefix: "From the image, I understood:",
+        imageWeakGuess: "Not 100% sure, but it looks like:",
+        confirmQuestion: "Do you want to perform this search?",
+        confirmSearch: "Search",
+        editQuery: "Edit",
+        searchNow: "Search",
+        edit: "Edit",
+        cancel: "Cancel",
+        cameraError: "Image analysis failed. Please try again."
+      },
+
+      // ✅ qrScanner (EN)
+      qrScanner: {
+        noCameraTitle: "Camera unavailable",
+        noCameraBody: "No camera found or permission was not granted.",
+        retry: "Try again",
+        lastRead: "Last scanned:",
+        torchTurnOn: "🔦 Turn on flash",
+        torchTurnOff: "🔦 Turn off flash",
+        help: "Align the QR code or barcode inside the square. Search will trigger automatically when detected.",
+        starting: "Opening camera…",
+        scanning: "Scanning…",
+        detected: "Code detected.",
+        analyzing: "Analyzing code…",
+        startingSearch: "Starting search…",
+        closing: "Closing",
+        countdown: "{{count}}s",
+        httpsRequired: "A secure connection (HTTPS) is required to use the camera.",
+        videoNotFound: "Video element not found.",
+        cameraDenied: "Camera access denied: {{msg}}",
+        torchNotSupported: "Flash is not supported on this device.",
+        torchError: "Flash could not be controlled"
+      },
+
+      smartGreeting: {
+        hello: "Hello {{name}}",
+        t1: "Showing top clicked deals in your area",
+        t2: "Best price from the most reliable seller",
+        t3: "Compare instantly, save time",
+        t4: "You can also check other countries",
+        trigger1: "Showing top clicked deals in your area",
+        trigger2: "Best price from the most reliable seller",
+        trigger3: "Compare instantly, save time",
+        trigger4: "You can also check other countries"
+      },
+
+      slogan: {
+        full: "Just type, I’ll handle the rest 😊."
+      },
+
+      greeting: {
+        morning: "Good morning ☀️",
+        afternoon: "Good afternoon 🙂",
+        evening: "Good evening 🌙",
+        night: "Good night 😴"
+      },
+
+      trigger: {
+        writeSono: "Just type, Sono finds it.",
+        discoverDeals: "Discover best deals.",
+        youTypeIFind: "You type, I find.",
+        readyToSave: "Ready to save time and money?",
+        aiWithYou: "AI is with you.",
+        customShowcase: "Preparing your personalized showcase..."
+      },
+
+      header: {
+        chooseLanguage: "Choose Language",
+        wallet: "Wallet"
+      },
+
+      auth: {
+        login: "Sign In",
+        logout: "Sign Out",
+        register: "Register",
+        forgotPassword: "Forgot Password",
+
+        email: "Email",
+        emailRequired: "Email is required.",
+        password: "Password",
+        nameSurname: "Full Name",
+        inviteCode: "Referral Code",
+        newPassword: "New Password",
+        enterResetCode: "Enter Verification Code",
+        saveNewPassword: "Save New Password",
+        sendResetCode: "Send Code",
+
+        loading: "Loading…",
+
+        loginFailed: "Login failed.",
+        registerFailed: "Registration failed.",
+        registerSuccess: "Registration successful, you may now sign in.",
+        activationMailSent: "Activation code sent to your email.",
+        activateTitle: "Activate Your Account",
+        activationInfoEmail: "enter the code sent to this address.",
+        activationInfoNoEmail: "Please enter your email to get a code.",
+        activationCode: "Activation Code",
+        activateAccount: "Activate Account",
+        activationCodeRequired: "Activation code is required.",
+        activationFailed: "Activation failed.",
+        activationSuccess: "Your account has been activated!",
+        resendCode: "Resend Code",
+        resendFailed: "Could not resend activation code.",
+        resendSuccess: "Activation code resent."
+      },
+
+      showcase: {
+        best: "Best & Reliable",
+        preparing: "Preparing suggestions...",
+        aiCumulative: "SonoAI Suggestions",
+        personalizing: "Personalizing…",
+        others: "Others",
+        noResults: "No results yet."
+      },
+
+      common: {
+        loading: "Loading…",
+        noImage: "No image",
+        noPrice: "Price at seller",
+        summaryFallback: "No summary"
+      },
+
+      actions: {
+        goToReservation: "Click",
+        close: "Close",
+        clear: "Clear"
+      },
+
+      footerFull: {
+        left: "AI-powered global price comparison assistant.",
+        mid: "Snap your fingers to save time and money,",
+        right: "it handles the rest."
+      },
+
+      ai: {
+        sono: "Sono AI",
+        listen: "Listen",
+        send: "Send",
+        placeholder: "Type a message...",
+        listening: "Listening…",
+        voiceHeardPrefix: "I heard:",
+        voiceConfirmQuestion: "Search for this?",
+        voiceConfirmToast: "Heard you — confirm to search.",
+        voiceDone: "Okay. Searching…",
+        searching: "Searching…",
+        searchError: "Search error.",
+        analyzing: "Analyzing, preparing showcase...",
+        hello: "Hi, I'm Sono. Search for a product/service or ask any question — I’ll help fast.",
+        prepping: "Preparing an answer...",
+        ready: "Ready. You may check it on the showcase.",
+        chatReady: "Answer is ready.",
+        thanks: "You're welcome 🌸",
+        talk: "Talk",
+        error: "Something went wrong.",
+        noAnswer: "I couldn't get an answer right now.",
+        noSpeech: "Your browser does not support speech recognition!",
+        thanksReply: "You're welcome, always here for you."
+      },
+
+      net: {
+        offlineTitle: "No internet connection",
+        offlineDesc: "This alert stays until you’re back online. We’ll resume automatically.",
+        onlineTitle: "Back online",
+        onlineDesc: "You can continue.",
+      },
+
+      vitrine: {
+        resultsReady: "Results are ready in the showcase. Thank you.",
+        noResults: "Sorry, no results found. Try something else.",
+        resultsError: "An error occurred during the search. Please try again.",
+      },
 
 
-	  
-// Unified search çağrısından sonra vitrin tetiklenmiş mi kontrol e
+      wallet: {
+        statusNote:
+          "This panel is currently only for your invite link and history.",
+        title: "My Wallet",
+        howTo: "How do I earn?",
+        invite: "Invite",
+        inviteCopied: "Your invite link was copied: ",
+        inviteReady: "Your invite link is ready: ",
+        enterAmount: "Coupon Amount (₺):",
+        couponCreated: "Coupon created: ",
+        expires: "exp:",
+        locked: "Unlocks after your first order.",
+        copied: "Copied.",
+        ready: "Ready.",
+        rule: "First purchase + referral = earnings.",
+        createCoupon: "Create Coupon",
+        useCoupon: "Redeem Coupon",
+        couponAmount: "Coupon Amount",
+        tree: "Referral Tree",
+        noBadges: "No badges yet.",
+        lockedText: "Wallet unlocks after your first order.",
+        unlockedText: "Wallet discount active.",
+        useDiscount: "Use Discount",
+        discountApplied: "Discount applied.",
+        myBadges: "My Badges",
+        errorGeneric: "An error occurred.",
+        noBalance: "No balance.",
+        needLogin: "Please sign in to view your wallet.",
+        mustLoginInvite: "You must sign in to create an invite.",
+        mustLoginCoupon: "You must sign in to create a coupon.",
+        mustLoginRedeem: "You must sign in to use a discount.",
 
-      // 7) onSuggest / onProductSearch override
-      // Not: onSuggest/onProductSearch sadece product_search için kullanılır (yukarıda return).
-      {
-        // 8) Backend Chat / AI API Çağrısı
-        const backend = API_BASE || "";
+        enterCoupon: "Please enter a coupon code.",
+        couponInvalid: "Coupon is invalid or cannot be used.",
+        couponAppliedCashback:
+          "Coupon applied (preview). Rewards/cashback are not active yet.",
+        couponError: "An error occurred while validating the coupon.",
+        relatedOrder: "Related order:",
+        inviteError: "Could not create the invite link.",
+        noRewardsForCoupon: "No available balance for this action.",
+        couponTooHigh: "The amount is too high.",
+        redeemError: "Discount could not be applied.",
+        infoAria: "Wallet info",
 
-        // Kullanıcı + AI geçmişi: backend'e güvenli formatta gönderilir
-        const safeHistory = messagesRef.current
-          .slice(-6)
-          .map((m) => ({
-            role: m.from === "user" ? "user" : "assistant",
-            content: m.text,
-          }));
+        infoTitle: "How does this wallet work?",
+        infoWallet:
+          "This wallet screen is a preview. Rewards/cashback/coupons are not active yet, and there is no cash withdrawal (IBAN).",
+        infoCoupon:
+          "Wallet features may open later. For now, this panel is for info and your invite link.",
+        infoDiscount:
+          "Right now we’re only testing the best-price search and click-out flow. When wallet/rewards go live, details will be published here.",
+        infoReferral:
+          "Invites are ready; if rewards become active later, referral earnings will appear here.",
 
-        const res = await fetch(`${backend}/api/ai`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          signal: controller.signal,
-          body: JSON.stringify({
-            message: text,
-            context: contextMemory.getContext(),
-            locale,
-            region: localStorage.getItem("region") || "TR",
-            city: typeof window !== "undefined" ? window.__FIE_CITY__ || "" : "",
-            history: safeHistory,
-            mode: "chat",
-          }),
-        });
+        walletTabs: {
+          wallet: "Wallet",
+          actions: "Transactions",
+          orders: "Orders"
+        },
 
-        const j = await res.json();
-        if (j?.cards) {
-          try {
-            if (typeof window !== "undefined") {
-              window.dispatchEvent(
-                new CustomEvent("fie:vitrin", {
-                  detail: { cards: j.cards || [], model: j.provider || "ai" },
-                })
-              );
-            }
-          } catch (e) {
-            console.warn("fie:vitrin dispatch error:", e);
-          }
+        historyTitle: "Wallet Transactions",
+        historyEmpty: "You have no recorded wallet transactions.",
+        historyUnavailable: "History not ready or no records.",
+        historyError: "Error loading wallet history.",
+        mustLoginHistory: "You must sign in to view wallet history.",
+        txOrderRef: "Order:",
+        txUnknownDate: "No date",
+
+        txType: {
+          deposit: "Deposit",
+          reward: "Reward",
+          cashback: "Cashback",
+          coupon: "Coupon",
+          order: "Order",
+          referral: "Referral Reward",
+          withdraw: "Withdrawal"
+        },
+
+        shareWithFriends: "Share the Link",
+
+        share: {
+          whatsapp: "WhatsApp",
+          telegram: "Telegram",
+          x: "X",
+          facebook: "Facebook",
+          instagram: "Instagram"
+        },
+
+        motto:
+          "<span style='color:#FFD700;'>Note:</span> Rewards, cashback and coupons are not active yet. For now, find the best price and test the routing."
+      },
+
+      orders: {
+        title: "My Orders",
+        empty: "You currently have no tracked orders.",
+        mustLogin: "Sign in to view your orders.",
+        status: {
+          pending: "Pending",
+          paid: "Paid",
+          shipped: "Shipped",
+          completed: "Completed",
+          canceled: "Canceled",
+
         }
+      }
+    }
+  },
 
-        setMessages((m) => [
-          ...m,
-          {
-            from: "ai",
-            text:
-              j?.answer ||
-              t("ai.noAnswer", { defaultValue: "Şu an cevap alamadım." }),
-          },
-        ]);
-      }
+  // ======================== FRENCH ========================
+  fr: {
+    translation: {
+      "yazman yeterli,": "Tape simplement,",
+      gerisini: "je m'occupe du",
+      "halleder.": "reste.",
 
-      if (!silent) {
-        speak(
-          t("ai.ready", {
-            defaultValue: "Hazır. Vitrinden kontrol edebilirsiniz.",
-          })
-        );
+      username: "Utilisateur",
+      Puan: "Points",
+
+      loading: "Chargement…",
+      cameraSearch: "Rechercher avec la caméra",
+      sloganFull: "Tapez simplement — Sono s’occupe du reste.",
+
+      site: {
+        about: "À propos",
+        how: "Comment ça marche ?",
+        contact: "Contact"
+      },
+
+      // ✅ merged legal
+      legal: {
+        badge: "Légal",
+        home: "← Accueil",
+        updatedAt: "Mise à jour",
+        privacy: "Confidentialité",
+        cookies: "Cookies",
+        affiliate: "Mention d’affiliation",
+        terms: "Conditions d’utilisation"
+      },
+
+      fillAllFields: "Veuillez remplir tous les champs.",
+      networkError: "Erreur réseau. Veuillez réessayer.",
+      processFailed: "Le processus a échoué.",
+      emailRequired: "E-mail requis.",
+      resetCodeSent: "Code envoyé.",
+      missingFields: "Veuillez remplir tous les champs.",
+      updateFailed: "La mise à jour a échoué.",
+      passwordUpdated: "Mot de passe mis à jour.",
+
+      voiceSearch: "Recherche vocale",
+      visualSearch: "Recherche visuelle",
+      qrSearch: "Recherche par QR",
+
+      badges: {
+        title: "Badges",
+        silver: "Argent",
+        gold: "Or",
+        platinum: "Platine",
+        progress: "Progression",
+        earnMore:
+          "Achetez ou invitez des amis pour gagner davantage de récompenses."
+      },
+
+      ph: {
+        searchProduct: "Rechercher un produit ou un service",
+        findHotel: "Rechercher des hôtels...",
+        compareFlight: "Comparer les vols...",
+        exploreElectronics: "Explorer l'électronique...",
+        findCarRental: "Trouver une voiture..."
+      },
+
+      placeholder: {
+        hotel: "Rechercher des hôtels...",
+        car: "Trouver une voiture...",
+        food: "Commander à manger...",
+        tour: "Trouver une excursion...",
+        insurance: "Comparer des assurances...",
+        estate: "Explorer l'immobilier...",
+        electronic: "Comparer l’électronique..."
+      },
+
+      search: {
+        voice: "Recherche vocale",
+        camera: "Recherche par caméra",
+        qr: "Recherche par QR",
+        search: "Rechercher",
+        voiceNotSupported:
+          "Votre navigateur ne supporte pas la reconnaissance vocale.",
+        voiceStarted: "La recherche vocale a démarré — vous pouvez parler.",
+        voiceHeardPrefix: "J’ai compris :",
+        voiceConfirmQuestion: "Lancer la recherche ?",
+        voiceConfirmToast: "J’ai compris — confirme pour rechercher.",
+        voiceDone: "Compris — je recherche.",
+        voiceStopped: "Recherche vocale arrêtée.",
+        voiceError: "Erreur de recherche vocale.",
+        searching: "Recherche…",
+        searchError: "La recherche a échoué. Réessayez.",
+        badQuery: "Texte de recherche invalide. Réessayez.",
+        imageAnalyzing: "Analyse de l'image…",
+        imageDetected: "D'après l'image : {{query}}",
+        // ✅ Barre de confirmation caméra (App.jsx)
+        imageDetectedPrefix: "D'après l'image, j'ai compris :",
+        imageWeakGuess: "Pas sûr à 100 %, mais on dirait :",
+        confirmQuestion: "Voulez-vous lancer cette recherche ?",
+        confirmSearch: "Rechercher",
+        editQuery: "Modifier",
+        searchNow: "Rechercher",
+        edit: "Modifier",
+        cancel: "Annuler",
+        cameraError: "Analyse d'image échouée. Réessayez."
+      },
+
+      // ✅ qrScanner (FR)
+      qrScanner: {
+        noCameraTitle: "Caméra indisponible",
+        noCameraBody:
+          "Aucune caméra trouvée ou l’autorisation n’a pas été accordée.",
+        retry: "Réessayer",
+        lastRead: "Dernier scan :",
+        torchTurnOn: "🔦 Allumer le flash",
+        torchTurnOff: "🔦 Éteindre le flash",
+        help: "Alignez le QR code ou le code-barres dans le cadre. La recherche se lancera automatiquement dès qu’il est détecté.",
+        starting: "Ouverture de la caméra…",
+        scanning: "Scan en cours…",
+        detected: "Code détecté.",
+        analyzing: "Analyse du code…",
+        startingSearch: "Recherche en cours…",
+        closing: "Fermeture",
+        countdown: "{{count}}s",
+        httpsRequired:
+          "Une connexion sécurisée (HTTPS) est requise pour utiliser la caméra.",
+        videoNotFound: "Élément vidéo introuvable.",
+        cameraDenied: "Accès à la caméra refusé : {{msg}}",
+        torchNotSupported:
+          "Le flash n’est pas pris en charge sur cet appareil.",
+        torchError: "Impossible de contrôler le flash"
+      },
+
+      smartGreeting: {
+        hello: "Bonjour {{name}}",
+        t1: "Je montre les offres populaires dans ta région",
+        t2: "Meilleur prix du vendeur le plus fiable",
+        t3: "Compare en un clic, gagne du temps",
+        t4: "Tu peux aussi regarder d'autres pays",
+        trigger1: "Je montre les offres populaires dans ta région",
+        trigger2: "Meilleur prix du vendeur le plus fiable",
+        trigger3: "Compare en un clic, gagne du temps",
+        trigger4: "Tu peux aussi regarder d'autres pays"
+      },
+
+      slogan: {
+        full: "Tape simplement, je m'occupe du reste 😊."
+      },
+
+      greeting: {
+        morning: "Bonjour ☀️",
+        afternoon: "Bon après-midi 🙂",
+        evening: "Bonsoir 🌙",
+        night: "Bonne nuit 😴"
+      },
+
+      trigger: {
+        writeSono: "Écris et Sono trouve.",
+        discoverDeals: "Découvre les meilleures offres.",
+        youTypeIFind: "Tu écris, je trouve.",
+        readyToSave: "Prêt à économiser ?",
+        aiWithYou: "L’IA est avec toi.",
+        customShowcase: "Je prépare ta vitrine personnalisée..."
+      },
+
+      header: {
+        chooseLanguage: "Choisir la langue",
+        wallet: "Portefeuille"
+      },
+
+      auth: {
+        login: "Connexion",
+        logout: "Déconnexion",
+        register: "Créer un compte",
+        forgotPassword: "Mot de passe oublié",
+
+        email: "E-mail",
+        emailRequired: "E-mail requis.",
+        password: "Mot de passe",
+        nameSurname: "Nom & Prénom",
+        inviteCode: "Code d’invitation",
+        newPassword: "Nouveau mot de passe",
+        enterResetCode: "Entrez le code",
+        saveNewPassword: "Enregistrer le mot de passe",
+        sendResetCode: "Envoyer le code",
+
+        loading: "Chargement…",
+
+        loginFailed: "Échec de connexion.",
+        registerFailed: "Échec de l’inscription.",
+        registerSuccess:
+          "Inscription réussie, vous pouvez maintenant vous connecter.",
+        activationMailSent:
+          "Inscription réussie ! Un code d’activation a été envoyé.",
+        activateTitle: "Activer le compte",
+        activationInfoEmail: "veuillez saisir le code reçu à cette adresse.",
+        activationInfoNoEmail:
+          "Veuillez entrer votre e-mail pour recevoir un code.",
+        activationCode: "Code d’activation",
+        activateAccount: "Activer le compte",
+        activationCodeRequired: "Le code d’activation est requis.",
+        activationFailed: "Activation échouée.",
+        activationSuccess: "Votre compte a été activé !",
+        resendCode: "Renvoyer le code",
+        resendFailed: "Impossible de renvoyer l’e-mail.",
+        resendSuccess: "E-mail renvoyé."
+      },
+
+      showcase: {
+        best: "Le plus fiable & avantageux",
+        preparing: "Préparation…",
+        aiCumulative: "Suggestions SonoAI",
+        personalizing: "Personnalisation…",
+        others: "Autres",
+        noResults: "Aucun résultat."
+      },
+
+      common: {
+        loading: "Chargement…",
+        noImage: "Aucune image",
+        noPrice: "Prix chez le vendeur",
+        summaryFallback: "Pas de résumé"
+      },
+
+      actions: {
+        goToReservation: "Cliquez",
+        close: "Fermer",
+        clear: "Effacer"
+      },
+
+      footerFull: {
+        left: "Assistant IA global de comparaison de prix.",
+        mid: "Claque les doigts pour gagner du temps,",
+        right: "je m'occupe du reste."
+      },
+
+      ai: {
+        sono: "Sono AI",
+        listen: "Écouter",
+        send: "Envoyer",
+        placeholder: "Écrire un message...",
+        listening: "J'écoute…",
+        voiceHeardPrefix: "J’ai compris :",
+        voiceConfirmQuestion: "Lancer la recherche ?",
+        voiceConfirmToast: "J’ai compris — confirme pour rechercher.",
+        voiceDone: "D’accord. Je cherche…",
+        searching: "Je cherche…",
+        searchError: "Erreur de recherche.",
+        analyzing: "Analyse…",
+        hello: "Bonjour, je suis Sono. Cherchez un produit/service ou posez une question — je vous aide vite.",
+        prepping: "Je prépare la réponse...",
+        ready: "C’est prêt.",
+        chatReady: "Réponse prête.",
+        thanks: "Avec plaisir 🌸",
+        talk: "Parler",
+        error: "Une erreur s'est produite.",
+        noAnswer: "Je n'ai pas pu obtenir de réponse pour le moment.",
+        noSpeech:
+          "Votre navigateur ne supporte pas la reconnaissance vocale.",
+        thanksReply: "Avec plaisir, je suis toujours là."
+      },
+
+      net: {
+        offlineTitle: "Pas de connexion Internet",
+        offlineDesc: "Cette alerte reste affichée jusqu’au retour en ligne. Reprise automatique ensuite.",
+        onlineTitle: "Connexion rétablie",
+        onlineDesc: "Vous pouvez continuer.",
+      },
+
+      vitrine: {
+        resultsReady: "Les résultats sont prêts dans la vitrine. Merci.",
+        noResults: "Désolé, aucun résultat. Essayez autre chose.",
+        resultsError: "Une erreur est survenue pendant la recherche. Réessayez.",
+      },
+
+
+      wallet: {
+        statusNote:
+          "Ce panneau est actuellement uniquement destiné à votre lien d'invitation et à l'historique.",
+        title: "Mon portefeuille",
+        howTo: "Comment gagner ?",
+        invite: "Inviter",
+        inviteCopied: "Lien copié : ",
+        inviteReady: "Lien prêt : ",
+        enterAmount: "Montant du coupon (₺):",
+        couponCreated: "Coupon créé : ",
+        expires: "exp :",
+        locked: "S’active après votre première commande.",
+        copied: "Copié.",
+        ready: "Prêt.",
+        rule: "Premier achat + invitation = gains.",
+        createCoupon: "Créer un coupon",
+        useCoupon: "Utiliser le coupon",
+        couponAmount: "Montant du coupon",
+        tree: "Arbre d'invitations",
+        noBadges: "Aucun badge.",
+        lockedText: "Le portefeuille s’active après la première commande.",
+        unlockedText: "Réduction activée.",
+        useDiscount: "Utiliser la réduction",
+        discountApplied: "Réduction appliquée.",
+        myBadges: "Mes badges",
+        errorGeneric: "Erreur.",
+        noBalance: "Aucun solde.",
+        needLogin: "Veuillez vous connecter pour voir le portefeuille.",
+        mustLoginInvite: "Connexion requise pour créer une invitation.",
+        mustLoginCoupon: "Connexion requise pour créer un coupon.",
+        mustLoginRedeem:
+          "Connexion requise pour utiliser une réduction.",
+
+        enterCoupon: "Veuillez saisir un code coupon.",
+        couponInvalid: "Coupon invalide ou inutilisable.",
+        couponAppliedCashback:
+          "Coupon appliqué (aperçu). Les récompenses/cashback ne sont pas encore actifs.",
+        couponError: "Erreur lors de la vérification du coupon.",
+        relatedOrder: "Commande associée :",
+        inviteError: "Impossible de créer le lien d'invitation.",
+        noRewardsForCoupon: "Aucun solde disponible pour cette action.",
+        couponTooHigh: "Le montant est trop élevé.",
+        redeemError: "Impossible d'appliquer la réduction.",
+        infoAria: "Infos du portefeuille",
+
+        infoTitle: "Comment fonctionne le portefeuille ?",
+        infoWallet:
+          "Cet écran de portefeuille est un aperçu. La distribution de cashback/coupons n’est pas encore active et il n’y a pas de retrait (IBAN).",
+        infoCoupon:
+          "La création/utilisation de coupons (et la conversion des récompenses) sera activée après validation.",
+        infoDiscount:
+          "Pour l’instant, nous testons seulement la recherche du meilleur prix et la redirection. Quand les récompenses seront actives, les règles seront publiées ici.",
+        infoReferral:
+          "Le système d’invitation est prêt ; lorsque les récompenses seront activées, les gains apparaîtront ici.",
+
+        walletTabs: {
+          wallet: "Portefeuille",
+          actions: "Mouvements",
+          orders: "Commandes"
+        },
+
+        historyTitle: "Historique du portefeuille",
+        historyEmpty: "Aucun mouvement enregistré.",
+        historyUnavailable: "Historique indisponible ou aucun enregistrement.",
+        historyError: "Erreur lors du chargement de l’historique.",
+        mustLoginHistory: "Veuillez vous connecter pour voir l’historique.",
+        txOrderRef: "Commande :",
+        txUnknownDate: "Aucune date",
+
+        txType: {
+          deposit: "Dépôt",
+          reward: "Récompense",
+          cashback: "Cashback",
+          coupon: "Coupon",
+          order: "Commande",
+          referral: "Récompense d’invitation",
+          withdraw: "Retrait"
+        },
+
+        shareWithFriends: "Partager le lien",
+
+        share: {
+          whatsapp: "WhatsApp",
+          telegram: "Telegram",
+          x: "X",
+          facebook: "Facebook",
+          instagram: "Instagram"
+        },
+
+        motto:
+          "<span style='color:#FFD700;'>Bientôt :</span> récompenses/coupons/parrainage. Pour l’instant, trouve le meilleur prix et teste la redirection."
+      },
+
+      orders: {
+        title: "Mes commandes",
+        empty: "Aucune commande suivie pour le moment.",
+        mustLogin: "Veuillez vous connecter pour voir vos commandes.",
+        status: {
+          pending: "En attente",
+          paid: "Payé",
+          shipped: "Expédié",
+          completed: "Terminé",
+          canceled: "Annulé",
+
+        }
       }
-    } catch (error) {
-      if (error.name !== "AbortError") {
-        setMessages((m) => [
-          ...m,
-          {
-            from: "ai",
-            text: t("ai.error", { defaultValue: "Bir hata oluştu, tekrar deneyiniz." }),
-          },
-        ]);
+    }
+  },
+
+  // ======================== RUSSIAN ========================
+  ru: {
+    translation: {
+      "yazman yeterli,": "Просто напиши,",
+      gerisini: "остальное",
+      "halleder.": "я сделаю.",
+
+      username: "Пользователь",
+      Puan: "Баллы",
+
+      loading: "Загрузка…",
+      cameraSearch: "Поиск по камере",
+      sloganFull: "Просто напишите — остальное сделает Sono.",
+
+      site: {
+        about: "О нас",
+        how: "Как это работает?",
+        contact: "Контакты"
+      },
+
+      // ✅ merged legal
+      legal: {
+        badge: "Правовые",
+        home: "← На главную",
+        updatedAt: "Обновлено",
+        privacy: "Конфиденциальность",
+        cookies: "Файлы cookie",
+        affiliate: "Affiliate-раскрытие",
+        terms: "Условия использования"
+      },
+
+      fillAllFields: "Заполните все поля.",
+      networkError: "Ошибка сети. Попробуйте ещё раз.",
+      processFailed: "Процесс завершился с ошибкой.",
+      emailRequired: "Требуется e-mail.",
+      resetCodeSent: "Код отправлен.",
+      missingFields: "Заполните все поля.",
+      updateFailed: "Ошибка обновления.",
+      passwordUpdated: "Пароль обновлён.",
+
+      voiceSearch: "Голосовой поиск",
+      visualSearch: "Визуальный поиск",
+      qrSearch: "Поиск по QR",
+
+      badges: {
+        title: "Значки",
+        silver: "Серебро",
+        gold: "Золото",
+        platinum: "Платина",
+        progress: "Прогресс",
+        earnMore:
+          "Покупайте или приглашайте друзей, чтобы заработать больше."
+      },
+
+      ph: {
+        searchProduct: "Искать товар или услугу",
+        findHotel: "Искать отели...",
+        compareFlight: "Сравнить авиабилеты...",
+        exploreElectronics: "Исследовать электронику...",
+        findCarRental: "Найти аренду авто..."
+      },
+
+      placeholder: {
+        hotel: "Искать отели...",
+        car: "Найти аренду авто...",
+        food: "Заказать еду...",
+        tour: "Найти туры...",
+        insurance: "Сравнить страховки...",
+        estate: "Исследовать недвижимость...",
+        electronic: "Сравнить электронику..."
+      },
+
+      search: {
+        voice: "Голосовой поиск",
+        camera: "Поиск по камере",
+        qr: "Поиск по QR",
+        search: "Искать",
+        voiceNotSupported:
+          "Браузер не поддерживает распознавание речи.",
+        voiceStarted: "Голосовой поиск начался — говорите.",
+        voiceHeardPrefix: "Я услышала:",
+        voiceConfirmQuestion: "Искать это?",
+        voiceConfirmToast: "Услышала — подтверди, чтобы искать.",
+        voiceDone: "Понял — ищу.",
+        voiceStopped: "Голосовой поиск остановлен.",
+        voiceError: "Ошибка голосового поиска.",
+        searching: "Идёт поиск…",
+        searchError: "Поиск не удался. Попробуйте ещё раз.",
+        badQuery: "Некорректный запрос. Попробуйте ещё раз.",
+        imageAnalyzing: "Анализ изображения…",
+        imageDetected: "По изображению похоже на: {{query}}",
+        // ✅ Панель подтверждения камеры (App.jsx)
+        imageDetectedPrefix: "По изображению я понял:",
+        imageWeakGuess: "Не уверен, но похоже на:",
+        confirmQuestion: "Вы хотите выполнить этот поиск?",
+        confirmSearch: "Искать",
+        editQuery: "Редактировать",
+        searchNow: "Поиск",
+        edit: "Редактировать",
+        cancel: "Отмена",
+        cameraError: "Анализ изображения не удался. Попробуйте ещё раз."
+      },
+
+      // ✅ qrScanner (RU)
+      qrScanner: {
+        noCameraTitle: "Камера недоступна",
+        noCameraBody: "Камера не найдена или доступ к ней не разрешён.",
+        retry: "Повторить",
+        lastRead: "Последнее сканирование:",
+        torchTurnOn: "🔦 Включить фонарик",
+        torchTurnOff: "🔦 Выключить фонарик",
+        help: "Поместите QR-код или штрих-код в рамку. По обнаружении поиск запустится автоматически.",
+        starting: "Открываю камеру…",
+        scanning: "Сканирование…",
+        detected: "Код обнаружен.",
+        analyzing: "Анализ кода…",
+        startingSearch: "Запускаю поиск…",
+        closing: "Закрываю…",
+        countdown: "{{count}}с",
+        httpsRequired:
+          "Для использования камеры требуется защищённое соединение (HTTPS).",
+        videoNotFound: "Элемент видео не найден.",
+        cameraDenied: "Доступ к камере запрещён: {{msg}}",
+        torchNotSupported: "Фонарик не поддерживается на этом устройстве.",
+        torchError: "Не удалось управлять фонариком"
+      },
+
+      smartGreeting: {
+        hello: "Привет {{name}}",
+        t1: "Показываю топ-предложения в твоём регионе",
+        t2: "Лучшая цена от проверенного продавца",
+        t3: "Сравнивай быстро — экономь время",
+        t4: "Можно посмотреть другие страны",
+        trigger1: "Показываю топ-предложения в твоём регионе",
+        trigger2: "Лучшая цена от проверенного продавца",
+        trigger3: "Сравнивай быстро — экономь время",
+        trigger4: "Можно посмотреть другие страны"
+      },
+
+      slogan: {
+        full: "Просто напиши, остальное я 😊 сделаю."
+      },
+
+      greeting: {
+        morning: "Доброе утро ☀️",
+        afternoon: "Добрый день 🙂",
+        evening: "Добрый вечер 🌙",
+        night: "Спокойной ночи 😴"
+      },
+
+      trigger: {
+        writeSono: "Пиши, а Sono найдёт.",
+        discoverDeals: "Открой лучшие предложения.",
+        youTypeIFind: "Ты пишешь — я нахожу.",
+        readyToSave: "Готов экономить?",
+        aiWithYou: "ИИ рядом.",
+        customShowcase: "Готовлю твою витрину..."
+      },
+
+      header: {
+        chooseLanguage: "Выбор языка",
+        wallet: "Кошелёк"
+      },
+
+      auth: {
+        login: "Войти",
+        logout: "Выйти",
+        register: "Регистрация",
+        forgotPassword: "Забыли пароль?",
+
+        email: "E-mail",
+        emailRequired: "Требуется email.",
+        password: "Пароль",
+        nameSurname: "Имя и фамилия",
+        inviteCode: "Код приглашения",
+        newPassword: "Новый пароль",
+        enterResetCode: "Введите код",
+        saveNewPassword: "Сохранить пароль",
+        sendResetCode: "Отправить код",
+
+        loading: "Загрузка…",
+
+        loginFailed: "Ошибка входа.",
+        registerFailed: "Ошибка регистрации.",
+        registerSuccess: "Регистрация успешна, теперь войдите.",
+        activationMailSent: "Регистрация успешна! Код активации отправлен.",
+        activateTitle: "Активировать аккаунт",
+        activationInfoEmail: "введите код, отправленный на этот адрес.",
+        activationInfoNoEmail: "Введите e-mail, чтобы получить код.",
+        activationCode: "Код активации",
+        activateAccount: "Активировать аккаунт",
+        activationCodeRequired: "Нужен код активации.",
+        activationFailed: "Активация не удалась, проверьте код.",
+        activationSuccess: "Ваш аккаунт успешно активирован!",
+        resendCode: "Отправить код снова",
+        resendFailed: "Не удалось отправить письмо.",
+        resendSuccess: "Письмо отправлено снова."
+      },
+
+      showcase: {
+        best: "Лучшее & надёжное",
+        preparing: "Готовлю...",
+        aiCumulative: "Рекомендации SonoAI",
+        personalizing: "Персонализация…",
+        others: "Другие",
+        noResults: "Нет результатов."
+      },
+
+      common: {
+        loading: "Загрузка…",
+        noImage: "Нет изображения",
+        noPrice: "Цена у продавца",
+        summaryFallback: "Нет описания"
+      },
+
+      actions: {
+        goToReservation: "Нажать",
+        close: "Закрыть",
+        clear: "Очистить"
+      },
+
+      footerFull: {
+        left: "Глобальный помощник сравнения цен.",
+        mid: "Щёлкни пальцами, чтобы экономить,",
+        right: "остальное я сделаю."
+      },
+
+      ai: {
+        sono: "Sono AI",
+        listen: "Слушать",
+        send: "Отправить",
+        placeholder: "Введите сообщение...",
+        listening: "Слушаю…",
+        voiceHeardPrefix: "Я услышала:",
+        voiceConfirmQuestion: "Искать это?",
+        voiceConfirmToast: "Услышала — подтверди, чтобы искать.",
+        voiceDone: "Понял. Ищу…",
+        searching: "Ищу…",
+        searchError: "Ошибка поиска.",
+        analyzing: "Анализ…",
+        hello: "Привет, я Sono. Ищите товар/услугу или задайте вопрос — помогу быстро.",
+        prepping: "Готовлю ответ...",
+        ready: "Готово.",
+        chatReady: "Ответ готов.",
+        thanks: "Пожалуйста 🌸",
+        talk: "Говорить",
+        error: "Произошла ошибка.",
+        noAnswer: "Сейчас не удалось получить ответ.",
+        noSpeech: "Браузер не поддерживает распознавание речи.",
+        thanksReply: "Пожалуйста, я всегда рядом."
+      },
+
+      net: {
+        offlineTitle: "Нет подключения к интернету",
+        offlineDesc: "Это уведомление не исчезнет, пока связь не вернётся. Продолжим автоматически.",
+        onlineTitle: "Соединение восстановлено",
+        onlineDesc: "Можно продолжить.",
+      },
+
+      vitrine: {
+        resultsReady: "Результаты готовы на витрине. Спасибо.",
+        noResults: "Извините, ничего не найдено. Попробуйте ещё раз.",
+        resultsError: "Во время поиска произошла ошибка. Попробуйте снова.",
+      },
+
+
+      wallet: {
+        statusNote:
+          "Этот раздел сейчас предназначен только для ссылки приглашения и истории.",
+        title: "Кошелёк",
+        howTo: "Как заработать?",
+        invite: "Пригласить",
+        inviteCopied: "Ссылка скопирована: ",
+        inviteReady: "Ссылка готова: ",
+        enterAmount: "Сумма купона (₽):",
+        couponCreated: "Купон создан: ",
+        expires: "до:",
+        locked: "Откроется после первого заказа.",
+        copied: "Скопировано.",
+        ready: "Готово.",
+        rule: "Первая покупка + приглашение = доход.",
+        createCoupon: "Создать купон",
+        useCoupon: "Использовать купон",
+        couponAmount: "Сумма купона",
+        tree: "Дерево приглашений",
+        noBadges: "Нет значков.",
+        lockedText: "Кошелёк активируется после первой покупки.",
+        unlockedText: "Скидка активна.",
+        useDiscount: "Использовать скидку",
+        discountApplied: "Скидка применена.",
+        myBadges: "Мои значки",
+        errorGeneric: "Ошибка.",
+        noBalance: "Нет баланса.",
+        needLogin: "Войдите, чтобы увидеть кошелёк.",
+        mustLoginInvite: "Войдите, чтобы создать приглашение.",
+        mustLoginCoupon: "Войдите, чтобы создать купон.",
+        mustLoginRedeem: "Войдите, чтобы использовать скидку.",
+
+        enterCoupon: "Введите код купона.",
+        couponInvalid: "Купон недействителен или недоступен.",
+        couponAppliedCashback:
+          "Купон применён (предпросмотр). Награды/кэшбэк пока не активны.",
+        couponError: "Ошибка при проверке купона.",
+        relatedOrder: "Связанный заказ:",
+        inviteError: "Не удалось создать ссылку приглашения.",
+        noRewardsForCoupon: "Нет доступного баланса для этого действия.",
+        couponTooHigh: "Сумма слишком большая.",
+        redeemError: "Не удалось применить скидку.",
+        infoAria: "Информация о кошельке",
+
+        infoTitle: "Как работает кошелёк?",
+        infoWallet:
+          "Этот экран кошелька — предварительный просмотр. Начисление cashback/купонов пока не активно, вывода денег (IBAN) нет.",
+        infoCoupon:
+          "Создание/использование купонов (и конвертация наград) будет доступно после завершения проверок.",
+        infoDiscount:
+          "Сейчас мы тестируем только поиск лучшей цены и переходы. Когда награды будут включены, правила появятся здесь.",
+        infoReferral:
+          "Реферальная система готова; после включения наград доходы от приглашений будут отображаться здесь.",
+
+        walletTabs: {
+          wallet: "Кошелёк",
+          actions: "Операции",
+          orders: "Заказы"
+        },
+
+        historyTitle: "История кошелька",
+        historyEmpty: "Нет записанных операций.",
+        historyUnavailable: "История недоступна или пуста.",
+        historyError: "Ошибка при загрузке истории.",
+        mustLoginHistory: "Войдите, чтобы увидеть историю.",
+        txOrderRef: "Заказ:",
+        txUnknownDate: "Нет даты",
+
+        txType: {
+          deposit: "Пополнение",
+          reward: "Награда",
+          cashback: "Кэшбэк",
+          coupon: "Купон",
+          order: "Заказ",
+          referral: "Приглашение",
+          withdraw: "Снятие"
+        },
+
+        shareWithFriends: "Поделиться ссылкой",
+
+        share: {
+          whatsapp: "WhatsApp",
+          telegram: "Telegram",
+          x: "X",
+          facebook: "Facebook",
+          instagram: "Instagram"
+        },
+
+        motto:
+          "<span style='color:#FFD700;'>Скоро:</span> награды/купоны/рефералы. Пока — ищи лучшую цену и тестируй переходы."
+      },
+
+      orders: {
+        title: "Мои заказы",
+        empty: "Нет заказов для отслеживания.",
+        mustLogin: "Войдите, чтобы увидеть заказы.",
+        status: {
+          pending: "Ожидает",
+          paid: "Оплачено",
+          shipped: "Отправлено",
+          completed: "Завершено",
+          canceled: "Отменено",
+
+        }
       }
-    } finally {
-      if (abortControllerRef.current === controller) {
-        setThinking(false);
-        flashMsg("", 450);
-        abortControllerRef.current = null;
+    }
+  },
+
+  // ======================== ARABIC ========================
+  ar: {
+    translation: {
+      "yazman yeterli,": "اكتب فقط،",
+      gerisini: "وسأتولى",
+      "halleder.": "الباقي.",
+
+      username: "المستخدم",
+      Puan: "النقاط",
+
+      loading: "جارٍ التحميل…",
+      cameraSearch: "بحث بالكاميرا",
+      sloganFull: "اكتب فقط — وسيتكفّل Sono بالباقي.",
+
+      site: {
+        about: "من نحن",
+        how: "كيف يعمل؟",
+        contact: "تواصل معنا"
+      },
+
+      // ✅ merged legal
+      legal: {
+        badge: "قانوني",
+        home: "← الرئيسية",
+        updatedAt: "تم التحديث",
+        privacy: "الخصوصية",
+        cookies: "ملفات تعريف الارتباط",
+        affiliate: "إفصاح الإحالة",
+        terms: "شروط الاستخدام"
+      },
+
+      fillAllFields: "يرجى تعبئة جميع الحقول.",
+      networkError: "حدث خطأ في الشبكة. حاول مرة أخرى.",
+      processFailed: "فشلت العملية.",
+      emailRequired: "البريد الإلكتروني مطلوب.",
+      resetCodeSent: "تم إرسال رمز التحقق.",
+      missingFields: "يرجى تعبئة جميع الحقول.",
+      updateFailed: "فشل التحديث.",
+      passwordUpdated: "تم تحديث كلمة المرور بنجاح.",
+
+      voiceSearch: "بحث صوتي",
+      visualSearch: "بحث بصري",
+      qrSearch: "بحث عبر QR",
+
+      badges: {
+        title: "الشارات",
+        silver: "فضي",
+        gold: "ذهبي",
+        platinum: "بلاتيني",
+        progress: "التقدم",
+        earnMore: "تسوّق أو ادعُ أصدقاءك لكسب المزيد."
+      },
+
+      ph: {
+        searchProduct: "ابحث عن منتج أو خدمة",
+        findHotel: "ابحث عن الفنادق...",
+        compareFlight: "قارن الرحلات...",
+        exploreElectronics: "استكشف الإلكترونيات...",
+        findCarRental: "ابحث عن تأجير السيارات..."
+      },
+
+      placeholder: {
+        hotel: "ابحث عن الفنادق...",
+        car: "ابحث عن تأجير السيارات...",
+        food: "اطلب الطعام...",
+        tour: "ابحث عن الجولات...",
+        insurance: "قارن التأمين...",
+        estate: "استكشف العقارات...",
+        electronic: "قارن الإلكترونيات..."
+      },
+
+      search: {
+        voice: "بحث صوتي",
+        camera: "بحث بالكاميرا",
+        qr: "بحث عبر QR",
+        search: "بحث",
+        voiceNotSupported: "المتصفح لا يدعم التعرف على الصوت.",
+        voiceStarted: "بدأ البحث الصوتي — يمكنك التحدث الآن.",
+        voiceHeardPrefix: "سمعت:",
+        voiceConfirmQuestion: "هل أبحث عن هذا؟",
+        voiceConfirmToast: "سمعتك — أكّد لأبحث.",
+        voiceDone: "تم — جارٍ البحث.",
+        voiceStopped: "تم إيقاف البحث الصوتي.",
+        voiceError: "حدث خطأ في البحث الصوتي.",
+        searching: "جارٍ البحث…",
+        searchError: "فشل البحث. حاول مرة أخرى.",
+        badQuery: "نص بحث غير صالح. حاول مرة أخرى.",
+        imageAnalyzing: "جارٍ تحليل الصورة…",
+        imageDetected: "من الصورة أظن: {{query}}",
+        // ✅ شريط تأكيد الكاميرا (App.jsx)
+        imageDetectedPrefix: "مما فهمته من الصورة:",
+        imageWeakGuess: "لست متأكدًا تمامًا، لكن يبدو أنه:",
+        confirmQuestion: "هل تريد إجراء هذا البحث؟",
+        confirmSearch: "بحث",
+        editQuery: "تعديل",
+        searchNow: "ابحث",
+        edit: "تعديل",
+        cancel: "إلغاء",
+        cameraError: "فشل تحليل الصورة. حاول مرة أخرى."
+      },
+
+      // ✅ qrScanner (AR)
+      qrScanner: {
+        noCameraTitle: "الكاميرا غير متاحة",
+        noCameraBody: "لم يتم العثور على كاميرا أو لم يتم منح الإذن.",
+        retry: "أعد المحاولة",
+        lastRead: "آخر مسح:",
+        torchTurnOn: "🔦 تشغيل الفلاش",
+        torchTurnOff: "🔦 إيقاف الفلاش",
+        help: "ضع رمز QR أو الباركود داخل الإطار. سيتم تشغيل البحث تلقائيًا عند اكتشافه.",
+        starting: "جارٍ فتح الكاميرا…",
+        scanning: "جارٍ المسح…",
+        detected: "تم اكتشاف الرمز.",
+        analyzing: "جارٍ تحليل الرمز…",
+        startingSearch: "جارٍ بدء البحث…",
+        closing: "جارٍ الإغلاق",
+        countdown: "{{count}}ث",
+        httpsRequired: "يلزم اتصال آمن (HTTPS) لاستخدام الكاميرا.",
+        videoNotFound: "تعذّر العثور على عنصر الفيديو.",
+        cameraDenied: "تم رفض الوصول إلى الكاميرا: {{msg}}",
+        torchNotSupported: "الفلاش غير مدعوم على هذا الجهاز.",
+        torchError: "تعذّر التحكم في الفلاش"
+      },
+
+      smartGreeting: {
+        hello: "مرحبًا {{name}}",
+        t1: "أعرض أشهر العروض في منطقتك",
+        t2: "أفضل سعر من أكثر البائعين موثوقية",
+        t3: "قارن فورًا ووفر الوقت",
+        t4: "يمكنك أيضًا استكشاف دول أخرى",
+        trigger1: "أعرض أشهر العروض في منطقتك",
+        trigger2: "أفضل سعر من أكثر البائعين موثوقية",
+        trigger3: "قارن فورًا ووفر الوقت",
+        trigger4: "يمكنك أيضًا استكشاف دول أخرى"
+      },
+
+      slogan: {
+        full: "اكتب فقط، وسأتولى الباقي 😊."
+      },
+
+      greeting: {
+        morning: "صباح الخير ☀️",
+        afternoon: "مساء الخير 🙂",
+        evening: "مساء الخير 🌙",
+        night: "تصبح على خير 😴"
+      },
+
+      trigger: {
+        writeSono: "اكتب فقط وسونو سيجد.",
+        discoverDeals: "اكتشف أفضل العروض.",
+        youTypeIFind: "أنت تكتب وأنا أجد.",
+        readyToSave: "جاهز لتوفير الوقت والمال؟",
+        aiWithYou: "الذكاء الاصطناعي معك.",
+        customShowcase: "أُحضّر واجهتك المخصصة..."
+      },
+
+      header: {
+        chooseLanguage: "اختر اللغة",
+        wallet: "المحفظة"
+      },
+
+      auth: {
+        login: "تسجيل الدخول",
+        logout: "تسجيل الخروج",
+        register: "إنشاء حساب",
+        forgotPassword: "نسيت كلمة المرور",
+
+        email: "البريد الإلكتروني",
+        emailRequired: "البريد الإلكتروني مطلوب.",
+        password: "كلمة المرور",
+        nameSurname: "الاسم الكامل",
+        inviteCode: "رمز الدعوة",
+        newPassword: "كلمة مرور جديدة",
+        enterResetCode: "أدخل رمز التحقق",
+        saveNewPassword: "حفظ كلمة المرور",
+        sendResetCode: "إرسال الرمز",
+
+        loading: "جارٍ التحميل…",
+
+        loginFailed: "فشل تسجيل الدخول.",
+        registerFailed: "فشل التسجيل.",
+        registerSuccess: "تم التسجيل بنجاح، يمكنك الآن تسجيل الدخول.",
+        activationMailSent:
+          "تم إنشاء الحساب! تم إرسال رمز التفعيل إلى بريدك الإلكتروني.",
+        activateTitle: "تفعيل الحساب",
+        activationInfoEmail:
+          "يرجى إدخال رمز التفعيل المرسل إلى هذا البريد.",
+        activationInfoNoEmail:
+          "يرجى إدخال بريدك الإلكتروني لاستلام رمز التفعيل.",
+        activationCode: "رمز التفعيل",
+        activateAccount: "تفعيل الحساب",
+        activationCodeRequired: "رمز التفعيل مطلوب.",
+        activationFailed: "فشل التفعيل، يرجى التحقق من الرمز.",
+        activationSuccess: "تم تفعيل حسابك بنجاح!",
+        resendCode: "إعادة إرسال الرمز",
+        resendFailed: "تعذّر إرسال الرسالة.",
+        resendSuccess: "تم إرسال الرسالة مرة أخرى."
+      },
+
+      showcase: {
+        best: "الأفضل & الأكثر موثوقية",
+        preparing: "يتم التحضير...",
+        aiCumulative: "اقتراحات SonoAI",
+        personalizing: "جارٍ التخصيص…",
+        others: "آخرون",
+        noResults: "لا توجد نتائج."
+      },
+
+      common: {
+        loading: "جارٍ التحميل…",
+        noImage: "لا توجد صورة",
+        noPrice: "السعر عند البائع",
+        summaryFallback: "لا توجد خلاصة"
+      },
+
+      actions: {
+        goToReservation: "اضغط",
+        close: "إغلاق",
+        clear: "مسح"
+      },
+
+      footerFull: {
+        left: "مساعد مقارنة الأسعار العالمي.",
+        mid: "اضغط بإصبعك لتوفير الوقت والمال،",
+        right: "وسأتولى الباقي."
+      },
+
+      ai: {
+        sono: "Sono AI",
+        listen: "استمع",
+        send: "إرسال",
+        placeholder: "اكتب رسالة...",
+        listening: "أستمع…",
+        voiceHeardPrefix: "سمعت:",
+        voiceConfirmQuestion: "هل أبحث عن هذا؟",
+        voiceConfirmToast: "سمعتك — أكّد لأبحث.",
+        voiceDone: "حسنًا. جارٍ البحث…",
+        searching: "جارٍ البحث…",
+        searchError: "خطأ في البحث.",
+        analyzing: "جارٍ التحليل…",
+        hello: "مرحبًا، أنا Sono. ابحث عن منتج/خدمة أو اسأل أي سؤال — سأساعدك بسرعة.",
+        prepping: "أحضّر الإجابة...",
+        ready: "جاهز.",
+        chatReady: "الإجابة جاهزة.",
+        thanks: "على الرحب والسعة 🌸",
+        talk: "تحدث",
+        error: "حدث خطأ.",
+        noAnswer: "تعذّر الحصول على إجابة الآن.",
+        noSpeech: "المتصفح لا يدعم التعرف على الصوت.",
+        thanksReply: "على الرحب والسعة، أنا دائمًا هنا."
+      },
+
+      net: {
+        offlineTitle: "لا يوجد اتصال بالإنترنت",
+        offlineDesc: "سيبقى هذا التنبيه حتى عودة الاتصال. سنستأنف تلقائيًا بعد ذلك.",
+        onlineTitle: "عاد الاتصال بالإنترنت",
+        onlineDesc: "يمكنك المتابعة.",
+      },
+
+      vitrine: {
+        resultsReady: "النتائج جاهزة في الواجهة. شكرًا لك.",
+        noResults: "عذرًا، لم يتم العثور على نتائج. جرّب شيئًا آخر.",
+        resultsError: "حدث خطأ أثناء البحث. حاول مرة أخرى.",
+      },
+
+
+      wallet: {
+        statusNote: "هذا القسم مخصص حاليًا فقط لرابط الدعوة والسجل.",
+        title: "محفظتي",
+        howTo: "كيف أكسب؟",
+        invite: "دعوة",
+        inviteCopied: "تم نسخ رابط الدعوة: ",
+        inviteReady: "رابط الدعوة جاهز: ",
+        enterAmount: "قيمة القسيمة (₺):",
+        couponCreated: "تم إنشاء القسيمة: ",
+        expires: "حتى:",
+        locked: "تُفتح بعد أول طلب مكتمل.",
+        copied: "تم النسخ.",
+        ready: "جاهز.",
+        rule: "أول عملية شراء + دعوة = أرباح.",
+        createCoupon: "إنشاء قسيمة",
+        useCoupon: "استخدام القسيمة",
+        couponAmount: "قيمة القسيمة",
+        tree: "شجرة الدعوات",
+        noBadges: "لا توجد شارات.",
+        lockedText: "تُفتح المحفظة بعد أول عملية شراء.",
+        unlockedText: "الخصم مفعل.",
+        useDiscount: "استخدم الخصم",
+        discountApplied: "تم تطبيق الخصم.",
+        myBadges: "شاراتي",
+        errorGeneric: "حدث خطأ.",
+        noBalance: "لا يوجد رصيد.",
+        needLogin: "يرجى تسجيل الدخول لرؤية محفظتك.",
+        mustLoginInvite: "يجب تسجيل الدخول لإنشاء الدعوة.",
+        mustLoginCoupon: "يجب تسجيل الدخول لإنشاء قسيمة.",
+        mustLoginRedeem: "يجب تسجيل الدخول لاستخدام الخصم.",
+
+        enterCoupon: "يرجى إدخال رمز القسيمة.",
+        couponInvalid: "القسيمة غير صالحة أو لا يمكن استخدامها.",
+        couponAppliedCashback:
+          "تم تطبيق القسيمة (معاينة). المكافآت/الكاش باك غير مفعّلة بعد.",
+        couponError: "حدث خطأ أثناء التحقق من القسيمة.",
+        relatedOrder: "الطلب المرتبط:",
+        inviteError: "تعذر إنشاء رابط الدعوة.",
+        noRewardsForCoupon: "لا يوجد رصيد متاح لهذا الإجراء.",
+        couponTooHigh: "المبلغ كبير جدًا.",
+        redeemError: "تعذر تطبيق الخصم.",
+        infoAria: "معلومات المحفظة",
+
+        infoTitle: "كيف تعمل هذه المحفظة؟",
+        infoWallet:
+          "هذه شاشة محفظة تجريبية. توزيع الكاشباك/القسائم غير مفعّل بعد، ولا يوجد سحب أموال (IBAN).",
+        infoCoupon:
+          "إنشاء/استخدام القسائم (وتحويل المكافآت) سيتاح بعد اكتمال الموافقات.",
+        infoDiscount:
+          "حالياً نختبر فقط البحث عن أفضل سعر وعملية التحويل. عند تفعيل المكافآت سيتم نشر القواعد هنا.",
+        infoReferral:
+          "نظام الدعوات جاهز؛ عند تفعيل المكافآت ستظهر أرباح الإحالات هنا.",
+
+        walletTabs: {
+          wallet: "المحفظة",
+          actions: "العمليات",
+          orders: "الطلبات"
+        },
+
+        historyTitle: "سجل المحفظة",
+        historyEmpty: "لا توجد عمليات مسجلة.",
+        historyUnavailable: "السجل غير متاح أو فارغ.",
+        historyError: "حدث خطأ أثناء تحميل السجل.",
+        mustLoginHistory: "يجب تسجيل الدخول لرؤية سجل المحفظة.",
+        txOrderRef: "طلب:",
+        txUnknownDate: "لا يوجد تاريخ",
+
+        txType: {
+          deposit: "إيداع",
+          reward: "مكافأة",
+          cashback: "استرداد",
+          coupon: "قسيمة",
+          order: "طلب",
+          referral: "دعوة",
+          withdraw: "سحب"
+        },
+
+        shareWithFriends: "مشاركة الرابط",
+
+        share: {
+          whatsapp: "WhatsApp",
+          telegram: "Telegram",
+          x: "X",
+          facebook: "Facebook",
+          instagram: "Instagram"
+        },
+
+        motto:
+          "<span style='color:#FFD700;'>ملاحظة:</span> المكافآت والكاش باك والقسائم غير مفعّلة بعد. حالياً اعثر على أفضل سعر واختبر التحويل."
+      },
+
+      orders: {
+        title: "طلباتي",
+        empty: "لا توجد طلبات حالياً.",
+        mustLogin: "يجب تسجيل الدخول لرؤية طلباتك.",
+        status: {
+          pending: "قيد الانتظار",
+          paid: "مدفوع",
+          shipped: "تم الشحن",
+          completed: "مكتمل",
+          canceled: "أُلغي",
+
+        }
       }
     }
   }
-
-  // FORM HANDLER (MOBİL İÇİN ENTER DESTEĞİ)
-  async function handleFormSubmit(e) {
-    e.preventDefault();
-    if (!inputRef.current) return;
-
-    const val = inputRef.current.value;
-    const text = String(val || "").trim();
-
-    if (!text) return;
-    setPendingVoice(null);
-    inputRef.current.value = "";
-    await processQuery(text);
-  }
-
-  // Eski kullanım için handler (gerekirse)
-  async function handleSend(txt) {
-    const text = String(txt || "").trim();
-    if (!text) return;
-    if (inputRef.current) inputRef.current.value = "";
-    await processQuery(text);
-  }
-
-  // Açıldığında ilk selamlama + persona
-const greetNow = () => {
-  const greet =
-    t("ai.hello", {
-      defaultValue: persona.hello,
-    }) || persona.hello;
-
-  const intro = `${greet}`;
-  setMessages([{ from: "ai", text: intro }]);
-  speak(intro);
 };
 
-useEffect(() => {
-  if (open && messages.length === 0 && !greetedRef.current) {
-    greetedRef.current = true;
-    greetNow();
+i18n
+  .use(LanguageDetector)
+  .use(initReactI18next)
+  .init({
+    resources,
+    fallbackLng: "tr",
+    detection: {
+      order: ["querystring", "localStorage", "navigator", "htmlTag"],
+      caches: ["localStorage"]
+    },
+    interpolation: { escapeValue: false }
+  });
+
+export default i18n;
+
+// EMAIL FİLTRE – kullanıcı adı e-posta ise gizle
+export function sanitizeName(name) {
+  if (!name) return "";
+  const s = String(name).trim();
+  const isEmail = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s);
+  return isEmail ? "" : s;
+}
+
+// Backend çeviri servisi varsa fallback
+export async function aiTranslate(text, targetLang) {
+  try {
+    const res = await fetch((API_BASE || "") + "/api/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, targetLang })
+    });
+    const json = await res.json();
+    return json && json.ok && json.translated ? json.translated : text;
+  } catch {
+    return text;
   }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [open, i18n.language]);
-
-  const isRTL = locale.startsWith("ar");
-
-  // Yüz modu
-  const faceMode = listening ? "listening" : thinking ? "thinking" : "idle";
-  const faceClass =
-    faceMode === "listening"
-      ? "sono-face-listening"
-      : faceMode === "thinking"
-      ? "sono-face-thinking"
-      : "sono-face-idle";
-
-  // RENDER
-  return (
-    <div
-      ref={wrapRef}
-      className="fixed sono-adjusted-position z-[999]"
-      style={{ contain: "layout paint" }}
-      aria-live="polite"
-      dir={isRTL ? "rtl" : "ltr"}
-    >
-      {/* YÜZ + HALO + DALGALAR */}
-      <div className="relative grid place-items-center">
-        {listening && (
-          <>
-            <div className="speech-wave-base speech-wave-1" />
-            <div className="speech-wave-base speech-wave-2" />
-            <div className="speech-wave-base speech-wave-3" />
-          </>
-        )}
-
-        <div
-          ref={haloRef}
-          className="absolute w-[84px] h-[84px] rounded-full blur-md opacity-70 pointer-events-none"
-        >
-          <span className={`sono-gold-halo ${listening ? "fast" : ""}`} />
-        </div>
-
-        <button
-          onClick={() => {
-            const willOpen = !open;
-            setOpen(willOpen);
-            pulseHalo();
-
-            if (willOpen) {
-              // Speak immediately (avoid waiting for useEffect re-render)
-              if (!greetedRef.current && messages.length === 0) {
-                greetedRef.current = true;
-                greetNow();
-              }
-              setTimeout(() => inputRef.current?.focus(), 60);
-            } else {
-              greetedRef.current = false;
-              setTimeout(() => setMessages([]), 100);
-            }
-          }}
-          aria-label={t("ai.sono", { defaultValue: "Sono AI" })}
-          className="relative w-[56px] h-[56px] rounded-full bg-black/70 border border-[#d4af37]/60 shadow-lg 
-          grid place-items-center hover:scale-[1.03] transition z-10"
-        >
-          <img
-            src="/sono-assets/sono-face.svg"
-            alt="Sono AI"
-            draggable={false}
-            className={`w-[38px] h-[38px] transition-all duration-500 ${faceClass}`}
-          />
-        </button>
-      </div>
-
-      {/* CHAT PENCERESİ */}
-      {open && (
-        <div
-          className="mt-2 bg-black/85 text-white border border-[#d4af37]/50 
-          rounded-2xl shadow-2xl backdrop-blur-md p-3 w-[calc(100vw-32px)] max-w-[380px] md:w-[340px] md:max-w-[340px]"
-        >
-          <div className="overflow-auto max-h-[220px] my-2 space-y-2 pr-1 custom-scrollbar">
-            {messages.map((m, i) => (
-              <p
-                key={i}
-                className={`${
-                  m.from === "user"
-                    ? "text-right text-[#d4af37]"
-                    : "text-left text-gray-200"
-                } text-sm leading-snug`}
-              >
-                {m.text}
-              </p>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* ✅ Sesli komut onayı (otomatik arama YOK) */}
-          {pendingVoice ? (
-            <div className="mb-2 p-2 rounded-xl border border-[#d4af37]/30 bg-black/40">
-              <div className="text-xs text-white/70">
-                {t("ai.voiceHeardPrefix", { defaultValue: "Sesli komuttan anladığım:" })}{" "}
-                <span className="text-[#d4af37] font-semibold">{String(pendingVoice || "").trim()}</span>
-              </div>
-              <div className="text-xs text-white/60 mt-1">
-                {t("ai.voiceConfirmQuestion", { defaultValue: "Bunu mu arayayım?" })}
-              </div>
-              <div className="mt-2 flex items-center gap-2">
-                <button
-                  type="button"
-                  className="px-3 py-1 rounded-lg bg-[#d4af37] text-black text-xs font-semibold"
-                  onClick={async () => {
-                    const q = String(pendingVoice || "").trim();
-                    if (!q) return;
-                    setPendingVoice(null);
-                    try { if (inputRef.current) inputRef.current.value = ""; } catch {}
-                    await processQuery(q);
-                  }}
-                >
-                  {t("search.confirmSearch", { defaultValue: "Ara" })}
-                </button>
-                <button
-                  type="button"
-                  className="px-3 py-1 rounded-lg border border-[#d4af37]/50 text-[#d4af37] text-xs"
-                  onClick={() => {
-                    // Düzenle: input'ta kalsın, focus ver
-                    setPendingVoice(null);
-                    setTimeout(() => {
-                      try { inputRef.current?.focus?.(); } catch {}
-                    }, 0);
-                  }}
-                >
-                  {t("search.editQuery", { defaultValue: "Düzenle" })}
-                </button>
-                <button
-                  type="button"
-                  className="px-3 py-1 rounded-lg border border-white/20 text-white/70 text-xs"
-                  onClick={() => {
-                    setPendingVoice(null);
-                    try { if (inputRef.current) inputRef.current.value = ""; } catch {}
-                    flashMsg(t("search.cancel", { defaultValue: "İptal" }), 900, "muted");
-                  }}
-                >
-                  {t("search.cancel", { defaultValue: "İptal" })}
-                </button>
-              </div>
-            </div>
-          ) : null}
-
-          {/* INPUT ALANI - FORM YAPISI */}
-          <form onSubmit={handleFormSubmit} className="flex items-center gap-2">
-            <button
-              type="button"
-              onPointerDown={handleMicPointerDown}
-              onClick={(e) => {
-                // prevent duplicate click after touch
-                try {
-                  e.preventDefault?.();
-                  e.stopPropagation?.();
-                } catch {}
-              }}
-              className={`sono-mic-glow sono-mic-hover-gold relative grid place-items-center w-9 h-9 rounded-full border 
-              border-[#d4af37]/70 transition ${
-                listening ? "sono-mic-listening" : "hover:bg-[#d4af37]/10"
-              }`}
-              title={t("ai.listen", { defaultValue: "Dinle" })}
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                className="text-[#d4af37]"
-              >
-                <path
-                  fill="currentColor"
-                  d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2Z"
-                />
-              </svg>
-            </button>
-
-            <input
-              ref={inputRef}
-              type="text"
-              enterKeyHint="send"
-              autoComplete="off"
-              placeholder={t("ai.placeholder", {
-                defaultValue: "Mesaj yaz...",
-              })}
-              className="flex-grow bg-transparent outline-none border border-[#d4af37]/40 rounded-xl 
-              px-2 py-2 text-white text-sm"
-            />
-
-            <button
-              type="submit"
-              className="grid place-items-center w-9 h-9 rounded-full border border-[#d4af37]/70 
-              hover:bg-[#d4af37]/10 transition"
-              title={t("ai.send", { defaultValue: "Gönder" })}
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                className="text-[#d4af37]"
-              >
-                <path
-                  fill="currentColor"
-                  d="M3.4 20.4L21 12L3.4 3.6L3 10l11 2l-11 2z"
-                />
-              </svg>
-            </button>
-          </form>
-        </div>
-      )}
-    </div>
-  );
 }
