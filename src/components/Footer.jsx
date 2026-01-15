@@ -14,7 +14,10 @@ export default function Footer({ fixed = false }) {
   }, []);
 
   return (
-    <footer className={`${fixed ? "fixed bottom-0 left-0 z-[60]" : ""} py-2 sm:py-3 px-3 w-full bg-[#0f110d]/88 backdrop-blur-xl border-t border-[#d4af37]/20`}>      {/* ✅ Info + Legal links (reviewers want these) */}
+    <footer className={`py-2 sm:py-3 px-3 w-full ${fixed ? "fixed bottom-0 left-0 z-[60] border-t border-[#d4af37]/18 bg-[rgba(16,18,14,0.72)] backdrop-blur-xl" : ""}`}>
+      <hr className="footer-line" />
+      <div className="phi-gap text-[11px] md:text-sm" />
+      {/* ✅ Info + Legal links (reviewers want these) */}
       <nav className="mt-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs">
         <a
           href="/about"
