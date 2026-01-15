@@ -92,33 +92,45 @@ function getPersona(locale) {
 }
 
 // S11 — Intent Engine (kullanıcı niyetini sınıflandırır)
-function detectIntent(text) {
-  const low = text.toLowerCase();
+function detectIntent(text, locale = "tr") {
+  const raw = String(text || "");
+  const low = raw.toLowerCase().trim();
+  if (!low) return "info";
 
-  // ÜRÜN / FİYAT / OTEL / ETKİNLİK ARAMA
-  if (
-    low.includes("ara") ||
-    low.includes("bul") ||
-    low.includes("fiyat") ||
-    low.includes("otel") ||
-    low.includes("uçak") ||
-    low.includes("bilet") ||
-    low.includes("etkinlik")
-  ) {
-    return "product_search";
-  }
+  // ⚠️ "ara" kelimesi "kamera" içinde geçiyor; bu yüzden kelime sınırı gibi davranalım.
+  const hasWord = (w) => new RegExp(`(^|\\s)${w}(\\s|$)`, "i").test(low);
+  const endsQuestion = /[?؟]\s*$/.test(raw);
 
-  // SİSTEM / AKSİYON / DEĞİŞTİRME
-  if (
-    low.includes("dili değiştir") ||
-    low.includes("şehri değiştir") ||
-    low.includes("şehir") ||
-    low.includes("qr")
-  ) {
-    return "action";
-  }
+  // Aksiyon: dil/şehir/QR vb.
+  const isAction =
+    /(\bdil(ini)?\b.*\b(değiştir|degistir)\b)|(\blanguage\b.*\b(change|switch)\b)|(\bşehir\b.*\b(değiştir|degistir)\b)|(\bcity\b.*\b(change|switch)\b)|(\bqr\b|\bbarkod\b|\bbarcode\b|\bkamera\b|\bcamera\b)/i.test(low);
 
-  return "info";
+  if (isAction) return "action";
+
+  // Ürün/hizmet arama sinyalleri (çok dilli)
+  const productSignal =
+    /(en ucuz|fiyat|indirim|kampanya|satın|satinal|satın al|otel|uçak|ucak|bilet|sigorta|kira|kirala|araba|emlak|daire|ev|uçuş|ucus|price|deal|cheapest|discount|buy|purchase|hotel|flight|ticket|insurance|rent|car|real\s*estate|prix|promo|réduction|acheter|hôtel|vol|billet|assurance|louer|цена|купить|отель|рейс|билет|страхов|аренда|سعر|شراء|فندق|رحلة|تذكرة|تأمين|إيجار)/i.test(low) ||
+    hasWord("ara") ||
+    hasWord("bul") ||
+    /\b(search|find|look\s*up|show)\b/i.test(low);
+
+  // Bilgi/sohbet sinyalleri (çok dilli)
+  const infoSignal =
+    /(nedir|ne demek|nasıl|nasil|açıkla|acikla|anlat|özet|detay|özellik|kullanım|kullanim|hakkında|hakkinda|bilgi ver|how\s*to|what\s*is|explain|define|tell\s+me\s+about|c['’]est\s+quoi|explique|définition|comment|qu['’]est-ce|что\s+такое|объясни|как\s+это|расскажи|ماذا|ما\s+هو|اشرح|كيف|معلومات)/i.test(low);
+
+  // Önce arama sinyali > sonra bilgi sinyali (örn: "iphone fiyatı nedir?" arama olmalı)
+  if (productSignal) return "product_search";
+  if (infoSignal) return "info";
+
+  // Kısa, anahtar-kelime tarzı girdiler: varsayılan arama
+  const wordCount = low.split(/\s+/).filter(Boolean).length;
+  if (wordCount <= 3) return "product_search";
+
+  // Soru işaretiyle biten, uzun cümleler genelde bilgi talebi
+  if (endsQuestion) return "info";
+
+  // Varsayılan: arama
+  return "product_search";
 }
 
 export default function AIAssistant({ onSuggest, onProductSearch }) {
@@ -185,6 +197,9 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
   const haloRef = useRef(null);
   const inputRef = useRef(null);
   const recRef = useRef(null);
+  const micWarmedRef = useRef(false);
+  const lastAssistantSearchRef = useRef({ ts: 0, query: "" });
+  const micTapGuardRef = useRef(0);
 
   // İstek İptali için Ref (Anti-Race Condition)
   const abortControllerRef = useRef(null);
@@ -224,6 +239,27 @@ useEffect(() => {
   };
 }, []);
 
+
+// Warm up microphone permission early (reduces first-tap delay)
+useEffect(() => {
+  if (!open) return;
+  if (micWarmedRef.current) return;
+  micWarmedRef.current = true;
+
+  (async () => {
+    try {
+      if (typeof navigator === "undefined") return;
+      const md = navigator.mediaDevices;
+      if (!md || typeof md.getUserMedia !== "function") return;
+      const stream = await md.getUserMedia({ audio: true });
+      try {
+        stream.getTracks().forEach((t) => t.stop());
+      } catch {}
+    } catch {
+      // ignore (permission denied / unavailable)
+    }
+  })();
+}, [open]);
 
   // --- TEMİZLİK (CLEANUP) ---
  // Action engine sadece 1 kere çalışacak
@@ -268,6 +304,62 @@ useEffect(() => {
     window.addEventListener("fae.vitrine.search", onUnified);
     return () => window.removeEventListener("fae.vitrine.search", onUnified);
   }, []);
+
+
+// Vitrin sonuçları: assistant başlattıysa hem yazılı hem (gerekirse) sesli bilgilendir
+useEffect(() => {
+  if (typeof window === "undefined") return;
+
+  const onResults = (e) => {
+    const last = lastAssistantSearchRef.current;
+    if (!last || !last.ts) return;
+
+    const now = Date.now();
+    if (now - last.ts > 25000) return; // bayat
+
+    const status = String(e?.detail?.status || "").toLowerCase();
+    let msg = "";
+
+    if (status === "success") {
+      msg = t("vitrine.resultsReady", {
+        defaultValue: "Sonuçlar vitrinde hazır. Teşekkürler.",
+      });
+    } else if (status === "empty") {
+      msg = t("vitrine.noResults", {
+        defaultValue: "Üzgünüm, sonuç bulunamadı. Başka bir şey deneyin.",
+      });
+    } else if (status === "error") {
+      msg = t("vitrine.resultsError", {
+        defaultValue: "Arama sırasında hata oluştu. Lütfen tekrar deneyin.",
+      });
+    } else {
+      return;
+    }
+
+    // yazılı mesaj
+    setMessages((m) => [...m, { from: "ai", text: msg }]);
+
+    // App zaten konuştuysa çakışmayı önle
+    try {
+      const lastSpokenAt = Number(window.__FAE_LAST_VITRIN_SPOKEN_AT || 0);
+      if (!lastSpokenAt || Date.now() - lastSpokenAt > 1200) {
+        speak(msg);
+      }
+    } catch {
+      // ignore
+    }
+
+    // busy kapat
+    flashMsg("", 450);
+    setSearching(false);
+
+    // reset
+    lastAssistantSearchRef.current = { ts: 0, query: "" };
+  };
+
+  window.addEventListener("fae.vitrine.results", onResults);
+  return () => window.removeEventListener("fae.vitrine.results", onResults);
+}, [t, locale]);
 
   // Mesaj geldiğinde otomatik aşağı kaydır
   useEffect(() => {
@@ -491,8 +583,18 @@ useEffect(() => {
     }
   }
 
-  // SESLİ KOMUT (STT)
-  async function captureOnce() {
+
+// SESLİ KOMUT (STT)
+function handleMicPointerDown(e) {
+  try {
+    e.preventDefault?.();
+    e.stopPropagation?.();
+  } catch {}
+  const now = Date.now();
+  if (now - (micTapGuardRef.current || 0) < 700) return;
+  micTapGuardRef.current = now;
+  captureOnce();
+}  async function captureOnce() {
     if (typeof window === "undefined") return;
 
     const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -642,31 +744,53 @@ useEffect(() => {
     }
 
     // 2) Intent & Context
-    const intent = detectIntent(text);
+    const intent = detectIntent(text, locale);
     contextMemory.add(text);
 
     // Intent bazlı davranış
     if (intent === "product_search") {
-      // ✅ Ürün/hizmet araması: /api/ai ÇAĞIRMA (kredi yakma). Sadece vitrine arama tetikle.
-      setSearching(true);
-      flashMsg(t("ai.analyzing", { defaultValue: "Analiz yapılıyor…" }), 0);
-      try {
-        if (typeof onProductSearch === "function") {
-          await onProductSearch(text);
-        } else if (typeof onSuggest === "function") {
-          await onSuggest(text);
-        } else {
-          pushQueryToVitrine(text, "ai");
-        }
-        flashMsg("", 450);
-      } catch (err) {
-        console.warn("AI product_search trigger fail:", err?.message || err);
-        flashMsg(t("ai.searchError", { defaultValue: "Arama sırasında bir hata oldu." }), 1800, "danger");
-      } finally {
-        setSearching(false);
-      }
-      return;
-    } else if (intent === "action") {
+  // ✅ Ürün/hizmet araması: /api/ai ÇAĞIRMA (kredi yakma). Sadece vitrine arama tetikle.
+  setSearching(true);
+  lastAssistantSearchRef.current = { ts: Date.now(), query: text };
+
+  // Kullanıcı aramanın başladığını HEM görsün HEM duysun (dil çevirileri i18n'de)
+  setMessages((m) => [
+    ...m,
+    { from: "ai", text: t("ai.searching", { defaultValue: "Arıyorum…" }) },
+  ]);
+
+  flashMsg(t("ai.analyzing", { defaultValue: "Analiz ediliyor…" }), 0);
+
+  try {
+    if (typeof onProductSearch === "function") {
+      await onProductSearch(text);
+    } else if (typeof onSuggest === "function") {
+      await onSuggest(text);
+    } else {
+      pushQueryToVitrine(text, "ai");
+    }
+    // Sonuç mesajı (hazır / yok / hata) fae.vitrine.results event'inden gelecek.
+  } catch (err) {
+    console.warn("AI product_search trigger fail:", err?.message || err);
+    flashMsg(
+      t("ai.searchError", { defaultValue: "Arama sırasında bir hata oldu." }),
+      1800,
+      "danger"
+    );
+    setMessages((m) => [
+      ...m,
+      {
+        from: "ai",
+        text: t("ai.searchError", {
+          defaultValue: "Arama sırasında bir hata oldu.",
+        }),
+      },
+    ]);
+    setSearching(false);
+    lastAssistantSearchRef.current = { ts: 0, query: "" };
+  }
+  return;
+} else if (intent === "action") {
       // S12: aksiyon niyeti için event fırlatıyoruz (ileride başka yerde yakalanabilir)
       try {
         if (typeof window !== "undefined") {
@@ -1007,7 +1131,14 @@ useEffect(() => {
           <form onSubmit={handleFormSubmit} className="flex items-center gap-2">
             <button
               type="button"
-              onClick={captureOnce}
+              onPointerDown={handleMicPointerDown}
+              onClick={(e) => {
+                // prevent duplicate click after touch
+                try {
+                  e.preventDefault?.();
+                  e.stopPropagation?.();
+                } catch {}
+              }}
               className={`sono-mic-glow sono-mic-hover-gold relative grid place-items-center w-9 h-9 rounded-full border 
               border-[#d4af37]/70 transition ${
                 listening ? "sono-mic-listening" : "hover:bg-[#d4af37]/10"
