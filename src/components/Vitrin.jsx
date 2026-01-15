@@ -509,6 +509,37 @@ export default function Vitrin() {
     const refreshHandler = () => loadVitrine(true);
 
     if (typeof window !== "undefined") {
+    const onInject = (e) => {
+      const d = e?.detail || {};
+      if (!Array.isArray(d.items)) return;
+
+      const q = d.query || d.q || "";
+      const injectedItems = d.items || [];
+
+      setLoading(false);
+      setLastQuery(q);
+
+      // Inject ile gelenleri "best" olarak göster (tek liste)
+      setBest(injectedItems);
+      setSmart([]);
+      setOthers([]);
+
+      // App.jsx dinlediği event: TTS + status için
+      window.dispatchEvent(
+        new CustomEvent("fae.vitrine.results", {
+          detail: {
+            query: q,
+            items: injectedItems,
+            status: injectedItems.length > 0 ? "success" : "empty",
+            source: d.source || "inject",
+            injected: true,
+            meta: { product: d.product || null },
+          },
+        })
+      );
+    };
+
+      window.addEventListener("fae.vitrine.inject", onInject);
       window.addEventListener("fae.vitrine.search", unifiedHandleSearch);
       window.addEventListener("fae.vitrine.refresh", refreshHandler);
       window.addEventListener("fie:vitrin", handleFIE);
@@ -516,6 +547,7 @@ export default function Vitrin() {
 
     return () => {
       if (typeof window !== "undefined") {
+        window.removeEventListener("fae.vitrine.inject", onInject);
         window.removeEventListener("fae.vitrine.search", unifiedHandleSearch);
 
         window.removeEventListener("fae.vitrine.refresh", refreshHandler);
