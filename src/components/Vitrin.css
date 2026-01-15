@@ -1,9 +1,11 @@
 /* === Kartların hepsi tek yükseklik olsun === */
+/* === Kartların hepsi tek yükseklik olsun === */
 .vitrin-card {
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(212, 175, 55, 0.25);
+  background: var(--panel2);
+  border: 1px solid var(--panel-border);
   border-radius: 14px;
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   padding: 12px;
   transition: 0.25s ease;
 
@@ -12,11 +14,12 @@
   flex-direction: column;
   justify-content: space-between;
   height: 265px;              /* <<< TÜM KARTLAR SABİT YÜKSEKLİK */
+  color: var(--text);
 }
 
 .vitrin-card:hover {
-  background: rgba(0, 0, 0, 0.45);
-  border-color: rgba(212, 175, 55, 0.45);
+  background: rgba(255, 255, 255, 0.68);
+  border-color: rgba(212, 175, 55, 0.34);
   transform: translateY(-2px);
 }
 
@@ -29,14 +32,14 @@
   justify-content: center;
   overflow: hidden;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(0, 0, 0, 0.03);
 }
 
 /* === Başlık alanı kayma yaratmasın === */
 .vitrin-item-title {
   font-size: 15px;
   font-weight: 600;
-  color: #fff;
+  color: rgba(15, 15, 15, 0.92);
   display: block;
   line-height: 1.2;
   max-height: 34px;           /* 2 satırda sabit */
