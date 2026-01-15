@@ -252,7 +252,12 @@ useEffect(() => {
         defaultValue: "Sonuçlar vitrinde hazır. Teşekkürler.",
       });
       showVoiceToast(msg, "success", 2200);
-      speak(msg);
+
+try {
+  window.__FAE_LAST_VITRIN_SPOKEN_AT = Date.now();
+  window.__FAE_LAST_VITRIN_SPOKEN_TEXT = msg;
+} catch {}
+speak(msg);
       return;
     }
 
@@ -261,7 +266,12 @@ useEffect(() => {
         defaultValue: "Üzgünüm, sonuç bulunamadı. Başka bir şey deneyin.",
       });
       showVoiceToast(msg, "warn", 2600);
-      speak(msg);
+
+try {
+  window.__FAE_LAST_VITRIN_SPOKEN_AT = Date.now();
+  window.__FAE_LAST_VITRIN_SPOKEN_TEXT = msg;
+} catch {}
+speak(msg);
       return;
     }
 
@@ -270,7 +280,12 @@ useEffect(() => {
         defaultValue: "Arama sırasında hata oluştu. Lütfen tekrar deneyin.",
       });
       showVoiceToast(msg, "error", 2600);
-      speak(msg);
+
+try {
+  window.__FAE_LAST_VITRIN_SPOKEN_AT = Date.now();
+  window.__FAE_LAST_VITRIN_SPOKEN_TEXT = msg;
+} catch {}
+speak(msg);
     }
   }
 
