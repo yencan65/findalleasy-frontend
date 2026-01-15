@@ -8,20 +8,20 @@
   --gold: #d4af37;
 
   /* === Soft "Buket 205" inspired theme (ferah) === */
-  --bg0: #d7dec7;  /* light sage */
-  --bg1: #c4ceb0;  /* mid sage */
-  --bg2: #dfe6d3;  /* light top/bottom */
+--bg0: #e1e7d9;  /* light sage */
+--bg1: #c8d1b8;  /* mid sage */
+--bg2: #edf2e7;  /* light top/bottom */
   --text: #0f0f0f; /* body text */
   --muted: rgba(15, 15, 15, 0.62);
 
   /* Panels (search bar, vitrin card) */
-  --panel: rgba(255, 255, 255, 0.60);
-  --panel2: rgba(255, 255, 255, 0.48);
+--panel: rgba(255, 255, 255, 0.68);
+--panel2: rgba(255, 255, 255, 0.55);
   --panel-border: rgba(212, 175, 55, 0.26);
 
   /* Header/Footer */
-  --hf-bg: rgba(16, 18, 14, 0.72);  /* soft charcoal-green */
-  --hf-border: rgba(212, 175, 55, 0.18);
+--hf-bg: rgba(20, 22, 17, 0.60);  /* soft charcoal-green */
+--hf-border: rgba(212, 175, 55, 0.16);
 
   /* Icons in BODY (not header/footer) */
   --icon: rgba(15, 15, 15, 0.88);
@@ -51,6 +51,41 @@ body {
   overflow-y: hidden;
   -webkit-tap-highlight-color: transparent;
 }
+
+/* === THEME HELPERS (Body) === */
+.fae-soft-panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.10);
+  color: var(--text);
+}
+
+.fae-soft-panel--subtle { background: var(--panel2); }
+
+.fae-soft-input { color: var(--text); }
+.fae-soft-input::placeholder { color: rgba(15, 15, 15, 0.45); }
+
+.fae-icon-btn {
+  color: var(--icon);
+  transition: color .18s ease, background-color .18s ease, transform .18s ease;
+}
+.fae-icon-btn:hover {
+  color: var(--icon-hover);
+  background: rgba(0,0,0,0.05);
+}
+.fae-icon-btn:active { transform: scale(0.96); }
+
+/* Footer divider (header-like) */
+.footer-line {
+  margin: 0 auto;
+  width: min(1200px, 96%);
+  border: 0;
+  border-top: 1px solid rgba(212, 175, 55, 0.20);
+  opacity: 1;
+}
+
 
 /* === MODAL OPEN (scroll lock) === */
 body.fae-modal-open {
@@ -403,69 +438,15 @@ iframe {
 
 .fae-dot:nth-child(2) { animation-delay: 0.12s; }
 .fae-dot:nth-child(3) { animation-delay: 0.24s; }
-/* ✅ Mobil: Andezit 60 dokusu (gece mavisi yok) */
+
+/* ✅ Mobile tweaks: calmer glow, keep content foreground */
 @media (max-width: 640px) {
-  html,
-body {
-  /* ✅ Mobil/Tablet/PC tek dil: arka plan body'den gelir */
-  background:
-    radial-gradient(900px 520px at 18% 12%, rgba(212, 175, 55, 0.05), transparent 62%),
-    radial-gradient(820px 480px at 86% 26%, rgba(212, 175, 55, 0.035), transparent 64%),
-    radial-gradient(700px 430px at 50% 92%, rgba(255, 215, 120, 0.025), transparent 66%),
-    linear-gradient(180deg, var(--bg2) 0%, var(--bg0) 50%, var(--bg1) 100%);
-  background-color: var(--bg0);
-  color: var(--text);
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
-  margin: 0;
-  padding: 0;
-  overflow-x: hidden;
-  overflow-y: hidden;
-  -webkit-tap-highlight-color: transparent;
-}
-
-
-
-/* === THEME HELPERS (Body) === */
-.fae-soft-panel {
-  background: var(--panel);
-  border: 1px solid var(--panel-border);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.10);
-  color: var(--text);
-}
-
-.fae-soft-panel--subtle {
-  background: var(--panel2);
-}
-
-.fae-soft-input {
-  color: var(--text);
-}
-
-.fae-soft-input::placeholder {
-  color: rgba(15, 15, 15, 0.45);
-}
-
-.fae-icon-btn {
-  color: var(--icon);
-  transition: color .18s ease, background-color .18s ease, transform .18s ease;
-}
-
-.fae-icon-btn:hover {
-  color: var(--icon-hover);
-  background: rgba(0,0,0,0.05);
-}
-
-.fae-icon-btn:active {
-  transform: scale(0.96);
-}
-
-/* Footer divider (header-like) */
-.footer-line {
-  margin: 0 auto;
-  width: min(1200px, 96%);
-  border: 0;
-  border-top: 1px solid rgba(212, 175, 55, 0.20);
-  opacity: 1;
+  html, body {
+    background:
+      radial-gradient(760px 420px at 18% 12%, rgba(212, 175, 55, 0.035), transparent 66%),
+      radial-gradient(720px 420px at 86% 26%, rgba(212, 175, 55, 0.025), transparent 70%),
+      radial-gradient(620px 360px at 50% 92%, rgba(255, 215, 120, 0.018), transparent 72%),
+      linear-gradient(180deg, var(--bg2) 0%, var(--bg0) 55%, var(--bg1) 100%);
+    background-color: var(--bg0);
+  }
 }
