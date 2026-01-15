@@ -14,8 +14,7 @@ export default function Footer({ fixed = false }) {
   }, []);
 
   return (
-    <footer className={`py-2 sm:py-3 px-3 w-full ${fixed ? "fixed bottom-0 left-0 z-[60] bg-[#151411]/55 backdrop-blur-xl" : ""}`}>
-      <hr className="footer-line" />
+    <footer className={`py-2 sm:py-3 px-3 w-full ${fixed ? "fixed bottom-0 left-0 z-[60] bg-[#0b0e14]/70 backdrop-blur-xl" : ""}`}>
       <div className="phi-gap text-[11px] md:text-sm" />
       {/* ✅ Info + Legal links (reviewers want these) */}
       <nav className="mt-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs">
@@ -68,6 +67,6 @@ export default function Footer({ fixed = false }) {
           {t("legal.affiliate", { defaultValue: "Affiliate Açıklaması" })}
         </a>
       </nav>
-      </footer>
+    </footer>
   );
-} 
+}
