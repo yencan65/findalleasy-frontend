@@ -3,7 +3,7 @@ export default function SloganWithAI() {
 
   return (
     <div className="text-center pt-6">
-      <h1 className="font-apple font-medium text-[22px] md:text-[26px] text-paper/95">
+      <h1 className="font-apple font-medium text-[22px] md:text-[26px] text-[#14170f]/90">
       {t("sloganFull")}
 
         <button
