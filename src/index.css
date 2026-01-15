@@ -4,11 +4,28 @@
 
 /* === GENEL === */
 :root {
+  /* === Brand accent === */
   --gold: #d4af37;
-  --bg: #31372B;
-  --sage205: #A7B989;
-  --hf-bg: rgba(15, 17, 13, 0.88);
-  --hf-border: rgba(212, 175, 55, 0.20);
+
+  /* === Soft "Buket 205" inspired theme (ferah) === */
+  --bg0: #d7dec7;  /* light sage */
+  --bg1: #c4ceb0;  /* mid sage */
+  --bg2: #dfe6d3;  /* light top/bottom */
+  --text: #0f0f0f; /* body text */
+  --muted: rgba(15, 15, 15, 0.62);
+
+  /* Panels (search bar, vitrin card) */
+  --panel: rgba(255, 255, 255, 0.60);
+  --panel2: rgba(255, 255, 255, 0.48);
+  --panel-border: rgba(212, 175, 55, 0.26);
+
+  /* Header/Footer */
+  --hf-bg: rgba(16, 18, 14, 0.72);  /* soft charcoal-green */
+  --hf-border: rgba(212, 175, 55, 0.18);
+
+  /* Icons in BODY (not header/footer) */
+  --icon: rgba(15, 15, 15, 0.88);
+  --icon-hover: rgba(0, 0, 0, 1);
 }
 
 /* === Scroll unlock (legal/admin pages) === */
@@ -21,13 +38,12 @@ html,
 body {
   /* ✅ Mobil/Tablet/PC tek dil: arka plan body'den gelir */
   background:
-    radial-gradient(1200px 680px at 55% 30%, rgba(167,185,137,0.22), transparent 60%),
-    radial-gradient(900px 520px at 18% 12%, rgba(212, 175, 55, 0.06), transparent 60%),
-    radial-gradient(820px 480px at 86% 26%, rgba(212, 175, 55, 0.05), transparent 62%),
-    radial-gradient(700px 430px at 50% 92%, rgba(255, 215, 120, 0.04), transparent 65%),
-    linear-gradient(180deg, #3E4635 0%, #31372B 55%, #2B3126 100%);
-  background-color: var(--bg);
-  color: #f5f5f5;
+    radial-gradient(900px 520px at 18% 12%, rgba(212, 175, 55, 0.05), transparent 62%),
+    radial-gradient(820px 480px at 86% 26%, rgba(212, 175, 55, 0.035), transparent 64%),
+    radial-gradient(700px 430px at 50% 92%, rgba(255, 215, 120, 0.025), transparent 66%),
+    linear-gradient(180deg, var(--bg2) 0%, var(--bg0) 50%, var(--bg1) 100%);
+  background-color: var(--bg0);
+  color: var(--text);
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
   margin: 0;
   padding: 0;
@@ -91,7 +107,7 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid var(--hf-border);
+  border-bottom:  1px solid var(--hf-border);
   box-shadow: none;
   position: sticky;
   top: 0;
@@ -284,14 +300,14 @@ header {
 footer {
   margin-top: auto;
   width: 100%;
-  border-top: 1px solid var(--hf-border);
+  border-top:  1px solid var(--hf-border);
   box-shadow: none;
   text-align: center;
   padding: 1rem 0;
   background: var(--hf-bg) !important;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  color: #aaa;
+  color:  rgba(255,255,255,0.70);
   font-size: clamp(0.8rem, 1vw, 0.9rem);
 }
 
@@ -387,3 +403,69 @@ iframe {
 
 .fae-dot:nth-child(2) { animation-delay: 0.12s; }
 .fae-dot:nth-child(3) { animation-delay: 0.24s; }
+/* ✅ Mobil: Andezit 60 dokusu (gece mavisi yok) */
+@media (max-width: 640px) {
+  html,
+body {
+  /* ✅ Mobil/Tablet/PC tek dil: arka plan body'den gelir */
+  background:
+    radial-gradient(900px 520px at 18% 12%, rgba(212, 175, 55, 0.05), transparent 62%),
+    radial-gradient(820px 480px at 86% 26%, rgba(212, 175, 55, 0.035), transparent 64%),
+    radial-gradient(700px 430px at 50% 92%, rgba(255, 215, 120, 0.025), transparent 66%),
+    linear-gradient(180deg, var(--bg2) 0%, var(--bg0) 50%, var(--bg1) 100%);
+  background-color: var(--bg0);
+  color: var(--text);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+
+
+/* === THEME HELPERS (Body) === */
+.fae-soft-panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.10);
+  color: var(--text);
+}
+
+.fae-soft-panel--subtle {
+  background: var(--panel2);
+}
+
+.fae-soft-input {
+  color: var(--text);
+}
+
+.fae-soft-input::placeholder {
+  color: rgba(15, 15, 15, 0.45);
+}
+
+.fae-icon-btn {
+  color: var(--icon);
+  transition: color .18s ease, background-color .18s ease, transform .18s ease;
+}
+
+.fae-icon-btn:hover {
+  color: var(--icon-hover);
+  background: rgba(0,0,0,0.05);
+}
+
+.fae-icon-btn:active {
+  transform: scale(0.96);
+}
+
+/* Footer divider (header-like) */
+.footer-line {
+  margin: 0 auto;
+  width: min(1200px, 96%);
+  border: 0;
+  border-top: 1px solid rgba(212, 175, 55, 0.20);
+  opacity: 1;
+}
