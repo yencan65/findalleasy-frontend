@@ -256,6 +256,20 @@ const resources = {
         thanksReply: "Rica ederim, her zaman buradayım."
       },
 
+      net: {
+        offlineTitle: "İnternet bağlantınız yok",
+        offlineDesc: "Bağlantı gelene kadar bu uyarı kapanmaz. İnternet gelince otomatik devam eder.",
+        onlineTitle: "İnternet bağlantınız geldi",
+        onlineDesc: "Devam edebilirsiniz.",
+      },
+
+      vitrine: {
+        resultsReady: "Sonuçlar vitrinde hazır. Teşekkürler.",
+        noResults: "Üzgünüm, sonuç bulunamadı. Başka bir şey deneyin.",
+        resultsError: "Arama sırasında hata oluştu. Lütfen tekrar deneyin.",
+      },
+
+
       wallet: {
         statusNote: "Bu panel şu an yalnızca davet linki ve geçmiş içindir.",
         title: "Cüzdanım",
@@ -359,12 +373,6 @@ const resources = {
           shipped: "Kargolandı",
           completed: "Tamamlandı",
           canceled: "İptal edildi",
-
-      "vitrine.resultsReady": "Sonuçlar vitrinde hazır. Teşekkürler.",
-      "vitrine.noResults": "Üzgünüm, sonuç bulunamadı. Başka bir şey deneyin.",
-      "vitrine.resultsError": "Arama sırasında hata oluştu. Lütfen tekrar deneyin.",
-      "ai.analyzing": "Analiz yapılıyor…",
-      "ai.searching": "Arama yapılıyor…"
 
         }
       }
@@ -619,6 +627,20 @@ const resources = {
         thanksReply: "You're welcome, always here for you."
       },
 
+      net: {
+        offlineTitle: "No internet connection",
+        offlineDesc: "This alert stays until you’re back online. We’ll resume automatically.",
+        onlineTitle: "Back online",
+        onlineDesc: "You can continue.",
+      },
+
+      vitrine: {
+        resultsReady: "Results are ready in the showcase. Thank you.",
+        noResults: "Sorry, no results found. Try something else.",
+        resultsError: "An error occurred during the search. Please try again.",
+      },
+
+
       wallet: {
         statusNote:
           "This panel is currently only for your invite link and history.",
@@ -721,12 +743,6 @@ const resources = {
           shipped: "Shipped",
           completed: "Completed",
           canceled: "Canceled",
-
-      "vitrine.resultsReady": "Results are ready in the showcase. Thank you.",
-      "vitrine.noResults": "Sorry, no results found. Try something else.",
-      "vitrine.resultsError": "An error occurred during the search. Please try again.",
-      "ai.analyzing": "Analyzing…",
-      "ai.searching": "Searching…"
 
         }
       }
@@ -990,6 +1006,20 @@ const resources = {
         thanksReply: "Avec plaisir, je suis toujours là."
       },
 
+      net: {
+        offlineTitle: "Pas de connexion Internet",
+        offlineDesc: "Cette alerte reste affichée jusqu’au retour en ligne. Reprise automatique ensuite.",
+        onlineTitle: "Connexion rétablie",
+        onlineDesc: "Vous pouvez continuer.",
+      },
+
+      vitrine: {
+        resultsReady: "Les résultats sont prêts dans la vitrine. Merci.",
+        noResults: "Désolé, aucun résultat. Essayez autre chose.",
+        resultsError: "Une erreur est survenue pendant la recherche. Réessayez.",
+      },
+
+
       wallet: {
         statusNote:
           "Ce panneau est actuellement uniquement destiné à votre lien d'invitation et à l'historique.",
@@ -1093,12 +1123,6 @@ const resources = {
           shipped: "Expédié",
           completed: "Terminé",
           canceled: "Annulé",
-
-      "vitrine.resultsReady": "Les résultats sont prêts dans la vitrine. Merci.",
-      "vitrine.noResults": "Désolé, aucun résultat. Essayez autre chose.",
-      "vitrine.resultsError": "Une erreur s’est produite pendant la recherche. Veuillez réessayer.",
-      "ai.analyzing": "Analyse en cours…",
-      "ai.searching": "Recherche en cours…"
 
         }
       }
@@ -1356,6 +1380,20 @@ const resources = {
         thanksReply: "Пожалуйста, я всегда рядом."
       },
 
+      net: {
+        offlineTitle: "Нет подключения к интернету",
+        offlineDesc: "Это уведомление не исчезнет, пока связь не вернётся. Продолжим автоматически.",
+        onlineTitle: "Соединение восстановлено",
+        onlineDesc: "Можно продолжить.",
+      },
+
+      vitrine: {
+        resultsReady: "Результаты готовы на витрине. Спасибо.",
+        noResults: "Извините, ничего не найдено. Попробуйте ещё раз.",
+        resultsError: "Во время поиска произошла ошибка. Попробуйте снова.",
+      },
+
+
       wallet: {
         statusNote:
           "Этот раздел сейчас предназначен только для ссылки приглашения и истории.",
@@ -1458,12 +1496,6 @@ const resources = {
           shipped: "Отправлено",
           completed: "Завершено",
           canceled: "Отменено",
-
-      "vitrine.resultsReady": "Результаты готовы на витрине. Спасибо.",
-      "vitrine.noResults": "Извините, результатов не найдено. Попробуйте другой запрос.",
-      "vitrine.resultsError": "Во время поиска произошла ошибка. Пожалуйста, попробуйте ещё раз.",
-      "ai.analyzing": "Анализирую…",
-      "ai.searching": "Ищу…"
 
         }
       }
@@ -1721,6 +1753,20 @@ const resources = {
         thanksReply: "على الرحب والسعة، أنا دائمًا هنا."
       },
 
+      net: {
+        offlineTitle: "لا يوجد اتصال بالإنترنت",
+        offlineDesc: "سيبقى هذا التنبيه حتى عودة الاتصال. سنستأنف تلقائيًا بعد ذلك.",
+        onlineTitle: "عاد الاتصال بالإنترنت",
+        onlineDesc: "يمكنك المتابعة.",
+      },
+
+      vitrine: {
+        resultsReady: "النتائج جاهزة في الواجهة. شكرًا لك.",
+        noResults: "عذرًا، لم يتم العثور على نتائج. جرّب شيئًا آخر.",
+        resultsError: "حدث خطأ أثناء البحث. حاول مرة أخرى.",
+      },
+
+
       wallet: {
         statusNote: "هذا القسم مخصص حاليًا فقط لرابط الدعوة والسجل.",
         title: "محفظتي",
@@ -1822,12 +1868,6 @@ const resources = {
           shipped: "تم الشحن",
           completed: "مكتمل",
           canceled: "أُلغي",
-
-      "vitrine.resultsReady": "النتائج جاهزة في الواجهة. شكرًا لك.",
-      "vitrine.noResults": "عذرًا، لم يتم العثور على نتائج. جرّب شيئًا آخر.",
-      "vitrine.resultsError": "حدث خطأ أثناء البحث. يُرجى المحاولة مرة أخرى.",
-      "ai.analyzing": "جارٍ التحليل…",
-      "ai.searching": "جارٍ البحث…"
 
         }
       }
