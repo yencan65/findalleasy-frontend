@@ -192,8 +192,7 @@ export default function App() {
     voiceToastTimer.current = setTimeout(() => setVoiceToast(null), ttl);
   };
 
-const ttsLastAtRef = useRef(0);
-const ttsLastKeyRef = useRef({ key: "", t: 0 });
+const ttsLastRef = useRef({ msg: "", t: 0 });
 
 function mapTtsLang(lang) {
   const l = String(lang || "tr").toLowerCase();
@@ -216,19 +215,15 @@ function speak(text) {
     if (!msg) return;
 
     const now = Date.now();
+    const last = ttsLastRef.current || { msg: "", t: 0 };
 
-    // Strong de-dupe: same message within 8s => ignore
-    try {
-      const g = (window.__fae_tts_last = window.__fae_tts_last || { key: "", t: 0 });
-      if (g.key === msg && now - g.t < 8000) return;
-      window.__fae_tts_last = { key: msg, t: now };
-    } catch {}
+    // Aynı cümle kısa sürede tekrar gelirse sus (double event avcısı)
+    if (last.msg === msg && now - last.t < 4000) return;
 
-    if (ttsLastKeyRef.current.key === msg && now - ttsLastKeyRef.current.t < 8000) return;
-    ttsLastKeyRef.current = { key: msg, t: now };
+    // Çok hızlı ardışık çağrıları da kes
+    if (now - last.t < 250) return;
 
-    if (now - (ttsLastAtRef.current || 0) < 250) return;
-    ttsLastAtRef.current = now;
+    ttsLastRef.current = { msg, t: now };
 
     try { synth.cancel(); } catch {}
 
@@ -251,17 +246,6 @@ useEffect(() => {
 
     // UI net olsun: event geldiyse artık "busy" bitmiştir.
     setSearchBusy(false);
-
-    // De-dupe vitrine result announcements for same query
-    try {
-      const qk = String(d.query || d.q || "");
-      const sk = `${status}|${qk}`;
-      const now2 = Date.now();
-      const gk = (window.__fae_vitrine_last = window.__fae_vitrine_last || { key: "", t: 0 });
-      if (gk.key === sk && now2 - gk.t < 6000) return;
-      window.__fae_vitrine_last = { key: sk, t: now2 };
-    } catch {}
-
 
     if (status === "success") {
       const msg = t("vitrine.resultsReady", {
@@ -336,17 +320,6 @@ useEffect(() => {
       return null;
     } finally {
       setSearchBusy(false);
-
-    // De-dupe vitrine result announcements for same query
-    try {
-      const qk = String(d.query || d.q || "");
-      const sk = `${status}|${qk}`;
-      const now2 = Date.now();
-      const gk = (window.__fae_vitrine_last = window.__fae_vitrine_last || { key: "", t: 0 });
-      if (gk.key === sk && now2 - gk.t < 6000) return;
-      window.__fae_vitrine_last = { key: sk, t: now2 };
-    } catch {}
-
     }
   }
 
