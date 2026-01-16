@@ -7,7 +7,7 @@ import { buildAffiliateRedirectUrl } from "../utils/affiliateRedirect";
 import { useAuth } from "../hooks/useAuth";
 import { getDeviceId } from "../utils/device";
 import { smartVitrinProcess } from "../utils/vitrinSmartCore";
-import { getLastQuery } from "../utils/searchBridge";
+import { getLastQuery, getLastQuerySource } from "../utils/searchBridge";
 import { pickImportantBadges } from "../utils/badgeSelect";
 import BadgePanel from "./BadgePanel";
 import VerifiedBadge from "./VerifiedBadge";
@@ -200,17 +200,78 @@ function itemHaystack(item) {
   }
 }
 
-function isRelevantItem(item, q) {
+function isRelevantItem(item, q, opts = {}) {
   if (!item) return false;
-  const qNorm = normText(q);
-  if (!qNorm) return true;
+
+  const source = String(opts?.source || "").toLowerCase();
+  const isCameraLike =
+    source === "camera" ||
+    source === "vision" ||
+    source === "image" ||
+    source === "photo" ||
+    source === "lens";
+
+  // Kamera/vision sorguları genelde fazla uzun/dağınık geliyor.
+  // Filtreyi akıllıca gevşet: "fiyat/indirim" gibi gürültüyü at, token sayısını kıs.
+  const normalizeForCamera = (raw) => {
+    const qNorm = normText(raw);
+    if (!qNorm) return qNorm;
+
+    const stop = new Set([
+      // TR
+      "fiyat",
+      "fiyati",
+      "fiyatı",
+      "indirim",
+      "kampanya",
+      "ucuz",
+      "uygun",
+      "en",
+      "iyi",
+      "guvenilir",
+      "güvenilir",
+      "satın",
+      "satin",
+      "al",
+      "alma",
+      "nerede",
+      "bul",
+      "bulun",
+      // EN/FR/AR/RU (minimal)
+      "price",
+      "cheap",
+      "buy",
+      "deal",
+      "discount",
+      "prix",
+      "acheter",
+      "promotion",
+      "سعر",
+      "شراء",
+      "خصم",
+      "цена",
+      "купить",
+      "скидка",
+    ]);
+
+    let toks = tokenize(qNorm).filter(Boolean);
+        toks = toks.filter((t) => t && t.length >= 2 && !stop.has(t));
+    // Çok uzunsa ilk 6 token genelde marka+model'i taşır.
+    if (toks.length > 6) toks = toks.slice(0, 6);
+
+    const compact = toks.join(" ").trim();
+    return compact || qNorm;
+  };
+
+  const qEffective = isCameraLike ? normalizeForCamera(q) : normText(q);
+  if (!qEffective) return true;
 
   const hay = itemHaystack(item);
   if (!hay) return false;
 
-  if (hay.includes(qNorm)) return true;
+  if (hay.includes(qEffective)) return true;
 
-  const qTokens = tokenize(qNorm);
+  const qTokens = tokenize(qEffective);
   if (!qTokens.length) return true;
 
   const tTokens = new Set(tokenize(hay));
@@ -220,14 +281,28 @@ function isRelevantItem(item, q) {
   if (qTokens.length === 1) return hay.includes(qTokens[0]);
 
   const ratio = hit / Math.max(1, qTokens.length);
-  return ratio >= 0.4;
+  const threshold = isCameraLike ? 0.2 : 0.4;
+  return ratio >= threshold;
 }
 
-function filterItemsForQuery(items, q) {
+function filterItemsForQuery(items, q, sourceHint = "") {
   const arr = Array.isArray(items) ? items.filter(Boolean) : items ? [items] : [];
   if (!arr.length) return arr;
 
-  const out = arr.filter((it) => isRelevantItem(it, q));
+  const src = String(sourceHint || "").toLowerCase();
+  const isCameraLike =
+    src === "camera" ||
+    src === "vision" ||
+    src === "image" ||
+    src === "photo" ||
+    src === "lens";
+
+  const out = arr.filter((it) => isRelevantItem(it, q, { source: src }));
+
+  // Kamera/vision hattında "hepsi elendi" durumu kullanıcıyı boş döndürüp sistemi kötü gösteriyor.
+  // Bu durumda backend'in döndürdüğü best'i göster (en azından hizmet ver).
+  if (isCameraLike && out.length === 0) return arr;
+
   return out; // Hepsi giderse boş dönmek, alakasız göstermemekten iyidir.
 }
 
@@ -695,8 +770,15 @@ export default function Vitrin() {
   //   🔥 VİTRİN MOTORU — stabil dinamik vitrin
   // ============================================================
   async function loadVitrine(reset = false) {
-    if (typeof window !== "undefined" && window.__vitrineLoading) return;
-    if (typeof window !== "undefined") window.__vitrineLoading = true;
+    if (typeof window !== "undefined") {
+      if (window.__vitrineLoading) {
+        // Yükleme devam ederken gelen yeni sorguyu kaybetme.
+        // Bitince bir kez daha tazeleyeceğiz.
+        window.__vitrinePending = true;
+        return;
+      }
+      window.__vitrineLoading = true;
+    }
 
     const OTHERS_ENABLED = false; // HARD
 
@@ -704,6 +786,14 @@ export default function Vitrin() {
       setLoading(true);
 
       const queryForBody = getLastQuery() || lastQuery || "";
+
+      const sourceHint = (() => {
+        try {
+          return String(getLastQuerySource() || (typeof window !== \"undefined\" && window.localStorage ? (window.localStorage.getItem(\"lastQuerySource\") || \"\") : \"\") || \"manual\");
+        } catch {
+          return \"manual\";
+        }
+      })();
 
       const dispatchVitrineResults = (status, extra = {}) => {
         try {
@@ -723,12 +813,7 @@ export default function Vitrin() {
       const body = {
         query: queryForBody,
       q: queryForBody,
-        // ✅ Source hint (manual/voice/camera/qr/...) — backend'in niyet/öncelik motoru bunu kullanabilir
-        source:
-          (typeof window !== "undefined" &&
-            window.localStorage &&
-            window.localStorage.getItem("lastQuerySource")) ||
-          "manual",
+        source: sourceHint,
         region:
           (typeof window !== "undefined" &&
             window.localStorage &&
@@ -798,14 +883,24 @@ export default function Vitrin() {
         let othersArr = OTHERS_ENABLED ? ensureArray(src.others) : [];
 
         // 🔥 alaka filtresi
-        bestArr = filterItemsForQuery(bestArr, body.query);
-        smartArr = filterItemsForQuery(smartArr, body.query);
-        othersArr = filterItemsForQuery(othersArr, body.query);
+        bestArr = filterItemsForQuery(bestArr, body.query, sourceHint);
+        smartArr = filterItemsForQuery(smartArr, body.query, sourceHint);
+        othersArr = filterItemsForQuery(othersArr, body.query, sourceHint);
+
+        // ✅ Kamera/vision hattında FE filtresi best'i sıfırlamasın: backend best'i en azından göster.
+        const srcLower = String(sourceHint || "").toLowerCase();
+        const cameraLike = srcLower === "camera" || srcLower === "vision" || srcLower === "image" || srcLower === "photo" || srcLower === "lens";
+        if (cameraLike && !bestArr.length) {
+          try {
+            const fallbackBest = src?.best || (Array.isArray(src?.best_list) ? src.best_list[0] : null) || (Array.isArray(src?.items) ? src.items[0] : null);
+            if (fallbackBest) bestArr = ensureArray(fallbackBest);
+          } catch {}
+        }
 
         try {
           const fallbackItems = ensureArray(src.items || src.results);
         const allItems = [...bestArr, ...fallbackItems].filter(Boolean);
-          const allFiltered = filterItemsForQuery(allItems, body.query);
+          const allFiltered = filterItemsForQuery(allItems, body.query, sourceHint);
 
           const processed = smartVitrinProcess({
             query: body.query,
@@ -821,11 +916,11 @@ export default function Vitrin() {
             const bestCandidate = pBest && isRelevantItem(pBest, body.query) ? pBest : null;
             if (bestCandidate) bestArr = [bestCandidate];
 
-            if (pSmart.length) smartArr = filterItemsForQuery(pSmart, body.query);
+            if (pSmart.length) smartArr = filterItemsForQuery(pSmart, body.query, sourceHint);
 
             if (OTHERS_ENABLED) {
               const pOthers = rest.slice(smartCount);
-              if (pOthers.length) othersArr = filterItemsForQuery(pOthers, body.query);
+              if (pOthers.length) othersArr = filterItemsForQuery(pOthers, body.query, sourceHint);
             }
           }
         } catch (e) {
@@ -873,7 +968,18 @@ export default function Vitrin() {
       setOthers([]);
       dispatchVitrineResults("error", { error: String(err?.message || err) });
     } finally {
-      if (typeof window !== "undefined") window.__vitrineLoading = false;
+      if (typeof window !== "undefined") {
+        window.__vitrineLoading = false;
+        if (window.__vitrinePending) {
+          window.__vitrinePending = false;
+          // Yeni sorgu load sırasında geldiyse, bir tick sonra tekrar yükle.
+          setTimeout(() => {
+            try {
+              loadVitrine(true);
+            } catch {}
+          }, 0);
+        }
+      }
       setLoading(false);
     }
   }
