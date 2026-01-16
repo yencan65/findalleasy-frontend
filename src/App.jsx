@@ -676,28 +676,28 @@ useEffect(() => {
         className="flex-1 flex flex-col items-center justify-start w-full px-4 pt-10 sm:pt-14 pb-28 sm:pb-8"
       >
         {/* ◆ SLOGAN */}
-        <h2 className="flex flex-wrap justify-center items-center gap-x-2 gap-y-1 text-[18px] sm:text-[20px] md:text-[24px] lg:text-[29px] font-semibold text-center select-none px-2 leading-tight">
-          <span className="text-white">{t("yazman yeterli,")}</span>
-          <span className="text-[#d4af37]">{t("gerisini")}</span>
+        <h2 className="flex flex-wrap justify-center items-center gap-x-2 gap-y-1 text-[18px] sm:text-[20px] md:text-[24px] lg:text-[29px] font-semibold text-center select-none px-2 leading-tight text-black">
+          <span className="text-black">{t("yazman yeterli,")}</span>
+          <span className="text-black">{t("gerisini")}</span>
 
           <div
             className="relative group transition-transform duration-500 hover:scale-110"
             title="Sono AI"
           >
             <div
-              className="absolute inset-0 rounded-full border-[2px] border-[#d4af37]
-              shadow-[0_0_12px_#d4af37,0_0_24px_#d4af37] opacity-70
-              group-hover:shadow-[0_0_20px_#d4af37,0_0_40px_#d4af37]
+              className="absolute inset-0 rounded-full border-[2px] border-[#8b8b8b]
+              shadow-[0_0_10px_rgba(120,120,120,0.45),0_0_22px_rgba(120,120,120,0.35)] opacity-70
+              group-hover:shadow-[0_0_16px_rgba(120,120,120,0.55),0_0_34px_rgba(120,120,120,0.45)]
               transition-all duration-500 ease-in-out"
             ></div>
             <img
               src={sonoFace}
               alt="Sono"
-              className="relative w-[24px] h-[24px] sm:w-[26px] sm:h-[26px] rounded-full drop-shadow-[0_0_4px_#d4af37]"
+              className="relative w-[24px] h-[24px] sm:w-[26px] sm:h-[26px] rounded-full drop-shadow-[0_0_4px_rgba(120,120,120,0.55)]"
             />
           </div>
 
-          <span className="text-[#d4af37]">{t("halleder.")}</span>
+          <span className="text-black">{t("halleder.")}</span>
         </h2>
 
         {/* ◆ Arama Çubuğu (mobil + desktop tek yapı: ikon solda, çerçevesiz; input çerçevesi altın) */}
@@ -716,7 +716,7 @@ useEffect(() => {
                 }}
                 onKeyDown={(e) => e.key === "Enter" && doSearch()}
                 placeholder={t("ph.searchProduct", { defaultValue: "Ürün veya hizmet ara" })}
-                className="w-full h-11 sm:h-12 rounded-xl pl-9 sm:pl-11 pr-11 sm:pr-12 text-white placeholder:text-white/40 outline-none border border-[#D9A441]/45 focus:border-[#D9A441]/70 bg-[#0B0E12]/45 backdrop-blur"
+                className="w-full h-11 sm:h-12 rounded-xl pl-9 sm:pl-11 pr-11 sm:pr-12 text-black placeholder:text-black/40 outline-none border border-black/35 focus:border-black/55 bg-[rgba(255,255,255,0.16)] backdrop-blur"
               />
 
               <button
@@ -726,7 +726,7 @@ useEffect(() => {
                 aria-label={t("search.search")}
                 title={t("search.search")}
               >
-                <SearchIcon className="w-4 h-4 sm:w-5 sm:h-5 text-[#D9A441]" aria-hidden />
+                <SearchIcon className="w-4 h-4 sm:w-5 sm:h-5 text-black/80" aria-hidden />
               </button>
 
               {/* Tek dokunuşla temizle */}
@@ -753,33 +753,33 @@ useEffect(() => {
             <div className="flex items-center justify-end gap-2">
               <button
                 onClick={startMic}
-                className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition ${voiceListening ? "ring-2 ring-[#D9A441]/40 bg-[#D9A441]/10" : ""}`}
+                className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl border border-black/35 bg-[rgba(255,255,255,0.10)] hover:bg-[rgba(255,255,255,0.16)] flex items-center justify-center transition ${voiceListening ? "ring-2 ring-black/30 bg-black/5" : ""}`}
                 title={t("search.voice")}
                 aria-label={t("search.voice")}
               >
                 <img
                   src={micIcon}
                   alt={t("search.voice")}
-                  className={`w-[18px] h-[18px] sm:w-5 sm:h-5 opacity-90 ${voiceListening ? "animate-pulse" : ""}`}
+                  className={`w-[18px] h-[18px] sm:w-5 sm:h-5 opacity-90 filter brightness-0 ${voiceListening ? "animate-pulse" : ""}`}
                 />
               </button>
 
               <button
                 onClick={openCamera}
-                className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
+                className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl border border-black/35 bg-[rgba(255,255,255,0.10)] hover:bg-[rgba(255,255,255,0.16)] flex items-center justify-center transition"
                 title={t("search.camera")}
                 aria-label={t("search.camera")}
               >
-                <img src={camera} alt={t("search.camera")} className="w-[18px] h-[18px] sm:w-5 sm:h-5 opacity-90" />
+                <img src={camera} alt={t("search.camera")} className="w-[18px] h-[18px] sm:w-5 sm:h-5 opacity-90 filter brightness-0" />
               </button>
 
               <button
                 onClick={startQRScanner}
-                className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl border border-[#D9A441]/45 bg-black/25 hover:bg-[#0B0E12]/75 flex items-center justify-center transition"
+                className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl border border-black/35 bg-[rgba(255,255,255,0.10)] hover:bg-[rgba(255,255,255,0.16)] flex items-center justify-center transition"
                 title={t("search.qr")}
                 aria-label={t("search.qr")}
               >
-                <QrCode className="w-5 h-5 sm:w-[22px] sm:h-[22px] text-[#D9A441]" aria-hidden />
+                <QrCode className="w-5 h-5 sm:w-[22px] sm:h-[22px] text-black/80" aria-hidden />
               </button>
             </div>
           </div>
@@ -914,10 +914,10 @@ useEffect(() => {
 
           return (
           <div className="w-full flex justify-center mt-2 mb-2 select-none">
-  <p className="text-[13px] sm:text-[14px] text-white/90 text-center flex items-center gap-2">
+  <p className="text-[13px] sm:text-[14px] text-black/80 text-center flex items-center gap-2">
     <span>{greeting}</span>
     {name ? <span>{name}</span> : null}
-    <span className="text-[#d4af37]">||</span>
+    <span className="text-black/50">||</span>
     <span
       className={`transition-opacity duration-700 ease-in-out ${
         fade ? "opacity-100" : "opacity-0"
