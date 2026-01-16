@@ -14,7 +14,7 @@ export default function Footer({ fixed = false }) {
   }, []);
 
   return (
-    <footer className={`py-2 sm:py-3 px-3 w-full ${fixed ? "fixed bottom-0 left-0 z-[60] bg-[#14170f]/65 backdrop-blur-xl" : ""}`}>
+    <footer className={`py-2 sm:py-3 px-3 w-full border-t border-[#d4af37]/20 ${fixed ? "fixed bottom-0 left-0 z-[60] bg-black/45 backdrop-blur-xl" : ""}`}>
       <hr className="footer-line" />
       <div className="phi-gap text-[11px] md:text-sm" />
       {/* ✅ Info + Legal links (reviewers want these) */}
