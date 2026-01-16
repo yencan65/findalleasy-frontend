@@ -657,7 +657,7 @@ useEffect(() => {
   }, [i18n.language, t]);
 
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-transparent text-[#0f0f0f] font-sans overflow-x-hidden">
+    <div className="min-h-[100dvh] flex flex-col bg-transparent text-white font-sans overflow-x-hidden">
       <Header />
       <NetworkStatusBanner />
 
@@ -673,11 +673,11 @@ useEffect(() => {
       ) : null}
 
       <main
-        className="flex-1 flex flex-col items-center justify-start w-full px-4 pt-10 sm:pt-14 pb-28 sm:pb-8 text-[#0f0f0f]"
+        className="flex-1 flex flex-col items-center justify-start w-full px-4 pt-10 sm:pt-14 pb-28 sm:pb-8"
       >
         {/* ◆ SLOGAN */}
         <h2 className="flex flex-wrap justify-center items-center gap-x-2 gap-y-1 text-[18px] sm:text-[20px] md:text-[24px] lg:text-[29px] font-semibold text-center select-none px-2 leading-tight">
-          <span className="text-[#0f0f0f]">{t("yazman yeterli,")}</span>
+          <span className="text-white">{t("yazman yeterli,")}</span>
           <span className="text-[#d4af37]">{t("gerisini")}</span>
 
           <div
@@ -686,14 +686,14 @@ useEffect(() => {
           >
             <div
               className="absolute inset-0 rounded-full border-[2px] border-[#d4af37]
-              shadow-[0_0_8px_#d4af37,0_0_16px_#d4af37] opacity-55
-              group-hover:shadow-[0_0_12px_#d4af37,0_0_24px_#d4af37]
+              shadow-[0_0_12px_#d4af37,0_0_24px_#d4af37] opacity-70
+              group-hover:shadow-[0_0_20px_#d4af37,0_0_40px_#d4af37]
               transition-all duration-500 ease-in-out"
             ></div>
             <img
               src={sonoFace}
               alt="Sono"
-              className="relative w-[24px] h-[24px] sm:w-[26px] sm:h-[26px] rounded-full drop-shadow-[0_0_3px_#d4af37]"
+              className="relative w-[24px] h-[24px] sm:w-[26px] sm:h-[26px] rounded-full drop-shadow-[0_0_4px_#d4af37]"
             />
           </div>
 
@@ -716,13 +716,13 @@ useEffect(() => {
                 }}
                 onKeyDown={(e) => e.key === "Enter" && doSearch()}
                 placeholder={t("ph.searchProduct", { defaultValue: "Ürün veya hizmet ara" })}
-                className="w-full h-11 sm:h-12 rounded-xl pl-9 sm:pl-11 pr-11 sm:pr-12 text-[#0f0f0f] placeholder:text-[rgba(15,15,15,0.45)] outline-none border border-[#D9A441]/45 focus:border-[#D9A441]/70 bg-[#0B0E12]/45 backdrop-blur"
+                className="w-full h-11 sm:h-12 rounded-xl pl-9 sm:pl-11 pr-11 sm:pr-12 text-white placeholder:text-white/40 outline-none border border-[#D9A441]/45 focus:border-[#D9A441]/70 bg-[#0B0E12]/45 backdrop-blur"
               />
 
               <button
                 id="search-button"
                 onClick={doSearch}
-                className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 p-1 rounded-md bg-transparent hover:bg-black/5 active:scale-95 transition"
+                className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 p-1 rounded-md bg-transparent hover:bg-white/5 active:scale-95 transition"
                 aria-label={t("search.search")}
                 title={t("search.search")}
               >
@@ -740,11 +740,11 @@ useEffect(() => {
                       searchInputRef.current?.focus?.();
                     } catch {}
                   }}
-                  className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-md bg-transparent hover:bg-black/5 active:scale-95 transition"
+                  className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-md bg-transparent hover:bg-white/5 active:scale-95 transition"
                   aria-label={t("actions.clear", { defaultValue: "Temizle" })}
                   title={t("actions.clear", { defaultValue: "Temizle" })}
                 >
-                  <X className="w-4 h-4 sm:w-5 sm:h-5 text-black/60" aria-hidden />
+                  <X className="w-4 h-4 sm:w-5 sm:h-5 text-white/60" aria-hidden />
                 </button>
               ) : null}
             </div>
@@ -788,23 +788,23 @@ useEffect(() => {
         {/* ◆ Arama / Kamera durum göstergesi (kullanıcıya net geri bildirim) */}
         <div className="w-full max-w-[760px] -mt-1 mb-2">
           {visionBusy ? (
-            <div className="flex items-center justify-center gap-2 text-[12px] sm:text-[13px] text-black/75 select-none">
+            <div className="flex items-center justify-center gap-2 text-[12px] sm:text-[13px] text-white/80 select-none">
               <div className="w-3 h-3 rounded-full border border-[#D9A441] border-t-transparent animate-spin" />
               <span>{t("search.imageAnalyzing", { defaultValue: "Görsel analiz ediliyor..." })}</span>
             </div>
           ) : searchBusy ? (
-            <div className="flex items-center justify-center gap-2 text-[12px] sm:text-[13px] text-black/75 select-none">
+            <div className="flex items-center justify-center gap-2 text-[12px] sm:text-[13px] text-white/80 select-none">
               <div className="w-3 h-3 rounded-full border border-[#D9A441] border-t-transparent animate-spin" />
               <span>{t("search.searching", { defaultValue: "Arama yapılıyor..." })}</span>
             </div>
           ) : voiceConfirm ? (
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl border border-[#D9A441]/35 bg-black/25 px-3 py-2">
-              <div className="text-[12px] sm:text-[13px] text-black/80">
-                <span className="text-black/70">
+              <div className="text-[12px] sm:text-[13px] text-white/85">
+                <span className="text-white/70">
                   {t("search.voiceHeardPrefix", { defaultValue: "Sesli komuttan anladığım:" })}
                 </span>{" "}
                 <span className="text-[#D9A441] font-semibold">{voiceConfirm?.query}</span>
-                <span className="text-black/70">
+                <span className="text-white/70">
                   {" "}
                   — {t("search.voiceConfirmQuestion", { defaultValue: "Bunu mu arayayım?" })}
                 </span>
@@ -830,14 +830,14 @@ useEffect(() => {
                       try { searchInputRef.current?.focus?.(); } catch {}
                     }, 0);
                   }}
-                  className="text-xs px-3 py-1 rounded-lg border border-black/15 text-black/75 hover:bg-black/5"
+                  className="text-xs px-3 py-1 rounded-lg border border-white/20 text-white/80 hover:bg-white/5"
                 >
                   {t("search.editQuery", { defaultValue: "Düzenle" })}
                 </button>
 
                 <button
                   onClick={() => setVoiceConfirm(null)}
-                  className="text-xs px-3 py-1 rounded-lg border border-black/12 text-black/60 hover:bg-black/5"
+                  className="text-xs px-3 py-1 rounded-lg border border-white/15 text-white/60 hover:bg-white/5"
                 >
                   {t("search.cancel", { defaultValue: "Vazgeç" })}
                 </button>
@@ -845,8 +845,8 @@ useEffect(() => {
             </div>
           ) : visionConfirm ? (
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-xl border border-[#D9A441]/35 bg-black/25 px-3 py-2">
-              <div className="text-[12px] sm:text-[13px] text-black/80">
-                <span className="text-black/70">
+              <div className="text-[12px] sm:text-[13px] text-white/85">
+                <span className="text-white/70">
                   {visionConfirm?.weak
                     ? t("search.imageWeakGuess", { defaultValue: "Emin olamadım, ama şöyle görünüyor:" })
                     : t("search.imageDetectedPrefix", { defaultValue: "Görüntüden anladığım:" })}
@@ -870,13 +870,13 @@ useEffect(() => {
                       searchInputRef.current?.focus?.();
                     } catch {}
                   }}
-                  className="px-3 py-1.5 rounded-lg border border-[#D9A441]/35 text-black/80 text-[12px] hover:bg-black/5 active:scale-95 transition"
+                  className="px-3 py-1.5 rounded-lg border border-[#D9A441]/45 text-white text-[12px] hover:bg-white/5 active:scale-95 transition"
                 >
                   {t("search.editQuery", { defaultValue: "Düzenle" })}
                 </button>
                 <button
                   onClick={() => setVisionConfirm(null)}
-                  className="px-3 py-1.5 rounded-lg border border-black/15 text-black/75 text-[12px] hover:bg-black/5 active:scale-95 transition"
+                  className="px-3 py-1.5 rounded-lg border border-white/20 text-white/80 text-[12px] hover:bg-white/5 active:scale-95 transition"
                 >
                   {t("search.cancel", { defaultValue: "İptal" })}
                 </button>
@@ -914,7 +914,7 @@ useEffect(() => {
 
           return (
           <div className="w-full flex justify-center mt-2 mb-2 select-none">
-  <p className="text-[13px] sm:text-[14px] text-black/85 text-center flex items-center gap-2">
+  <p className="text-[13px] sm:text-[14px] text-white/90 text-center flex items-center gap-2">
     <span>{greeting}</span>
     {name ? <span>{name}</span> : null}
     <span className="text-[#d4af37]">||</span>
