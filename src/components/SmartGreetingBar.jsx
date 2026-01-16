@@ -64,7 +64,7 @@ export default function SmartGreetingBar({ name = "Efendim" }) {
     <div className="w-full max-w-6xl mx-auto mb-2 mt-4">
       <div className="flex items-center gap-3 text-sm">
         {/* Greeting (fixed width) */}
-        <div className="px-3 py-2 rounded-md bg-white/5 border border-white/10 min-w-[200px] flex items-center gap-2 overflow-hidden">
+        <div className="px-3 py-2 rounded-md bg-white/10 border border-black/15 min-w-[200px] flex items-center gap-2 overflow-hidden text-black">
           <span aria-hidden="true">{greetIconByHour()}</span>
           <span
             className="block overflow-hidden text-ellipsis"
@@ -79,7 +79,7 @@ export default function SmartGreetingBar({ name = "Efendim" }) {
         {/* Guidance line (ONE LINE, NO JUMP) */}
         <div className="flex-1 h-5 overflow-hidden" aria-live="polite">
           <span
-            className={`block text-white/90 transition-opacity duration-500 ease-in-out leading-5 ${fade ? "opacity-100" : "opacity-0"}`}
+            className={`block text-black/80 transition-opacity duration-500 ease-in-out leading-5 ${fade ? "opacity-100" : "opacity-0"}`}
             style={{
               whiteSpace: "nowrap",
               overflow: "hidden",
@@ -93,7 +93,7 @@ export default function SmartGreetingBar({ name = "Efendim" }) {
       </div>
 
       {/* Thin separator under bar */}
-      <div className="mt-2 h-px w-full bg-white/10" />
+      <div className="mt-2 h-px w-full bg-black/10" />
     </div>
   );
 }
