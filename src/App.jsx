@@ -243,9 +243,14 @@ useEffect(() => {
   function onVitrineResults(e) {
     const d = e?.detail || {};
     const status = String(d.status || "").toLowerCase();
+    const q = String(d.query || d.q || "").trim();
 
     // UI net olsun: event geldiyse artık "busy" bitmiştir.
     setSearchBusy(false);
+
+    // İlk yüklemede (query boşken) vitrin "empty" dönebiliyor.
+    // Kullanıcı arama yapmadıysa "sonuç yok" toast'ı göstermeyelim.
+    if (!q) return;
 
     if (status === "success") {
       const msg = t("vitrine.resultsReady", {
@@ -301,6 +306,12 @@ useEffect(() => {
     const source = String(opts?.source || "manual");
 
     setSearchBusy(true);
+    // Kullanıcı arama yapıldığını UI'da net görsün.
+    showVoiceToast(
+      t("search.searching", { defaultValue: "Arama yapılıyor…" }),
+      "info",
+      1800
+    );
     try {
       // ✅ TEK HAT: ne /api/search, ne çift event.
       const out = await runUnifiedSearch(query, {
@@ -310,6 +321,7 @@ useEffect(() => {
       return out;
     } catch (err) {
       console.warn("Arama hatası:", err);
+      setSearchBusy(false);
       showVoiceToast(
         t("search.searchError", {
           defaultValue: "Arama sırasında hata oluştu. Lütfen tekrar deneyin.",
@@ -318,8 +330,6 @@ useEffect(() => {
         2600
       );
       return null;
-    } finally {
-      setSearchBusy(false);
     }
   }
 
@@ -589,10 +599,20 @@ useEffect(() => {
         showVoiceToast(t("search.cameraError", { defaultValue: "Kamera araması sonucu alınamadı." }), "error", 2200);
         return;
       }
-      if (j?.query) {
-        const q = String(j.query).trim();
-        if (!q) return;
+      const q = String(j?.query || "").trim();
+      if (!q) {
+        // Kamera sonucu anlamsız/boşsa kullanıcı eli boş dönmesin.
+        showVoiceToast(
+          t("vitrine.noResults", {
+            defaultValue: "Üzgünüm, sonuç bulunamadı. Başka bir şey deneyin.",
+          }),
+          "warn",
+          2600
+        );
+        return;
+      }
 
+      {
         const used = String(j?.meta?.used || "").trim();
         const qLower = q.toLowerCase();
         const weak = qLower === "ürün" || qLower === "urun" || q.length < 3 || /^\[object\s+object\]$/i.test(q);
