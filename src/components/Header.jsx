@@ -204,12 +204,12 @@ export default function Header() {
     <header
       className="
         w-full flex flex-row justify-between items-center flex-nowrap gap-2 sm:gap-3
-        px-3 sm:px-6 py-3 sm:py-4 bg-[#14170f]/72
+        px-3 sm:px-6 py-3 sm:py-4 bg-black
         border-b border-[#d4af37]/20
-        text-white/90 font-sans backdrop-blur-xl
+        text-white font-sans backdrop-blur-xl
       "
       style={{
-        boxShadow: "0 8px 24px rgba(20,23,15,0.12)",
+        boxShadow: "0 8px 28px rgba(212,175,55,0.07)",
       }}
     >
       {/* LOGO */}
