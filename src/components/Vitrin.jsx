@@ -789,9 +789,9 @@ export default function Vitrin() {
 
       const sourceHint = (() => {
         try {
-          return String(getLastQuerySource() || (typeof window !== \"undefined\" && window.localStorage ? (window.localStorage.getItem(\"lastQuerySource\") || \"\") : \"\") || \"manual\");
+          return String(getLastQuerySource() || (typeof window !== "undefined" && window.localStorage ? (window.localStorage.getItem("lastQuerySource") || "") : "") || "manual");
         } catch {
-          return \"manual\";
+          return "manual";
         }
       })();
 
