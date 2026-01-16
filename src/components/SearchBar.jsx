@@ -487,12 +487,21 @@ rec.lang =
 	    });
 
 	    const j = await r.json().catch(() => null);
-	    const fromCode = String(j?.qr || j?.barcode || "").trim();
 	    const finalQuery = String(j?.query || "").trim();
+	    const barcodeCandidate = String(
+	      j?.barcode ||
+	        (Array.isArray(j?.barcodes) ? j.barcodes[0] : "") ||
+	        j?.qr ||
+	        ""
+	    ).trim();
 
-	    if (fromCode && /^[0-9]{8,14}$/.test(fromCode.replace(/\s+/g, ""))) {
+	    // Vision'dan barkod çıkarsa: barcode->product-info hattına git (kredi yakmaz).
+	    const bc = isLikelyBarcode(barcodeCandidate)
+	      ? barcodeCandidate.replace(/\s+/g, "")
+	      : null;
+	    if (bc) {
 	      kickedSearch = true;
-	      await doBarcodeLookup(fromCode.replace(/\s+/g, ""));
+	      await doBarcodeLookup(bc);
 	      return;
 	    }
 
