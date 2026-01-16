@@ -685,7 +685,7 @@ export default function Vitrin() {
 
   function Tag({ children }) {
     return (
-      <div className="px-2 py-1 text-xs rounded-xl border border-[#d4af37]/40 text-[#14170f] bg-white/25 backdrop-blur-[3px]">
+      <div className="px-2 py-1 text-xs rounded-xl border border-[#d4af37]/40 text-[#f9e7a5] bg-black/30 backdrop-blur-[3px]">
         {children}
       </div>
     );
@@ -955,22 +955,22 @@ export default function Vitrin() {
           w-full
           max-w-[670px]
           mx-auto
-          bg-white/22 rounded-2xl p-3 sm:p-5
+          bg-black/40 rounded-2xl p-3 sm:p-5
           border border-[#d4af37]/35
           shadow-[0_0_22px_rgba(212,175,55,0.25)]
           backdrop-blur-xl
           transition-all duration-300
-          hover:bg-white/30 hover:border-[#d4af37]/70
+          hover:bg-black/55 hover:border-[#d4af37]/70
           hover:shadow-[0_0_40px_rgba(212,175,55,0.45)]
           cursor-pointer
           flex flex-row gap-3 sm:gap-5 items-center
         "
       >
-        <div className="w-[96px] h-[96px] sm:w-[160px] sm:h-[160px] rounded-xl overflow-hidden flex-none bg-white/22 flex items-center justify-center">
+        <div className="w-[96px] h-[96px] sm:w-[160px] sm:h-[160px] rounded-xl overflow-hidden flex-none bg-black/40 flex items-center justify-center">
           {img ? (
             <img src={img} alt={safeTitle} className="w-full h-full object-contain" />
           ) : (
-            <span className="text-[#14170f]/35 text-sm">
+            <span className="text-white/25 text-sm">
               {t("common.noImage", { defaultValue: "Görsel yok" })}
             </span>
           )}
@@ -979,19 +979,19 @@ export default function Vitrin() {
         <div className="flex-1 min-w-0 flex flex-col justify-between">
           <div className="flex flex-row justify-between items-start gap-2">
             <div className="flex-1 min-w-0">
-              <div className="text-[1rem] font-medium text-[#14170f] leading-tight">
+              <div className="text-[1rem] font-medium text-white/95 leading-tight">
                 {safeTitle}
               </div>
 
               {(icon || prov) ? (
-                <div className="mt-2 flex items-center gap-2 text-[0.75rem] text-[#14170f]/65">
+                <div className="mt-2 flex items-center gap-2 text-[0.75rem] text-white/60">
                   {icon && <img src={icon} className="w-4 h-4" alt="" />}
                   {prov ? <span className="uppercase tracking-wide">{prov}</span> : null}
                 </div>
               ) : null}
 
               <div
-                className="mt-2 text-[12px] sm:text-[13px] text-[#14170f]/70 leading-snug"
+                className="mt-2 text-[12px] sm:text-[13px] text-white/70 leading-snug"
                 style={{
                   display: "-webkit-box",
                   WebkitLineClamp: 2,
@@ -1005,18 +1005,18 @@ export default function Vitrin() {
 
             {price != null ? (
               <div className="flex flex-col items-end min-w-[80px]">
-                <span className="text-[#14170f] font-semibold text-[1.1rem]">
+                <span className="text-[#f5d76e] font-semibold text-[1.1rem]">
                   ₺{price.toLocaleString("tr-TR")}
                 </span>
               </div>
             ) : (
               <div className="flex flex-col items-end min-w-[80px]">
-                <span className="text-[#14170f]/45 text-[0.85rem]">{t("common.noPrice", { defaultValue: "Fiyat satıcıda" })}</span>
+                <span className="text-white/35 text-[0.85rem]">{t("common.noPrice", { defaultValue: "Fiyat satıcıda" })}</span>
               </div>
             )}
           </div>
 
-          <div className="flex items-center gap-4 text-[0.75rem] text-[#14170f] mt-4">
+          <div className="flex items-center gap-4 text-[0.75rem] text-[#f9e7a5] mt-4">
             <VerifiedBadge />
             {rating !== null && <span>⭐ {rating}/5</span>}
             {q5 !== null && <span>✔ {q5}/5</span>}
@@ -1035,7 +1035,7 @@ export default function Vitrin() {
         <div className="flex flex-col h-full md:-translate-y-[5%] transition-all duration-300">
           <h2
             className={`
-              text-sm sm:text-base font-semibold text-[#14170f]
+              text-sm sm:text-base font-semibold text-[#f9e7a5]
               flex items-center gap-2 mb-3 fae-title-offset
               ${highlight ? "animate-pulse-soft" : ""}
             `}
@@ -1053,7 +1053,7 @@ export default function Vitrin() {
               }}
             />
           ) : (
-            <div className="rounded-2xl border border-dashed border-white/15 text-xs text-[#14170f]/45 p-4 flex items-center justify-center h-full min-h-[160px]">
+            <div className="rounded-2xl border border-dashed border-white/15 text-xs text-white/40 p-4 flex items-center justify-center h-full min-h-[160px]">
               {t("trigger.customShowcase", { defaultValue: "Kişisel vitrinini hazırlıyorum..." })}
             </div>
           )}
