@@ -6,25 +6,33 @@
 :root {
   --gold: #d4af37;
 
-  /* ✅ Bazalt 10 (tek arka plan: mobil/tablet/pc aynı) */
-  --basalt-10: #91918b;
-  --basalt-10-mid: #7a7a74;
-  --basalt-10-deep: #5c5b56;
+  /* ✅ ANDEZIT 60 (tek arka plan: mobil/tablet/pc aynı) */
+  --stone-60: #8f908a;
+  --stone-60-mid: #767772;
+  --stone-60-deep: #585954;
 
-  --bg: var(--basalt-10);
+  /* eski isimler (kırılmasın diye map) */
+  --basalt-10: var(--stone-60);
+  --basalt-10-mid: var(--stone-60-mid);
+  --basalt-10-deep: var(--stone-60-deep);
 
-  /* UI okunurluğu için hafif koyu perde */
-  --bg-wash: rgba(0, 0, 0, 0.30);
+  --bg: var(--stone-60);
+
+  /* okunurluk perdesi (taşı boğmadan) */
+  --bg-wash: rgba(0, 0, 0, 0.22);
 
   /* yumuşak taş ışığı */
   --stone-glow: rgba(255, 255, 255, 0.10);
 
-  /* eski isimle uyumluluk (başka yerde kullanıldıysa kırılmasın) */
+  /* eski isimle uyumluluk */
   --rezene-glow: var(--stone-glow);
 
-  /* Header/Footer için bazalt uyumlu “ılık siyah” (mavi yok) */
-  --ui-surface: rgba(18, 17, 15, 0.72);
-  --ui-surface-strong: rgba(18, 17, 15, 0.86);
+  /* Header/Footer: taşın koyu tonu (mavi yok, “emanet” değil) */
+  --ui-surface: rgba(44, 45, 42, 0.60);
+  --ui-surface-strong: rgba(44, 45, 42, 0.78);
+
+  /* Search yüzeyi */
+  --field-surface: rgba(44, 45, 42, 0.40);
 }
 
 /* === Scroll unlock (legal/admin pages) === */
@@ -35,7 +43,7 @@ body.fae-allow-scroll {
 
 html,
 body {
-  /* ✅ Mobil/Tablet/PC tek dil: aynı bazalt arka plan */
+  /* ✅ Mobil/Tablet/PC tek dil: aynı Andezit 60 arka plan */
   background-image:
     /* ince taş dokusu (grain) */
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.16'/%3E%3C/svg%3E"),
@@ -44,10 +52,10 @@ body {
     /* üstten yumuşak ışık */
     radial-gradient(1200px 700px at 50% 18%, var(--stone-glow), transparent 62%),
     /* çok hafif altın dokunuş */
-    radial-gradient(900px 520px at 18% 12%, rgba(212, 175, 55, 0.05), transparent 60%),
-    radial-gradient(820px 480px at 86% 26%, rgba(212, 175, 55, 0.035), transparent 62%),
-    /* bazalt gövde */
-    linear-gradient(135deg, var(--basalt-10) 0%, var(--basalt-10-mid) 55%, var(--basalt-10-deep) 100%);
+    radial-gradient(900px 520px at 18% 12%, rgba(212, 175, 55, 0.045), transparent 60%),
+    radial-gradient(820px 480px at 86% 26%, rgba(212, 175, 55, 0.03), transparent 62%),
+    /* taş gövde */
+    linear-gradient(135deg, var(--stone-60) 0%, var(--stone-60-mid) 55%, var(--stone-60-deep) 100%);
 
   background-repeat: repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
   background-size: 260px 260px, cover, cover, cover, cover, cover;
@@ -110,13 +118,13 @@ body.fae-modal-open {
 /* === HEADER === */
 header {
   width: 100%;
-  max-width: 1400px;
+  max-width: none;            /* ✅ kart gibi durmasın */
   padding: 1rem clamp(1rem, 4vw, 2rem);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid rgba(212, 175, 55, 0.18);
-  box-shadow: none;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.14);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.10);
   position: sticky;
   top: 0;
   z-index: 50;
@@ -136,17 +144,17 @@ header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border: 1.8px solid var(--gold);
+  border: 1.8px solid rgba(212, 175, 55, 0.85);
   border-radius: 12px;
   padding: 0.6rem 1rem;
   width: clamp(320px, 55vw, 720px);
-  background: rgba(18, 17, 15, 0.40);
+  background: var(--field-surface);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   transition: all 0.3s ease;
 }
 .search-container:hover {
-  box-shadow: 0 0 18px rgba(212, 175, 55, 0.4);
+  box-shadow: 0 0 16px rgba(212, 175, 55, 0.30);
 }
 
 .search-input {
@@ -170,7 +178,7 @@ header {
 .search-icon:hover,
 .voice-icon:hover,
 .camera-icon:hover {
-  filter: brightness(1.2);
+  filter: brightness(1.15);
 }
 
 .search-btn {
@@ -207,28 +215,24 @@ header {
 }
 
 /* =============== ANİMASYON TEKİLLEŞTİRME =============== */
-/* goldenGlow VE goldenPulse ÇAKIŞMASI ÇÖZÜLDÜ
-   → kart default goldenPulse
-   → hover goldenGlow
-*/
 @keyframes goldenGlow {
-  0% { box-shadow: 0 0 10px rgba(212, 175, 55, 0.3); }
-  50% { box-shadow: 0 0 20px rgba(212, 175, 55, 0.6); }
-  100% { box-shadow: 0 0 10px rgba(212, 175, 55, 0.3); }
+  0% { box-shadow: 0 0 10px rgba(212, 175, 55, 0.26); }
+  50% { box-shadow: 0 0 18px rgba(212, 175, 55, 0.48); }
+  100% { box-shadow: 0 0 10px rgba(212, 175, 55, 0.26); }
 }
 
 @keyframes goldenPulse {
   0% {
-    box-shadow: 0 0 15px rgba(212, 175, 55, 0.2);
-    transform: scale(1.05);
+    box-shadow: 0 0 14px rgba(212, 175, 55, 0.18);
+    transform: scale(1.03);
   }
   50% {
-    box-shadow: 0 0 35px rgba(212, 175, 55, 0.6);
-    transform: scale(1.1);
+    box-shadow: 0 0 28px rgba(212, 175, 55, 0.46);
+    transform: scale(1.06);
   }
   100% {
-    box-shadow: 0 0 15px rgba(212, 175, 55, 0.2);
-    transform: scale(1.05);
+    box-shadow: 0 0 14px rgba(212, 175, 55, 0.18);
+    transform: scale(1.03);
   }
 }
 
@@ -252,15 +256,15 @@ header {
 /* ---- Altın parlamalı kart efekti ---- */
 .card-glow {
   box-shadow:
-    0 0 0 1px rgba(212, 175, 55, 0.35) inset,
-    0 6px 30px rgba(0, 0, 0, 0.35);
+    0 0 0 1px rgba(212, 175, 55, 0.28) inset,
+    0 6px 26px rgba(0, 0, 0, 0.30);
   backdrop-filter: blur(2px);
 }
 .card-glow:hover {
   box-shadow:
-    0 0 0 1px rgba(212, 175, 55, 0.55) inset,
-    0 12px 40px rgba(0, 0, 0, 0.45),
-    0 0 18px rgba(212, 175, 55, 0.35);
+    0 0 0 1px rgba(212, 175, 55, 0.46) inset,
+    0 12px 36px rgba(0, 0, 0, 0.38),
+    0 0 16px rgba(212, 175, 55, 0.28);
   transform: translateY(-2px);
   transition: box-shadow 200ms ease, transform 200ms ease;
 }
@@ -285,7 +289,7 @@ header {
   font-size: 1.15rem;
   line-height: 1.3;
   margin: 1.25rem 0 0.5rem 0;
-  color: rgba(212, 175, 55, 0.95);
+  color: rgba(212, 175, 55, 0.92);
 }
 .legal-prose p,
 .legal-prose li {
@@ -302,7 +306,7 @@ header {
   text-decoration: underline;
 }
 .legal-prose .muted {
-  color: rgba(212, 175, 55, 0.75);
+  color: rgba(212, 175, 55, 0.70);
   font-size: 0.85rem;
 }
 
@@ -310,14 +314,14 @@ header {
 footer {
   margin-top: auto;
   width: 100%;
-  border-top: 1px solid rgba(212, 175, 55, 0.16);
-  box-shadow: none;
+  border-top: 1px solid rgba(212, 175, 55, 0.12);
+  box-shadow: 0 -8px 24px rgba(0,0,0,0.10);
   text-align: center;
   padding: 1rem 0;
-  background: rgba(18, 17, 15, 0.90) !important;
+  background: var(--ui-surface-strong) !important;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  color: #aaa;
+  color: rgba(255,255,255,0.70);
   font-size: clamp(0.8rem, 1vw, 0.9rem);
 }
 
