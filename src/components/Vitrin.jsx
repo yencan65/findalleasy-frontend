@@ -723,6 +723,12 @@ export default function Vitrin() {
       const body = {
         query: queryForBody,
       q: queryForBody,
+        // ✅ Source hint (manual/voice/camera/qr/...) — backend'in niyet/öncelik motoru bunu kullanabilir
+        source:
+          (typeof window !== "undefined" &&
+            window.localStorage &&
+            window.localStorage.getItem("lastQuerySource")) ||
+          "manual",
         region:
           (typeof window !== "undefined" &&
             window.localStorage &&
