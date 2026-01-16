@@ -22,9 +22,9 @@
   /* eski isimle uyumluluk (kırılmasın) */
   --rezene-glow: var(--stone-glow);
 
-  /* Header/Footer: bazaltın koyu tonu (siyah ama yormayan siyah) */
-  --ui-surface: rgba(26, 27, 28, 0.58);
-  --ui-surface-strong: rgba(26, 27, 28, 0.78);
+  /* Header/Footer: bazaltın koyu tonu (body ile aynı aile) */
+  --ui-surface: rgba(52, 54, 55, 0.50);
+  --ui-surface-strong: rgba(52, 54, 55, 0.66);
 
   /* Search yüzeyi */
   --field-surface: rgba(26, 27, 28, 0.42);
