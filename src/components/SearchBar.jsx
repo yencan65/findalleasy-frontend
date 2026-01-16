@@ -203,8 +203,7 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     },
     [value, selectedRegion, locale, runUnifiedSearch, t]
   );
-}
-}
+
 
 
   // 🔥 Voice Search
@@ -277,8 +276,134 @@ rec.lang =
     fileRef.current?.click();
   }
 
-  
-async function onPickFile(e) {
+
+  // ============================================================
+  // Kamera dosyası: Ücretsiz tespit (BarcodeDetector/TextDetector) → en son backend /api/vision
+  // ============================================================
+  const detectBarcodesFromFile = async (file) => {
+    try {
+      if (typeof window === "undefined") return [];
+      const BD = window.BarcodeDetector;
+      if (!BD) return [];
+
+      const formats = [
+        "qr_code",
+        "ean_13",
+        "ean_8",
+        "upc_a",
+        "upc_e",
+        "code_128",
+        "code_39",
+        "itf",
+        "codabar",
+        "data_matrix",
+      ];
+
+      const det = new BD({ formats });
+      let src = null;
+      try {
+        if (typeof createImageBitmap === "function") {
+          src = await createImageBitmap(file);
+        }
+      } catch {
+        src = null;
+      }
+
+      // createImageBitmap yoksa <img> ile devam
+      if (!src) {
+        src = await new Promise((resolve, reject) => {
+          try {
+            const url = URL.createObjectURL(file);
+            const img = new Image();
+            img.onload = () => {
+              try {
+                URL.revokeObjectURL(url);
+              } catch {}
+              resolve(img);
+            };
+            img.onerror = (e) => {
+              try {
+                URL.revokeObjectURL(url);
+              } catch {}
+              reject(e);
+            };
+            img.src = url;
+          } catch (e) {
+            reject(e);
+          }
+        });
+      }
+
+      // Büyük görsellerde downscale ederek şansı artır
+      const w = src?.width || src?.naturalWidth || 0;
+      const h = src?.height || src?.naturalHeight || 0;
+      let input = src;
+      if (w && h) {
+        const maxDim = 1600;
+        const scale = Math.min(1, maxDim / Math.max(w, h));
+        if (scale < 1 && typeof document !== "undefined") {
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.max(1, Math.round(w * scale));
+          canvas.height = Math.max(1, Math.round(h * scale));
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(src, 0, 0, canvas.width, canvas.height);
+            input = canvas;
+          }
+        }
+      }
+
+      const codes = await det.detect(input);
+      const vals = (codes || [])
+        .map((c) => String(c?.rawValue || c?.value || "").trim())
+        .filter(Boolean);
+
+      // en iyi aday: sayısal barkod varsa onu öne al
+      const compact = vals.map((v) => v.replace(/\s+/g, ""));
+      const numeric = compact.find((v) => /^[0-9]{8,14}$/.test(v));
+      if (numeric) return [numeric];
+      return compact;
+    } catch {
+      return [];
+    }
+  };
+
+  const detectTextFromFile = async (file) => {
+    try {
+      if (typeof window === "undefined") return "";
+      const TD = window.TextDetector;
+      if (!TD) return "";
+
+      const det = new TD();
+      let src = null;
+      try {
+        if (typeof createImageBitmap === "function") {
+          src = await createImageBitmap(file);
+        }
+      } catch {
+        src = null;
+      }
+      if (!src) return "";
+
+      const regions = await det.detect(src);
+      const texts = (regions || [])
+        .map((r) => String(r?.rawValue || r?.text || "").trim())
+        .filter((x) => x && x.length >= 3);
+
+      if (!texts.length) return "";
+
+      // En uzun metni seç (genelde en anlamlı)
+      texts.sort((a, b) => b.length - a.length);
+      let best = texts[0];
+      best = best.replace(/\s+/g, " ").trim();
+      if (best.length > 140) best = best.slice(0, 140);
+      return best;
+    } catch {
+      return "";
+    }
+  };
+
+	async function onPickFile(e) {
   const f = e.target.files?.[0];
   if (!f) return;
 
@@ -300,58 +425,96 @@ async function onPickFile(e) {
     return;
   }
 
-  setLoading(true);
-  setStatus(STATUS_SRC, {
-    text: t("search.imageAnalyzing", { defaultValue: "Görsel analiz ediliyor…" }),
-    showDots: true,
-    tone: "gold",
-    priority: STATUS_PRIO,
-  });
+	  setLoading(true);
+	  try {
+	    window?.localStorage?.setItem?.("lastQuerySource", "camera");
+	  } catch {}
+	  setStatus(STATUS_SRC, {
+	    text: t("search.imageAnalyzing", { defaultValue: "Görsel analiz ediliyor…" }),
+	    showDots: true,
+	    tone: "gold",
+	    priority: STATUS_PRIO,
+	  });
 
   let kickedSearch = false;
 
-  try {
-    const b64 = await new Promise((ok, bad) => {
-      try {
-        const r = new FileReader();
-        r.onerror = () => bad(new Error("FILE_READ_ERROR"));
-        r.onload = () => ok(String(r.result || ""));
-        r.readAsDataURL(f);
-      } catch (e2) {
-        bad(e2);
-      }
-    });
+	  try {
+	    // 1) Ücretsiz: BarcodeDetector (barkod/QR)
+	    setStatus(STATUS_SRC, {
+	      text: t("qrScanner.scanning", { defaultValue: "Barkod/QR taranıyor…" }),
+	      showDots: true,
+	      tone: "gold",
+	      priority: STATUS_PRIO,
+	    });
+	    const codes = await detectBarcodesFromFile(f);
+	    if (codes?.length) {
+	      kickedSearch = true;
+	      await doBarcodeLookup(codes[0]);
+	      return;
+	    }
 
-    const r = await fetch("/api/vision?diag=0", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ imageBase64: b64, locale: i18n?.language || "tr" }),
-    });
+	    // 2) Ücretsiz: TextDetector (varsa)
+	    setStatus(STATUS_SRC, {
+	      text: t("search.imageAnalyzing", { defaultValue: "Görsel analiz ediliyor…" }),
+	      showDots: true,
+	      tone: "gold",
+	      priority: STATUS_PRIO,
+	    });
+	    const text = await detectTextFromFile(f);
+	    if (text) {
+	      setValue(text);
+	      kickedSearch = true;
+	      await doSearch(text, "camera");
+	      return;
+	    }
 
-    const j = await r.json().catch(() => null);
-    const finalQuery = String(j?.query || "").trim();
+	    // 3) En son: Backend /api/vision (buradan ücretli fallback'ler çalışabilir)
+	    const b64 = await new Promise((ok, bad) => {
+	      try {
+	        const r = new FileReader();
+	        r.onerror = () => bad(new Error("FILE_READ_ERROR"));
+	        r.onload = () => ok(String(r.result || ""));
+	        r.readAsDataURL(f);
+	      } catch (e2) {
+	        bad(e2);
+	      }
+	    });
 
-    if (!r.ok || j?.ok === false || !finalQuery) {
-      const msg = j?.error || `VISION_FAILED_HTTP_${r.status}`;
-      throw new Error(msg);
-    }
+	    const r = await fetch("/api/vision?diag=0", {
+	      method: "POST",
+	      headers: { "Content-Type": "application/json" },
+	      body: JSON.stringify({ imageBase64: b64, locale: i18n?.language || "tr" }),
+	    });
 
-    setValue(finalQuery);
+	    const j = await r.json().catch(() => null);
+	    const fromCode = String(j?.qr || j?.barcode || "").trim();
+	    const finalQuery = String(j?.query || "").trim();
 
-    flashMsg(
-      t("search.imageDetected", {
-        defaultValue: "Görüntüden anladığım: {{query}}",
-        query: finalQuery,
-      }),
-      900,
-      "muted"
-    );
+	    if (fromCode && /^[0-9]{8,14}$/.test(fromCode.replace(/\s+/g, ""))) {
+	      kickedSearch = true;
+	      await doBarcodeLookup(fromCode.replace(/\s+/g, ""));
+	      return;
+	    }
 
-    setCalm(t("search.voiceDone", { defaultValue: "Tamam — arıyorum." }), 600);
+	    if (!r.ok || j?.ok === false || !finalQuery) {
+	      const msg = j?.error || `VISION_FAILED_HTTP_${r.status}`;
+	      throw new Error(msg);
+	    }
 
-    kickedSearch = true;
-    await doSearch(finalQuery, "camera");
-  } catch (err) {
+	    setValue(finalQuery);
+	    flashMsg(
+	      t("search.imageDetected", {
+	        defaultValue: "Görüntüden anladığım: {{query}}",
+	        query: finalQuery,
+	      }),
+	      900,
+	      "muted"
+	    );
+
+	    setCalm(t("search.voiceDone", { defaultValue: "Tamam — arıyorum." }), 600);
+	    kickedSearch = true;
+	    await doSearch(finalQuery, "camera");
+	  } catch (err) {
     console.error("Vision error:", err);
     flashMsg(
       t("cameraVisionDisabled", {
@@ -367,13 +530,25 @@ async function onPickFile(e) {
   }
 }
 
-function handleQRDetect(result) {
-    if (!result) return;
-
-    localStorage.setItem("lastQuery", result);
-    setScannerOpen(false);
-    doSearch(result, "qr");
-  }
+	function handleQRDetect(result) {
+	  if (!result) return;
+	  const raw = String(result || "").trim();
+	  const compact = raw.replace(/\s+/g, "");
+	
+	  try {
+	    window?.localStorage?.setItem?.("lastQuery", raw);
+	    window?.localStorage?.setItem?.("lastQuerySource", "qr");
+	  } catch {}
+	
+	  setScannerOpen(false);
+	
+	  if (isLikelyBarcode(compact)) {
+	    doBarcodeLookup(compact);
+	    return;
+	  }
+	
+	  doSearch(raw, "qr");
+	}
 
 
   // ============================================================
