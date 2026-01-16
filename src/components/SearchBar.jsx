@@ -310,69 +310,7 @@ async function onPickFile(e) {
 
   let kickedSearch = false;
 
-  // ✅ ÜCRETSİZ ÖNCELİK 1: Eğer tarayıcı destekliyorsa, görsel üstündeki yazıyı (TextDetector) yakala.
-  // Bu, paket üstündeki marka/model metinlerini kredi yakmadan query'ye çevirebilir.
-  async function tryFreeTextDetect(file) {
-    try {
-      const TD = typeof window !== "undefined" ? window.TextDetector : null;
-      if (!TD) return "";
-      const detector = new TD();
-      const bmp = await createImageBitmap(file);
-      const results = await detector.detect(bmp);
-      const texts = (Array.isArray(results) ? results : [])
-        .map((r) => String(r?.rawValue || r?.text || "").trim())
-        .filter(Boolean);
-      const joined = texts.join(" ").trim();
-      if (!joined) return "";
-
-      // Hafif normalize + stopword temizliği
-      let s = joined
-        .normalize("NFKC")
-        .replace(/[^0-9A-Za-zğüşöçİıĞÜŞÖÇ\s]/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
-
-      const STOP = new Set([
-        "ve","ile","icin","için","en","cok","çok","uygun","ucuz","fiyat","kampanya","indirim",
-        "orijinal","resmi","satıcı","satici","satın","satin","al","alma","almak","bul","bulun",
-        "lütfen","lutfen","fotoğraf","fotograf","resim","urun","ürün","hizmet","service",
-        "made","in","for","the","and","with","new","best","quality"
-      ]);
-
-      const words = s
-        .split(" ")
-        .filter(Boolean)
-        .map((w) => w.trim())
-        .filter((w) => w.length > 1)
-        .filter((w) => !STOP.has(w.toLowerCase()));
-
-      if (!words.length) return "";
-      // Aşırı uzun query'yi kırp
-      return words.slice(0, 8).join(" ").trim();
-    } catch {
-      return "";
-    }
-  }
-
   try {
-    // 0) Ücretsiz TextDetector (varsa)
-    const freeText = await tryFreeTextDetect(f);
-    if (freeText) {
-      setValue(freeText);
-      flashMsg(
-        t("search.imageDetected", {
-          defaultValue: "Görüntüden anladığım: {{query}}",
-          query: freeText,
-        }),
-        900,
-        "muted"
-      );
-      setCalm(t("search.voiceDone", { defaultValue: "Tamam — arıyorum." }), 600);
-      kickedSearch = true;
-      await doSearch(freeText, "camera");
-      return;
-    }
-
     const b64 = await new Promise((ok, bad) => {
       try {
         const r = new FileReader();
@@ -384,46 +322,14 @@ async function onPickFile(e) {
       }
     });
 
-    // 1) Vision (Gemini) — varsa çalışır. (Kredi yakmayan query çıkarımı)
-    let r = await fetch("/api/vision?diag=0", {
+    const r = await fetch("/api/vision?diag=0", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ imageBase64: b64, locale: i18n?.language || "tr" }),
     });
 
-    let j = await r.json().catch(() => null);
-    let finalQuery = String(j?.query || "").trim();
-
-    // 2) Eğer Gemini yoksa/NO_MATCH ise → SON ÇARE: SerpApi Lens query çıkarımı (allowSerpLens)
-    // Not: Bu sadece query üretir; asıl arama zinciri (affiliate→free→CSE→Serp) doSearch tarafında.
-    const needLens =
-      !r.ok ||
-      j?.ok === false ||
-      !finalQuery ||
-      String(j?.error || "") === "VISION_DISABLED" ||
-      String(j?.error || "") === "NO_MATCH";
-
-    if (needLens) {
-      try {
-        r = await fetch("/api/vision?diag=0&allowSerpLens=1", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            // backend bu header ile de allowSerpLens açabiliyor
-            "x-fae-allow-serp-lens": "1",
-          },
-          body: JSON.stringify({
-            imageBase64: b64,
-            locale: i18n?.language || "tr",
-            allowSerpLens: true,
-          }),
-        });
-        j = await r.json().catch(() => null);
-        finalQuery = String(j?.query || "").trim();
-      } catch {
-        // ignore — aşağıda genel hata mesajına düşer
-      }
-    }
+    const j = await r.json().catch(() => null);
+    const finalQuery = String(j?.query || "").trim();
 
     if (!r.ok || j?.ok === false || !finalQuery) {
       const msg = j?.error || `VISION_FAILED_HTTP_${r.status}`;
@@ -448,10 +354,11 @@ async function onPickFile(e) {
   } catch (err) {
     console.error("Vision error:", err);
     flashMsg(
-      t("search.cameraError", {
-        defaultValue: "Görsel analizi başarısız. Lütfen tekrar dene.",
+      t("cameraVisionDisabled", {
+        defaultValue:
+          "Kamera ile arama hattı hazır ama görsel tanıma kapalı görünüyor. Şimdilik metinle arayın; API anahtarı gelince kamera otomatik çalışır.",
       }),
-      2600,
+      3500,
       "danger"
     );
   } finally {
