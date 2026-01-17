@@ -6,6 +6,8 @@ import { useTranslation } from "react-i18next";
 import { useStatusBus } from "../context/StatusBusContext";
 import QRScanner from "./QRScanner";
 import { detectCategory } from "../utils/categoryExtractor";
+import { API_BASE } from "../utils/api";
+import { barcodeLookupFlow, isLikelyBarcode } from "../utils/barcodeLookup";
 export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
   const { t, i18n } = useTranslation();
 
@@ -65,112 +67,38 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
   // ============================================================
   const locale = (i18n?.language || "tr").toLowerCase();
 
-  // =========================
-  // Barkod helpers (15dk cache)
-  // =========================
-  const isLikelyBarcode = (s) => /^[0-9]{8,14}$/.test(String(s || "").trim());
+	  // =========================
+	  // Barkod (free-first + tek akış)
+	  // =========================
+	  const doBarcodeLookup = async (qrRaw) => {
+	    const qr = String(qrRaw || "").trim().replace(/\s+/g, "");
+	    if (!qr) return;
 
-  const barcodeCacheKey = (qr) => `fae.barcodeCache:${locale}:${qr}`;
-  const getBarcodeCache = (qr) => {
-    try {
-      const raw = window?.localStorage?.getItem(barcodeCacheKey(qr));
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      if (!parsed || !parsed.ts || Date.now() - parsed.ts > 15 * 60 * 1000) return null; // 15dk TTL
-      return parsed.payload || null;
-    } catch {
-      return null;
-    }
-  };
+	    setScannerOpen(false);
+	    setLoading(true);
+	    setBusy(t("ai.analyzing", { defaultValue: "Analiz yapılıyor…" }));
 
-  const setBarcodeCache = (qr, payload) => {
-    try {
-      window?.localStorage?.setItem(
-        barcodeCacheKey(qr),
-        JSON.stringify({ ts: Date.now(), payload })
-      );
-    } catch {}
-  };
+	    try {
+	      const out = await barcodeLookupFlow(qr, {
+	        locale,
+	        allowPaidSecondStage: true,
+	        source: "barcode",
+	      });
 
-  const injectVitrine = (payload) => {
-    try {
-      window.dispatchEvent(new CustomEvent("fae.vitrine.inject", { detail: payload }));
-    } catch {}
-  };
-
-  const doBarcodeLookup = async (qrRaw) => {
-    const qr = String(qrRaw || "").trim();
-    if (!qr) return;
-
-    setScannerOpen(false);
-
-    const cached = getBarcodeCache(qr);
-    if (cached) {
-      injectVitrine(cached);
-      return;
-    }
-
-    setLoading(true);
-    setBusy(t("ai.analyzing", { defaultValue: "Analiz yapılıyor…" }));
-
-    try {
-      const resp = await fetch(`/api/product-info/product?force=0&diag=0&paid=1`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ qr, locale, allowPaid: true }),
-      });
-
-      const json = await resp.json().catch(() => null);
-      const product = json?.product || {};
-      const offers = [...(product.offersTrusted || []), ...(product.offersOther || [])];
-
-      // Fiyat zorunlu: price/finalPrice yoksa ele
-      const items = offers
-        .map((o) => ({
-          ...o,
-          title: o.title || product.title || product.name || qr,
-          image: o.image || product.image,
-          price: o.price ?? o.finalPrice,
-          finalPrice: o.finalPrice ?? o.price,
-          currency: o.currency || product.currency || "TRY",
-        }))
-        .filter((x) => typeof x.price === "number" && x.price > 0);
-
-      if (!items.length) {
-        setCalm(t("vitrine.noResults", { defaultValue: "Üzgünüm, sonuç bulunamadı." }), 2100);
-        // App.jsx TTS + toast için
-        window.dispatchEvent(
-          new CustomEvent("fae.vitrine.results", {
-            detail: { status: "empty", query: product.title || product.name || qr, items: [], source: "barcode" },
-          })
-        );
-        return;
-      }
-
-      const payload = {
-        query: product.title || product.name || qr,
-        items,
-        source: "barcode",
-        product,
-        ok: true,
-      };
-
-      setBarcodeCache(qr, payload);
-      injectVitrine(payload);
-
-      setCalm(t("vitrine.resultsReady", { defaultValue: "Sonuçlar vitrinde hazır." }), 2100);
-    } catch (e) {
-      setCalm(t("vitrine.resultsError", { defaultValue: "Arama sırasında hata oluştu." }), 2100);
-      window.dispatchEvent(
-        new CustomEvent("fae.vitrine.results", {
-          detail: { status: "error", query: qr, items: [], source: "barcode" },
-        })
-      );
-    } finally {
-      setLoading(false);
-      clearStatus(STATUS_SRC);
-    }
-  };
+	      if (out?.status === "success" || out?.status === "success_paid" || out?.status === "cached") {
+	        setCalm(t("vitrine.resultsReady", { defaultValue: "Sonuçlar vitrinde hazır." }), 2100);
+	      } else if (out?.status === "invalid" || out?.status === "empty") {
+	        setCalm(t("vitrine.noResults", { defaultValue: "Üzgünüm, sonuç bulunamadı." }), 2100);
+	      } else {
+	        setCalm(t("vitrine.resultsError", { defaultValue: "Arama sırasında hata oluştu." }), 2100);
+	      }
+	    } catch {
+	      setCalm(t("vitrine.resultsError", { defaultValue: "Arama sırasında hata oluştu." }), 2100);
+	    } finally {
+	      setLoading(false);
+	      clearStatus(STATUS_SRC);
+	    }
+	  };
 
   // =========================
   // Tek arama: dedupe + runUnifiedSearch
@@ -483,7 +411,8 @@ rec.lang =
 	      }
 	    });
 
-	    const r = await fetch("/api/vision?diag=0&allowSerpLens=1", {
+	    const backend = API_BASE || "";
+	    const r = await fetch(`${backend}/api/vision?diag=0&allowSerpLens=1`, {
 	      method: "POST",
 	      headers: { "Content-Type": "application/json" },
 	      body: JSON.stringify({ imageBase64: b64, locale: i18n?.language || "tr", allowSerpLens: true }),
