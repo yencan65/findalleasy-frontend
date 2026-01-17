@@ -19,7 +19,7 @@ import { QrCode, Search as SearchIcon, X } from "lucide-react";
 import TelemetryPanel from "./components/Admin/TelemetryPanel";
 import SystemTelemetryPanel from "./components/SystemTelemetryPanel";
 import { runUnifiedSearch } from "./utils/searchBridge";
-import { barcodeLookupFlow, isLikelyBarcode } from "./utils/barcodeLookup";
+import { barcodeLookupAndInject } from "./utils/barcodeLookup";
 
 // ✅ Legal pages (affiliate approvals / compliance)
 import LegalShell from "./components/LegalShell.jsx";
@@ -987,43 +987,53 @@ useEffect(() => {
         // JSON değilse düz metin olarak devam
       }
 
-	      const compact = String(q || "").trim().replace(/\s+/g, "");
-	      const isBarcode = isLikelyBarcode(compact);
-	      if (!q) return;
+      const isBarcode = /^\d{8,18}$/.test(String(q || "").trim());
+      if (!q) return;
 
-	      // ✅ Barkod ise: product-info (free-first) -> vitrin inject
-	      // Öncelik: resmi/affiliate + ücretsiz kaynaklar -> son çare paid fallback
-	      if (isBarcode) {
-	        try {
-	          setValue(compact);
-	        } catch {}
+      // ✅ Barkod ise: AI hattına girmeden (kredi yakmadan) direkt product-info → vitrine inject.
+      // Öncelik: resmi/affiliate + ücretsiz kaynaklar. Paid fallback sadece gerekirse (backend allowPaid).
+      if (isBarcode) {
+        try {
+          // Kullanıcı beklemesin: tarayıcı kapanır kapanmaz “çözümleme” başlasın.
+          setValue(q);
+          showVoiceToast(
+            t("qrScanner.analyzing", { defaultValue: "Barkod çözümleniyor…" }),
+            "info",
+            1800
+          );
+        } catch {}
 
-	        try {
-	          localStorage.setItem("lastQuerySource", "qr");
-	        } catch {}
+        try {
+          const out = await barcodeLookupAndInject(q, {
+            locale: i18n.language || "tr",
+            source: "barcode",
+            // paid = false önce; gerekirse util içinde 2. tur paid=true denenir
+          });
 
-	        setSearchBusy(true);
-	        const locale = (i18n?.language || "tr").toLowerCase();
-	        const out = await barcodeLookupFlow(compact, {
-	          locale,
-	          allowPaidSecondStage: true,
-	          source: "barcode",
-	        });
+          const humanQ = String(out?.query || "").trim();
+          if (humanQ && humanQ !== q) {
+            try { setValue(humanQ); } catch {}
+            try { localStorage.setItem("lastQuery", humanQ); } catch {}
+          } else {
+            try { localStorage.setItem("lastQuery", q); } catch {}
+          }
 
-	        const humanQ = String(out?.query || compact).trim();
-	        try {
-	          if (humanQ && humanQ !== compact) setValue(humanQ);
-	        } catch {}
-	        try {
-	          localStorage.setItem("lastQuery", humanQ || compact);
-	        } catch {}
+          return;
+        } catch (e) {
+          console.warn("Barcode lookup/inject failed:", e);
+          showVoiceToast(
+            t("search.searchError", {
+              defaultValue: "Arama sırasında hata oluştu. Lütfen tekrar deneyin.",
+            }),
+            "error",
+            2600
+          );
+          return;
+        }
+      }
 
-	        setSearchBusy(false);
-	        return;
-	      }
-
-	      // 🔥 Normal QR text
-	      doSearch(q, { source: "qr" });
+      // 🔥 TEK BEYİN: normal QR text
+      doSearch(q, { source: "qr" });
     }}
     onClose={() => setQrScanOpen(false)}
   />
