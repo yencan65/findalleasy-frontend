@@ -1,6 +1,7 @@
 // src/components/SearchBar.jsx
 import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { Search, Mic, Camera, QrCode } from "lucide-react";
+import { BrowserMultiFormatReader } from "@zxing/browser";
 import { runUnifiedSearch } from "../utils/searchBridge";
 import { useTranslation } from "react-i18next";
 import { useStatusBus } from "../context/StatusBusContext";
@@ -114,10 +115,10 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     setBusy(t("ai.analyzing", { defaultValue: "Analiz yapılıyor…" }));
 
     try {
-      const resp = await fetch(`/api/product-info/product?force=0&diag=0&paid=1`, {
+      const resp = await fetch(`/api/product-info/product?force=0&diag=0&paid=0`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ qr, locale, allowPaid: true }),
+        body: JSON.stringify({ qr, locale, allowPaid: false }),
       });
 
       const json = await resp.json().catch(() => null);
@@ -195,10 +196,7 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
 
       try {
         const category = detectCategory(cleaned, locale);
-        try {
-          window?.localStorage?.setItem?.("lastQueryCategory", String(category || ""));
-        } catch {}
-        await runUnifiedSearch(cleaned, { region: selectedRegion, categoryHint: category, locale, source });
+        await runUnifiedSearch(cleaned, { region: selectedRegion, category, locale, source });
       } finally {
         setLoading(false);
         clearStatus(STATUS_SRC);
@@ -280,269 +278,148 @@ rec.lang =
   }
 
 
+  
   // ============================================================
-  // Kamera dosyası: Ücretsiz tespit (BarcodeDetector/TextDetector) → en son backend /api/vision
+  // Kamera dosyası: ZXing ile barkod/QR decode (ÜCRETSİZ)
+  // - Kod yoksa arama YOK (alakasız sonuç üretmez)
+  // - /api/vision çağrısı YOK
   // ============================================================
   const detectBarcodesFromFile = async (file) => {
     try {
       if (typeof window === "undefined") return [];
-      const BD = window.BarcodeDetector;
-      if (!BD) return [];
+      if (!file) return [];
 
-      const formats = [
-        "qr_code",
-        "ean_13",
-        "ean_8",
-        "upc_a",
-        "upc_e",
-        "code_128",
-        "code_39",
-        "itf",
-        "codabar",
-        "data_matrix",
-      ];
+      const reader = new BrowserMultiFormatReader();
+      const url = URL.createObjectURL(file);
 
-      const det = new BD({ formats });
-      let src = null;
       try {
-        if (typeof createImageBitmap === "function") {
-          src = await createImageBitmap(file);
-        }
+        const result = await reader.decodeFromImageUrl(url);
+        const raw = String(result?.getText?.() ?? result?.text ?? "").trim();
+        if (!raw) return [];
+
+        const compact = raw.replace(/\s+/g, "");
+        const numeric = /^[0-9]{8,14}$/.test(compact) ? compact : raw;
+        return [numeric];
       } catch {
-        src = null;
+        return [];
+      } finally {
+        try { URL.revokeObjectURL(url); } catch {}
+        try { reader.reset(); } catch {}
       }
-
-      // createImageBitmap yoksa <img> ile devam
-      if (!src) {
-        src = await new Promise((resolve, reject) => {
-          try {
-            const url = URL.createObjectURL(file);
-            const img = new Image();
-            img.onload = () => {
-              try {
-                URL.revokeObjectURL(url);
-              } catch {}
-              resolve(img);
-            };
-            img.onerror = (e) => {
-              try {
-                URL.revokeObjectURL(url);
-              } catch {}
-              reject(e);
-            };
-            img.src = url;
-          } catch (e) {
-            reject(e);
-          }
-        });
-      }
-
-      // Büyük görsellerde downscale ederek şansı artır
-      const w = src?.width || src?.naturalWidth || 0;
-      const h = src?.height || src?.naturalHeight || 0;
-      let input = src;
-      if (w && h) {
-        const maxDim = 1600;
-        const scale = Math.min(1, maxDim / Math.max(w, h));
-        if (scale < 1 && typeof document !== "undefined") {
-          const canvas = document.createElement("canvas");
-          canvas.width = Math.max(1, Math.round(w * scale));
-          canvas.height = Math.max(1, Math.round(h * scale));
-          const ctx = canvas.getContext("2d");
-          if (ctx) {
-            ctx.drawImage(src, 0, 0, canvas.width, canvas.height);
-            input = canvas;
-          }
-        }
-      }
-
-      const codes = await det.detect(input);
-      const vals = (codes || [])
-        .map((c) => String(c?.rawValue || c?.value || "").trim())
-        .filter(Boolean);
-
-      // en iyi aday: sayısal barkod varsa onu öne al
-      const compact = vals.map((v) => v.replace(/\s+/g, ""));
-      const numeric = compact.find((v) => /^[0-9]{8,14}$/.test(v));
-      if (numeric) return [numeric];
-      return compact;
     } catch {
       return [];
     }
   };
 
-  const detectTextFromFile = async (file) => {
+  const normalizeQrViaBackend = async (qrRaw) => {
     try {
-      if (typeof window === "undefined") return "";
-      const TD = window.TextDetector;
-      if (!TD) return "";
+      const qr = String(qrRaw || "").trim();
+      if (!qr) return "";
 
-      const det = new TD();
-      let src = null;
-      try {
-        if (typeof createImageBitmap === "function") {
-          src = await createImageBitmap(file);
-        }
-      } catch {
-        src = null;
-      }
-      if (!src) return "";
+      const resp = await fetch(`/api/product-info/product?force=0&diag=0&paid=0`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ qr, locale, allowPaid: false }),
+      });
 
-      const regions = await det.detect(src);
-      const texts = (regions || [])
-        .map((r) => String(r?.rawValue || r?.text || "").trim())
-        .filter((x) => x && x.length >= 3);
+      const json = await resp.json().catch(() => null);
+      const name =
+        json?.product?.name ||
+        json?.product?.title ||
+        json?.productName ||
+        json?.title ||
+        "";
 
-      if (!texts.length) return "";
-
-      // En uzun metni seç (genelde en anlamlı)
-      texts.sort((a, b) => b.length - a.length);
-      let best = texts[0];
-      best = best.replace(/\s+/g, " ").trim();
-      if (best.length > 140) best = best.slice(0, 140);
-      return best;
+      const q = String(name || "").trim();
+      return q;
     } catch {
       return "";
     }
   };
 
-	async function onPickFile(e) {
-  const f = e.target.files?.[0];
-  if (!f) return;
+  async function onPickFile(e) {
+    const f = e.target.files?.[0];
+    if (!f) return;
 
-  // Aynı dosya tekrar seçilince de onChange tetiklensin
-  try {
-    e.target.value = "";
-  } catch {}
+    // Aynı dosya tekrar seçilince de onChange tetiklensin
+    try { e.target.value = ""; } catch {}
 
-  // Basit boyut kalkanı (backend de ayrıca clamp var)
-  const MAX_BYTES = 6 * 1024 * 1024;
-  if (f.size > MAX_BYTES) {
-    flashMsg(
-      t("cameraTooLarge", {
-        defaultValue: "Fotoğraf çok büyük. Lütfen daha küçük bir görsel seç.",
-      }),
-      2400,
-      "danger"
-    );
-    return;
+    // Basit boyut kalkanı (backend de ayrıca clamp var)
+    const MAX_BYTES = 6 * 1024 * 1024;
+    if (f.size > MAX_BYTES) {
+      flashMsg(
+        t("cameraTooLarge", {
+          defaultValue: "Fotoğraf çok büyük. Lütfen daha küçük bir görsel seç.",
+        }),
+        2400,
+        "danger"
+      );
+      return;
+    }
+
+    setLoading(true);
+    setStatus(STATUS_SRC, {
+      text: t("qrScanner.scanning", { defaultValue: "Barkod/QR taranıyor…" }),
+      showDots: true,
+      tone: "gold",
+      priority: STATUS_PRIO,
+    });
+
+    let kickedSearch = false;
+
+    try {
+      const codes = await detectBarcodesFromFile(f);
+      if (codes?.length) {
+        kickedSearch = true;
+
+        const raw = String(codes[0] || "").trim();
+        const compact = raw.replace(/\s+/g, "");
+
+        // Barkod ise: ürün fiyatı zorunlu barcode hattına git
+        if (isLikelyBarcode(compact)) {
+          await doBarcodeLookup(compact);
+          return;
+        }
+
+        // QR ise: backend üzerinden (ücretsiz) normalize et → sonra ara
+        const normalized = await normalizeQrViaBackend(raw);
+        const q = String(normalized || raw).trim();
+        if (!q) {
+          flashMsg(
+            t("cameraNoCode", {
+              defaultValue:
+                "Kod okundu ama ürün adı çıkmadı. Lütfen başka bir QR/barkod deneyin.",
+            }),
+            2600,
+            "danger"
+          );
+          return;
+        }
+
+        setValue(q);
+        await doSearch(q, "camera");
+        return;
+      }
+
+      // Kod yoksa: arama yapma (alakasız sonuç üretme)
+      flashMsg(
+        t("cameraNoCode", {
+          defaultValue:
+            "Bu görselde barkod/QR tespit edemedim. Lütfen barkodu kadraja alıp tekrar deneyin.",
+        }),
+        3200,
+        "danger"
+      );
+    } finally {
+      if (!kickedSearch) {
+        setLoading(false);
+        clearStatus(STATUS_SRC);
+      }
+    }
   }
 
-	  setLoading(true);
-	  try {
-	    window?.localStorage?.setItem?.("lastQuerySource", "camera");
-	  } catch {}
-	  setStatus(STATUS_SRC, {
-	    text: t("search.imageAnalyzing", { defaultValue: "Görsel analiz ediliyor…" }),
-	    showDots: true,
-	    tone: "gold",
-	    priority: STATUS_PRIO,
-	  });
 
-  let kickedSearch = false;
-
-	  try {
-	    // 1) Ücretsiz: BarcodeDetector (barkod/QR)
-	    setStatus(STATUS_SRC, {
-	      text: t("qrScanner.scanning", { defaultValue: "Barkod/QR taranıyor…" }),
-	      showDots: true,
-	      tone: "gold",
-	      priority: STATUS_PRIO,
-	    });
-	    const codes = await detectBarcodesFromFile(f);
-	    if (codes?.length) {
-	      kickedSearch = true;
-	      await doBarcodeLookup(codes[0]);
-	      return;
-	    }
-
-	    // 2) Ücretsiz: TextDetector (varsa)
-	    setStatus(STATUS_SRC, {
-	      text: t("search.imageAnalyzing", { defaultValue: "Görsel analiz ediliyor…" }),
-	      showDots: true,
-	      tone: "gold",
-	      priority: STATUS_PRIO,
-	    });
-	    const text = await detectTextFromFile(f);
-	    if (text) {
-	      setValue(text);
-	      kickedSearch = true;
-	      await doSearch(text, "camera");
-	      return;
-	    }
-
-	    // 3) En son: Backend /api/vision (buradan ücretli fallback'ler çalışabilir)
-	    const b64 = await new Promise((ok, bad) => {
-	      try {
-	        const r = new FileReader();
-	        r.onerror = () => bad(new Error("FILE_READ_ERROR"));
-	        r.onload = () => ok(String(r.result || ""));
-	        r.readAsDataURL(f);
-	      } catch (e2) {
-	        bad(e2);
-	      }
-	    });
-
-	    const r = await fetch("/api/vision?diag=0&allowSerpLens=1", {
-	      method: "POST",
-	      headers: { "Content-Type": "application/json" },
-	      body: JSON.stringify({ imageBase64: b64, locale: i18n?.language || "tr", allowSerpLens: true }),
-	    });
-
-	    const j = await r.json().catch(() => null);
-	    const finalQuery = String(j?.query || "").trim();
-	    const barcodeCandidate = String(
-	      j?.barcode ||
-	        (Array.isArray(j?.barcodes) ? j.barcodes[0] : "") ||
-	        j?.qr ||
-	        ""
-	    ).trim();
-
-	    // Vision'dan barkod çıkarsa: barcode->product-info hattına git (kredi yakmaz).
-	    const bc = isLikelyBarcode(barcodeCandidate)
-	      ? barcodeCandidate.replace(/\s+/g, "")
-	      : null;
-	    if (bc) {
-	      kickedSearch = true;
-	      await doBarcodeLookup(bc);
-	      return;
-	    }
-
-	    if (!r.ok || j?.ok === false || !finalQuery) {
-	      const msg = j?.error || `VISION_FAILED_HTTP_${r.status}`;
-	      throw new Error(msg);
-	    }
-
-	    setValue(finalQuery);
-	    flashMsg(
-	      t("search.imageDetected", {
-	        defaultValue: "Görüntüden anladığım: {{query}}",
-	        query: finalQuery,
-	      }),
-	      900,
-	      "muted"
-	    );
-
-	    setCalm(t("search.voiceDone", { defaultValue: "Tamam — arıyorum." }), 600);
-	    kickedSearch = true;
-	    await doSearch(finalQuery, "camera");
-	  } catch (err) {
-    console.error("Vision error:", err);
-    flashMsg(
-      t("cameraVisionDisabled", {
-        defaultValue:
-          "Kamera ile arama hattı hazır ama görsel tanıma kapalı görünüyor. Şimdilik metinle arayın; API anahtarı gelince kamera otomatik çalışır.",
-      }),
-      3500,
-      "danger"
-    );
-  } finally {
-    // Eğer arama hattına devrettiysek, loading'i doSearch yönetir.
-    if (!kickedSearch) setLoading(false);
-  }
-}
-
-	function handleQRDetect(result) {
+  function handleQRDetect(result) {
 	  if (!result) return;
 	  const raw = String(result || "").trim();
 	  const compact = raw.replace(/\s+/g, "");
