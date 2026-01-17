@@ -19,6 +19,7 @@ import { QrCode, Search as SearchIcon, X } from "lucide-react";
 import TelemetryPanel from "./components/Admin/TelemetryPanel";
 import SystemTelemetryPanel from "./components/SystemTelemetryPanel";
 import { runUnifiedSearch } from "./utils/searchBridge";
+import { barcodeLookupFlow, isLikelyBarcode } from "./utils/barcodeLookup";
 
 // ✅ Legal pages (affiliate approvals / compliance)
 import LegalShell from "./components/LegalShell.jsx";
@@ -986,56 +987,43 @@ useEffect(() => {
         // JSON değilse düz metin olarak devam
       }
 
-      const isBarcode = /^\d{8,14}$/.test(String(q || "").trim());
-      if (!q) return;
+	      const compact = String(q || "").trim().replace(/\s+/g, "");
+	      const isBarcode = isLikelyBarcode(compact);
+	      if (!q) return;
 
-      // ✅ Barkod ise: artık FE'de product-info çözümleme yok.
-      // Tek çağrı: /api/search → backend S200 barcode TWO-STAGE (barcode + resolved-name merge)
-      if (isBarcode) {
-        try {
-          setValue(q);
-        } catch {}
+	      // ✅ Barkod ise: product-info (free-first) -> vitrin inject
+	      // Öncelik: resmi/affiliate + ücretsiz kaynaklar -> son çare paid fallback
+	      if (isBarcode) {
+	        try {
+	          setValue(compact);
+	        } catch {}
 
-        const r = await doSearch(q, { source: "qr" });
+	        try {
+	          localStorage.setItem("lastQuerySource", "qr");
+	        } catch {}
 
-        const rq = String(r?._meta?.resolvedQuery || r?._meta?.upstreamMeta?.resolvedQuery || "").trim();
-        const bestTitle = String(r?.items?.[0]?.title || r?.results?.[0]?.title || "").trim();
-        const humanQ = rq && !/^\d{8,14}$/.test(rq) ? rq : (bestTitle || q);
+	        setSearchBusy(true);
+	        const locale = (i18n?.language || "tr").toLowerCase();
+	        const out = await barcodeLookupFlow(compact, {
+	          locale,
+	          allowPaidSecondStage: true,
+	          source: "barcode",
+	        });
 
-        // UI: barkod yerine isim göstermek için
-        try {
-          if (humanQ && humanQ !== q) setValue(humanQ);
-        } catch {}
+	        const humanQ = String(out?.query || compact).trim();
+	        try {
+	          if (humanQ && humanQ !== compact) setValue(humanQ);
+	        } catch {}
+	        try {
+	          localStorage.setItem("lastQuery", humanQ || compact);
+	        } catch {}
 
-        // Unified (AI + vitrin) artık "isim" ile tetiklenebilir.
-        try {
-          await runUnifiedSearch(humanQ || q, {
-            source: "qr",
-            categoryHint: "product",
-            meta: { barcode: q },
-          });
-        } catch {}
+	        setSearchBusy(false);
+	        return;
+	      }
 
-        // Global state: kullanıcıya isim kalsın
-        try {
-          localStorage.setItem("lastQuery", humanQ || q);
-        } catch {}
-
-        // Vitrin tetikleyicisi
-        try {
-          window.dispatchEvent(
-            new CustomEvent("fae.vitrine.search", {
-              detail: { query: humanQ || q },
-            })
-          );
-          window.dispatchEvent(new Event("fae.vitrine.refresh"));
-        } catch {}
-
-        return;
-      }
-
-      // 🔥 TEK BEYİN: normal QR text
-      doSearch(q, { source: "qr" });
+	      // 🔥 Normal QR text
+	      doSearch(q, { source: "qr" });
     }}
     onClose={() => setQrScanOpen(false)}
   />
