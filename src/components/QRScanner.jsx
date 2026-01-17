@@ -129,12 +129,36 @@ export default function QRScanner({ onDetect, onClose }) {
   }, [onClose]);
 
   // ==========================================================
-  //  ZXing canlı tarama (QR + barkod)
+  //  Barkod/QR canlı tarama (Native BarcodeDetector → ZXing fallback)
   // ==========================================================
   useEffect(() => {
     let isMounted = true;
     let controls = null;
-    const reader = new BrowserMultiFormatReader();
+    let rafId = null;
+    let fallbackTimer = null;
+
+    const reader = new BrowserMultiFormatReader(undefined, 250);
+
+    const stopAll = () => {
+      try { if (fallbackTimer) clearTimeout(fallbackTimer); } catch {}
+      fallbackTimer = null;
+
+      try { if (rafId) cancelAnimationFrame(rafId); } catch {}
+      rafId = null;
+
+      try { controls?.stop?.(); } catch {}
+      controls = null;
+
+      try { reader.reset(); } catch {}
+
+      try {
+        if (videoRef.current?.srcObject) {
+          const tracks = videoRef.current.srcObject.getTracks();
+          tracks.forEach((tt) => tt.stop());
+          videoRef.current.srcObject = null;
+        }
+      } catch {}
+    };
 
     const processDetectedValue = async (rawValue) => {
       if (!isMounted) return;
@@ -152,18 +176,14 @@ export default function QRScanner({ onDetect, onClose }) {
       setActive(false);
 
       // küçük kapanış sayacı
-      try {
-        if (countdownRef.current) clearInterval(countdownRef.current);
-      } catch {}
+      try { if (countdownRef.current) clearInterval(countdownRef.current); } catch {}
       let left = 2;
       setCountdown(left);
       countdownRef.current = setInterval(() => {
         left -= 1;
         setCountdown(left);
         if (left <= 0) {
-          try {
-            clearInterval(countdownRef.current);
-          } catch {}
+          try { clearInterval(countdownRef.current); } catch {}
           countdownRef.current = null;
         }
       }, 800);
@@ -183,45 +203,35 @@ export default function QRScanner({ onDetect, onClose }) {
       }
 
       setPhase("handoff");
-      try {
-        onDetect?.(query);
-      } catch {}
+      try { onDetect?.(query); } catch {}
 
       setTimeout(() => {
-        try {
-          handleClose();
-        } catch {}
+        try { handleClose(); } catch {}
       }, 1400);
     };
 
-    const start = async () => {
-      const cameraAvailable = await checkCameraAvailability();
-      if (!cameraAvailable) {
-        setError(t("qrScanner.noCameraBody", "Kamera bulunamadı veya erişim izni verilmedi."));
-        setHasCamera(false);
-        return;
-      }
-
-      const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-      if (window.location.protocol !== "https:" && !isLocalhost) {
-        setError(t("qrScanner.httpsRequired", "Kamera için güvenli bağlantı (HTTPS) gerekli."));
-        return;
-      }
-
+    const startZXing = async () => {
       if (!active || !isMounted) return;
 
       try {
         setPhase("starting");
         setError("");
+
         const videoEl = videoRef.current;
         if (!videoEl) {
           setError(t("qrScanner.videoNotFound", "Video elementi bulunamadı."));
           return;
         }
 
-        // facingMode ideal: environment
         controls = await reader.decodeFromConstraints(
-          { audio: false, video: { facingMode: { ideal: "environment" } } },
+          {
+            audio: false,
+            video: {
+              facingMode: { ideal: "environment" },
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
+          },
           videoEl,
           (result, err) => {
             if (result) {
@@ -250,25 +260,111 @@ export default function QRScanner({ onDetect, onClose }) {
       }
     };
 
+    const startNative = async () => {
+      if (!active || !isMounted) return false;
+      const videoEl = videoRef.current;
+      if (!videoEl) return false;
+
+      // BarcodeDetector yoksa direkt ZXing'e düş
+      if (typeof window === "undefined" || !("BarcodeDetector" in window)) return false;
+
+      try {
+        setPhase("starting");
+        setError("");
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+        });
+
+        videoEl.srcObject = stream;
+        try { await videoEl.play(); } catch {}
+
+        const detector = new window.BarcodeDetector({
+          formats: [
+            "ean_13",
+            "ean_8",
+            "upc_a",
+            "upc_e",
+            "code_128",
+            "code_39",
+            "itf",
+            "qr_code",
+          ],
+        });
+
+        if (isMounted) setPhase("scanning");
+
+        // Native çalışmazsa 6.5sn sonra ZXing fallback
+        fallbackTimer = setTimeout(() => {
+          if (!isMounted) return;
+          if (!active) return;
+          stopAll();
+          startZXing();
+        }, 6500);
+
+        const loop = async () => {
+          if (!isMounted) return;
+          if (!active) return;
+          try {
+            const codes = await detector.detect(videoEl);
+            if (codes && codes.length) {
+              const raw = codes[0]?.rawValue || codes[0]?.rawValue || "";
+              const txt = String(raw).trim();
+              if (txt) {
+                processDetectedValue(txt);
+                return;
+              }
+            }
+          } catch (e) {
+            // Native fail -> ZXing'e geç
+            stopAll();
+            startZXing();
+            return;
+          }
+          rafId = requestAnimationFrame(loop);
+        };
+
+        rafId = requestAnimationFrame(loop);
+        return true;
+      } catch (err) {
+        return false;
+      }
+    };
+
+    const start = async () => {
+      const cameraAvailable = await checkCameraAvailability();
+      if (!cameraAvailable) {
+        setError(t("qrScanner.noCameraBody", "Kamera bulunamadı veya erişim izni verilmedi."));
+        setHasCamera(false);
+        return;
+      }
+
+      const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+      if (window.location.protocol !== "https:" && !isLocalhost) {
+        setError(t("qrScanner.httpsRequired", "Kamera için güvenli bağlantı (HTTPS) gerekli."));
+        return;
+      }
+
+      if (!active || !isMounted) return;
+
+      // 1) Native dene
+      const ok = await startNative();
+      if (ok) return;
+
+      // 2) ZXing fallback
+      await startZXing();
+    };
+
     start();
 
     return () => {
       isMounted = false;
-
-      try {
-        controls?.stop?.();
-      } catch {}
-      try {
-        reader.reset();
-      } catch {}
-
-      try {
-        if (videoRef.current?.srcObject) {
-          const tracks = videoRef.current.srcObject.getTracks();
-          tracks.forEach((tt) => tt.stop());
-          videoRef.current.srcObject = null;
-        }
-      } catch {}
+      stopAll();
     };
   }, [active, t, onDetect, handleClose, fetchProductInfoFromCode, checkCameraAvailability]);
 
@@ -324,7 +420,7 @@ export default function QRScanner({ onDetect, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/90 flex flex-col items-center justify-center z-[9999]">
       <div className="relative">
-        <video ref={videoRef} className="w-[320px] h-[240px] rounded-xl border-2 border-[#d4af37] object-cover" muted playsInline />
+        <video ref={videoRef} className="w-[92vw] max-w-[560px] h-[320px] sm:h-[380px] rounded-xl border-2 border-[#d4af37] object-cover" muted playsInline />
 
         {/* Tarama çerçevesi */}
         <div className="absolute inset-0 border-2 border-transparent">
