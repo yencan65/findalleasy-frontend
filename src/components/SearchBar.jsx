@@ -725,7 +725,7 @@ rec.lang =
         className="search-bar-wrapper flex justify-center w-full"
       >
         <div
-          className="flex items-center bg-[linear-gradient(180deg,#F8EBC8_0%,#E7C876_55%,#D4AF37_100%)] border-2 border-black rounded-full px-3 sm:px-4 py-2 shadow-sm
+          className="flex items-center bg-[rgba(255,255,255,0.16)] border border-black/35 rounded-full px-3 sm:px-4 py-2 
                      w-[520px] max-w-[92%] sm:w-[420px] md:w-[500px] lg:w-[520px]
                      transition-all duration-300 ease-in-out"
         >
@@ -754,7 +754,7 @@ rec.lang =
               type="button"
               onClick={() => doSearch()}
               disabled={loading}
-              className="sm:hidden absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full border-2 border-black text-black bg-white/20 hover:bg-white/30 flex items-center justify-center shadow-sm transition disabled:opacity-60"
+              className="sm:hidden absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full border border-black/40 text-black/80 bg-transparent hover:bg-black/5 flex items-center justify-center shadow-sm transition disabled:opacity-60"
               aria-label={t("search.search")}
             >
               <Search size={18} />
@@ -765,7 +765,7 @@ rec.lang =
           <button
             type="button"
             onClick={startMic}
-            className="ml-1 text-black border-2 border-black bg-white/15 hover:bg-white/25 transition p-2 rounded-full"
+            className="ml-1 text-black/80 hover:text-black transition p-2 rounded-full"
             aria-label={t("search.voice", { defaultValue: "Sesli arama" })}
           >
             <Mic className={`w-5 h-5 ${micListening ? "animate-pulse" : ""}`} />
@@ -774,7 +774,7 @@ rec.lang =
           <button
             type="button"
             onClick={openCamera}
-            className="text-black border-2 border-black bg-white/15 hover:bg-white/25 transition p-2 rounded-full"
+            className="text-black/80 hover:text-black transition p-2 rounded-full"
             aria-label={t("cameraSearch", { defaultValue: "Kamera ile ara" })}
           >
             <Camera className="w-5 h-5" />
@@ -783,7 +783,7 @@ rec.lang =
           <button
             type="button"
             onClick={() => setScannerOpen(true)}
-            className="text-black border-2 border-black bg-white/15 hover:bg-white/25 transition p-2 rounded-full"
+            className="text-black/80 hover:text-black transition p-2 rounded-full"
             aria-label={t("qrSearch", { defaultValue: "QR ile ara" })}
           >
             <QrCode className="w-5 h-5" />
@@ -793,7 +793,7 @@ rec.lang =
           <button
             onClick={() => doSearch()}
             disabled={loading}
-            className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full border-2 border-black text-black bg-white/20 hover:bg-white/30 transition disabled:opacity-60"
+            className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full border border-black/40 text-black/80 bg-transparent hover:bg-black/5 hover:text-black transition disabled:opacity-60"
           >
             <Search size={18} />
           </button>
