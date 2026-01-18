@@ -190,18 +190,11 @@ export default function QRScanner({ onDetect, onClose }) {
 
       const raw = String(text || "").trim();
       const compact = raw.replace(/\s+/g, "");
-      const isBarcode = /^\d{8,14}$/.test(compact);
-      let query = isBarcode ? compact : raw;
+      const isBarcode = /^\d{8,18}$/.test(compact);
+      const query = isBarcode ? compact : raw;
 
-      // Barcode: FE'de isim çözümleme yapma. Backend barcode two-stage bunu yönetiyor.
-      if (!isBarcode) {
-        setPhase("normalizing");
-        try {
-          const normalized = await fetchProductInfoFromCode(raw);
-          if (normalized) query = normalized;
-        } catch {}
-      }
-
+      // ✅ IMPORTANT: Burada backend'e istek atmayız.
+      // Kullanıcı önce onaylasın; arama/lookup onaydan sonra App.jsx tarafında başlar.
       setPhase("handoff");
       try { onDetect?.(query); } catch {}
 

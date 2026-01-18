@@ -18,13 +18,15 @@ function resolveApiBase() {
       // Local dev
       if (h === "localhost" || h === "127.0.0.1") return "http://localhost:8080";
 
-      // Production: main site -> API subdomain
+      // Production: main site (and any subdomain) -> API subdomain
       if (h === "findalleasy.com" || h === "www.findalleasy.com" || h.endsWith(".findalleasy.com")) {
         return "https://api.findalleasy.com";
       }
 
-      // Other deploy domains: default to same-origin (empty base)
-      return "";
+      // ✅ IMPORTANT:
+      // Many preview/staging hosts (render/vercel/netlify/cloudflare pages) are NOT the API.
+      // If VITE_BACKEND_URL is not set, default to the real API to avoid silent same-origin 404s.
+      return "https://api.findalleasy.com";
     }
   } catch {}
 

@@ -1,6 +1,7 @@
 // ✅ src/App.jsx — TAMAMEN CERRAHİ OLARAK TEMİZLENMİŞ + GÜÇLENDİRİLMİŞ
 
 import React, { useState, useEffect, useRef } from "react";
+import { BrowserMultiFormatReader } from "@zxing/browser";
 import { API_BASE } from "./utils/api";
 import Header from "./components/Header.jsx";
 import NetworkStatusBanner from "./components/NetworkStatusBanner.jsx";
@@ -183,6 +184,7 @@ export default function App() {
   const [visionBusy, setVisionBusy] = useState(false);
   const [visionConfirm, setVisionConfirm] = useState(null); // { query, used, weak }
   const [voiceConfirm, setVoiceConfirm] = useState(null); // { query }
+  const [scanConfirm, setScanConfirm] = useState(null); // { kind: 'barcode'|'qr', isBarcode, code?, query?, source? }
   const searchInputRef = useRef(null);
 
   const showVoiceToast = (msg, kind = "info", ttl = 2200) => {
@@ -558,87 +560,123 @@ useEffect(() => {
   }
 
   async function onPickFile(e) {
-    const f = e.target?.files?.[0];
-    if (!f) return;
+    const file = e?.target?.files?.[0];
+    // clear input so the same file can be re-picked
+    try { if (e?.target) e.target.value = ""; } catch {}
 
-    const b64 = await compressImageForVision(f);
+    if (!file) return;
 
-    if (!b64) {
-      console.warn("Vision image prepare failed");
+    // guard: very large images can hang mobile + uploads
+    const MAX_MB = 10;
+    if (file.size && file.size > MAX_MB * 1024 * 1024) {
+      showVoiceToast(t("search.imageTooLarge", { defaultValue: "Görsel çok büyük. Daha küçük bir fotoğraf deneyin." }), "error");
       return;
     }
 
-    const backend = API_BASE || "";
-
-    // Kamera/galeri analizi sürecini kullanıcıya görünür yap
     setVisionBusy(true);
-    showVoiceToast(
-      t("search.imageAnalyzing", { defaultValue: "Görsel analiz ediliyor…" }),
-      "info",
-      1800
-    );
+    showVoiceToast(t("search.imageAnalyzing", { defaultValue: "Görsel analiz ediliyor..." }), "info");
+
+    const locale = (i18n?.language || "tr").slice(0, 2);
+
+    // --- 1) FREE-FIRST: barcode detection (BarcodeDetector -> ZXing) ---
+    const tryBarcodeDetector = async () => {
+      if (!window?.BarcodeDetector) return "";
+      try {
+        const supported = typeof window.BarcodeDetector.getSupportedFormats === "function"
+          ? await window.BarcodeDetector.getSupportedFormats()
+          : null;
+        const prefer = ["ean_13","ean_8","upc_a","upc_e","code_128","code_39","itf","qr_code","data_matrix","pdf417"];
+        const formats = supported ? prefer.filter(f => supported.includes(f)) : prefer;
+        const detector = new window.BarcodeDetector({ formats });
+        const bmp = await createImageBitmap(file);
+        const codes = await detector.detect(bmp);
+        try { bmp.close?.(); } catch {}
+        const raw = (codes && codes[0] && (codes[0].rawValue || codes[0].raw)) || "";
+        return (raw || "").trim();
+      } catch {
+        return "";
+      }
+    };
+
+    const tryZXing = async () => {
+      try {
+        const reader = new BrowserMultiFormatReader();
+        const url = URL.createObjectURL(file);
+        try {
+          const res = await reader.decodeFromImageUrl(url);
+          const txt = (res?.getText?.() || res?.text || "").trim();
+          return txt;
+        } finally {
+          try { URL.revokeObjectURL(url); } catch {}
+          try { reader.reset?.(); } catch {}
+        }
+      } catch {
+        return "";
+      }
+    };
 
     try {
-      const r = await fetch(`${backend}/api/vision`, {
+      let code = await tryBarcodeDetector();
+      if (!code) code = await tryZXing();
+
+      if (code && isLikelyBarcode(code)) {
+        // ✅ User must confirm before search
+        const compact = String(code).trim().replace(/\s+/g, "");
+        setValue(compact);
+        setVisionConfirm(null);
+        setVoiceConfirm(null);
+        setScanConfirm({ kind: "barcode", isBarcode: true, code: compact, source: "camera" });
+        return;
+      }
+
+      // --- 2) FREE-FIRST: local text detection (TextDetector) ---
+      if (window?.TextDetector) {
+        try {
+          const td = new window.TextDetector();
+          const bmp = await createImageBitmap(file);
+          const blocks = await td.detect(bmp);
+          try { bmp.close?.(); } catch {}
+          const txt = (blocks || []).map(b => (b?.rawValue || b?.text || "")).join(" ").replace(/\s+/g, " ").trim();
+          if (txt && txt.length >= 3) {
+            // trim to a sane query
+            const q = txt.length > 120 ? txt.slice(0, 120) : txt;
+            setValue(q);
+            setVisionConfirm({ query: q, used: "text-local", weak: true });
+            return;
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      // --- 3) BACKEND vision fallback (paid/official) ---
+      const b64 = await compressImageForVision(file);
+      const r = await fetch(`${API_BASE}/api/vision?diag=1`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          imageBase64: b64,
-          locale: i18n.language,
-          source: "camera",
-        }),
+        body: JSON.stringify({ imageBase64: b64, locale }),
       });
 
-      if (!r.ok) {
-        console.warn("Vision API hatası:", r.status);
-        showVoiceToast(t("search.cameraError", { defaultValue: "Kamera araması şu an çalışmadı." }), "error", 2200);
-        return;
-      }
-
       const j = await r.json().catch(() => null);
-      if (!j || j.ok === false) {
-        showVoiceToast(t("search.cameraError", { defaultValue: "Kamera araması sonucu alınamadı." }), "error", 2200);
-        return;
-      }
-      const q = String(j?.query || "").trim();
-      if (!q) {
-        // Kamera sonucu anlamsız/boşsa kullanıcı eli boş dönmesin.
-        showVoiceToast(
-          t("vitrine.noResults", {
-            defaultValue: "Üzgünüm, sonuç bulunamadı. Başka bir şey deneyin.",
-          }),
-          "warn",
-          2600
-        );
+      if (!j?.ok) {
+        showVoiceToast(t("search.cameraError", { defaultValue: "Görsel analizi başarısız. Lütfen tekrar dene." }), "error");
         return;
       }
 
-      {
-        const used = String(j?.meta?.used || "").trim();
-        const qLower = q.toLowerCase();
-        const weak = qLower === "ürün" || qLower === "urun" || q.length < 3 || /^\[object\s+object\]$/i.test(q);
-
-        // Önce input'u dolduralım.
-        setValue(q);
-
-        // Serp lens gibi daha “tahmini” kaynaklarda kullanıcı onayı iste.
-        if (weak || used.includes("serp_lens")) {
-          setVisionConfirm({ query: q, used: used || null, weak });
-          setTimeout(() => {
-            try { searchInputRef.current?.focus?.(); } catch {}
-          }, 0);
-          return;
-        }
-
-        // Güvenli/temiz sonuç: otomatik arama
-        doSearch(q, { source: "camera" });
+      const query = String(j.query || "").trim();
+      if (!query) {
+        showVoiceToast(t("search.cameraNoMatch", { defaultValue: "Görselde anlamlı bir şey bulunamadı." }), "info");
+        return;
       }
+
+      setValue(query);
+      setVisionConfirm({ query, used: j.used || "vision", weak: !!j.weak });
+
     } catch (err) {
-      console.warn("Vision arama hatası:", err);
+      console.error("onPickFile error", err);
+      showVoiceToast(t("search.cameraError", { defaultValue: "Görsel analizi başarısız. Lütfen tekrar dene." }), "error");
     } finally {
       setVisionBusy(false);
-      // aynı dosyayı tekrar seçebilmek için input değerini sıfırla
-      if (e.target) e.target.value = "";
     }
   }
 
@@ -818,7 +856,96 @@ useEffect(() => {
               <div className="w-3 h-3 rounded-full border border-[#D9A441] border-t-transparent animate-spin" />
               <span>{t("search.searching", { defaultValue: "Arama yapılıyor..." })}</span>
             </div>
-          ) : voiceConfirm ? (
+			  ) : scanConfirm ? (
+				<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl border border-[#D9A441]/35 bg-black/25 px-3 py-2">
+				  <div className="text-[12px] sm:text-[13px] text-white/85">
+				    {scanConfirm?.isBarcode ? (
+				      <>
+				        <span className="text-white/70">{t("search.barcodeDetected", { defaultValue: "Barkod algılandı: {{code}}", code: String(scanConfirm?.code || value || "").trim() })}</span>
+				        <span className="text-white/70">{" "}— {t("search.confirmQuestion", { defaultValue: "Bu aramayı yapmak istiyor musunuz?" })}</span>
+				      </>
+				    ) : (
+				      <>
+				        <span className="text-white/70">{t("search.voiceHeardPrefix", { defaultValue: "Anladığım:" })}</span>{" "}
+				        <span className="text-[#D9A441] font-semibold">{String(value || scanConfirm?.query || "").trim()}</span>
+				        <span className="text-white/70">{" "}— {t("search.confirmQuestion", { defaultValue: "Bu aramayı yapmak istiyor musunuz?" })}</span>
+				      </>
+				    )}
+				  </div>
+
+				  <div className="flex items-center gap-2">
+				    <button
+				      onClick={async () => {
+				        const src = String(scanConfirm?.source || "manual");
+				        const isBc = !!scanConfirm?.isBarcode;
+				        const q = String(value || scanConfirm?.query || scanConfirm?.code || "").trim();
+				        const code = String(scanConfirm?.code || q || "").trim().replace(/\s+/g, "");
+				        setScanConfirm(null);
+				        if (!q) return;
+
+				        if (isBc && isLikelyBarcode(code)) {
+				          try { localStorage.setItem("lastQuerySource", src); } catch {}
+				          setSearchBusy(true);
+				          showVoiceToast(t("search.searching", { defaultValue: "Arama yapılıyor…" }), "info", 1800);
+				          const locale = (i18n?.language || "tr").toLowerCase();
+				          let out = null;
+				          try {
+				            out = await barcodeLookupFlow(code, {
+				              locale,
+				              allowPaidSecondStage: true,
+				              source: src === "camera" ? "camera-barcode" : "barcode",
+				            });
+				          } catch (err) {
+				            console.warn("barcodeLookupFlow error:", err);
+				            setSearchBusy(false);
+				            showVoiceToast(
+				              t("search.searchError", {
+				                defaultValue: "Arama sırasında hata oluştu. Lütfen tekrar deneyin.",
+				              }),
+				              "error",
+				              2600
+				            );
+				            return;
+				          }
+
+				          // Eğer barkod hattı boş dönerse, ürün adını normal aramaya düşür.
+				          const humanQ = String(out?.query || "").trim();
+				          const isEmpty = out?.status === "empty" || out?.itemsLen === 0;
+				          if (isEmpty && humanQ && humanQ !== code) {
+				            try { setValue(humanQ); } catch {}
+				            doSearch(humanQ, { source: "barcode-fallback" });
+				          }
+				          return;
+				        }
+
+				        // Normal QR text / manuel metin
+				        doSearch(q, { source: src || "qr" });
+				      }}
+				      className="text-xs px-3 py-1 rounded-lg border border-[#D9A441]/60 text-[#f5d76e] hover:bg-[#D9A441]/10"
+				    >
+				      {t("search.confirmSearch", { defaultValue: "Ara" })}
+				    </button>
+
+				    <button
+				      onClick={() => {
+				        setTimeout(() => {
+				          try { searchInputRef.current?.focus?.(); } catch {}
+				        }, 0);
+				      }}
+				      className="text-xs px-3 py-1 rounded-lg border border-white/20 text-white/80 hover:bg-white/5"
+				    >
+				      {t("search.editQuery", { defaultValue: "Düzenle" })}
+				    </button>
+
+				    <button
+				      onClick={() => setScanConfirm(null)}
+				      className="text-xs px-3 py-1 rounded-lg border border-white/15 text-white/60 hover:bg-white/5"
+				    >
+				      {t("search.cancel", { defaultValue: "Vazgeç" })}
+				    </button>
+				  </div>
+				</div>
+			  ) : voiceConfirm ? (
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl border border-[#D9A441]/35 bg-black/25 px-3 py-2">
               <div className="text-[12px] sm:text-[13px] text-white/85">
                 <span className="text-white/70">
@@ -991,39 +1118,21 @@ useEffect(() => {
 	      const isBarcode = isLikelyBarcode(compact);
 	      if (!q) return;
 
-	      // ✅ Barkod ise: product-info (free-first) -> vitrin inject
-	      // Öncelik: resmi/affiliate + ücretsiz kaynaklar -> son çare paid fallback
+	      // ✅ QR/BARKOD: kullanıcı onayı olmadan arama başlatma.
+	      // Burada sadece query'i input'a yaz ve confirm barı aç.
+	      try {
+	        setVisionConfirm(null);
+	        setVoiceConfirm(null);
+	      } catch {}
+
 	      if (isBarcode) {
-	        try {
-	          setValue(compact);
-	        } catch {}
-
-	        try {
-	          localStorage.setItem("lastQuerySource", "qr");
-	        } catch {}
-
-	        setSearchBusy(true);
-	        const locale = (i18n?.language || "tr").toLowerCase();
-	        const out = await barcodeLookupFlow(compact, {
-	          locale,
-	          allowPaidSecondStage: true,
-	          source: "barcode",
-	        });
-
-	        const humanQ = String(out?.query || compact).trim();
-	        try {
-	          if (humanQ && humanQ !== compact) setValue(humanQ);
-	        } catch {}
-	        try {
-	          localStorage.setItem("lastQuery", humanQ || compact);
-	        } catch {}
-
-	        setSearchBusy(false);
+	        try { setValue(compact); } catch {}
+	        setScanConfirm({ kind: "barcode", isBarcode: true, code: compact, source: "qr" });
 	        return;
 	      }
 
-	      // 🔥 Normal QR text
-	      doSearch(q, { source: "qr" });
+	      try { setValue(q); } catch {}
+	      setScanConfirm({ kind: "qr", isBarcode: false, query: q, source: "qr" });
     }}
     onClose={() => setQrScanOpen(false)}
   />
