@@ -1105,10 +1105,51 @@ function handleMicPointerDown(e) {
     await processQuery(text);
   }
 
+  // ✅ Konuşma / state reset (mod değişiminde “temiz sayfa”)
+  function resetThread({ withMessage = "" } = {}) {
+    // varsa bekleyen istekleri iptal et
+    try {
+      if (abortControllerRef.current) abortControllerRef.current.abort();
+    } catch {}
+    abortControllerRef.current = null;
+
+    setThinking(false);
+    setSearching(false);
+    setListening(false);
+    setPendingVoice(null);
+    setVoiceLive("");
+
+    try {
+      if (inputRef.current) inputRef.current.value = "";
+    } catch {}
+
+    // context + history sıfırla (mode'lar arası çöp kalmasın)
+    try {
+      contextMemory.history = [];
+    } catch {}
+
+    messagesRef.current = [];
+    greetedRef.current = false;
+
+    clearStatus(STATUS_SRC);
+
+    const msg = String(withMessage || "").trim();
+    if (msg) {
+      const fresh = [{ from: "ai", text: msg }];
+      setMessages(fresh);
+      queueMicrotask(() => {
+        messagesRef.current = fresh;
+      });
+    } else {
+      setMessages([]);
+    }
+  }
+
   // ✅ Mode seçimi helper
   function setMode(next) {
     const m = String(next || "").toLowerCase();
     if (m !== "search" && m !== "chat") return;
+
     setSonoMode(m);
     try {
       if (typeof window !== "undefined") localStorage.setItem("sono_mode", m);
@@ -1117,15 +1158,16 @@ function handleMicPointerDown(e) {
     // Kullanıcıya kısa onay mesajı
     const msg =
       m === "search"
-        ? t("ai.modeSetSearch", { defaultValue: "Tamam — ürün/hizmet arama modundayım. Ne arıyoruz?" })
-        : t("ai.modeSetChat", { defaultValue: "Tamam — bilgi modu aktif. Sor bakalım." });
+        ? t("ai.modeSetSearch", {
+            defaultValue: "Tamam — ürün/hizmet arama modundayım. Ne arıyoruz?",
+          })
+        : t("ai.modeSetChat", {
+            defaultValue: "Tamam — bilgi modu aktif. Sor bakalım.",
+          });
 
-    setMessages((prev) => [...prev, { from: "ai", text: msg }]);
+    // ✅ Mod değişti: önceki konuşmayı temizle, yeni modda temiz sayfa aç
+    resetThread({ withMessage: msg });
     speak(msg);
-
-    // sesli taslak/ onay temizliği
-    setPendingVoice(null);
-    setVoiceLive("");
   }
 
   function resetMode() {
@@ -1133,8 +1175,13 @@ function handleMicPointerDown(e) {
     try {
       if (typeof window !== "undefined") localStorage.removeItem("sono_mode");
     } catch {}
-    setPendingVoice(null);
-    setVoiceLive("");
+    const choose = t("ai.helloChoose", {
+      defaultValue:
+        "Merhaba, ben Sono. Ne yapmak istersin? Ürün/Hizmet Ara veya Soru Sor / Bilgi Al.",
+    });
+
+    // ✅ Mod sıfırlandı: konuşmayı temizle, seçim ekranına dön
+    resetThread({ withMessage: choose });
     flashMsg(t("ai.modeReset", { defaultValue: "Mod seçimini sıfırladım." }), 1200, "muted");
   }
 
