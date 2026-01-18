@@ -31,6 +31,9 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [tick, setTick] = useState(0);
   const fileRef = useRef(null);
+  // When a barcode cannot be resolved, we ask for a front photo.
+  // In that case, skip barcode detection on the next pick to avoid an endless loop.
+  const forceVisionNextRef = useRef(false);
   // Dil değişiminde placeholder reset
   useEffect(() => {
     const rerender = () => setTick((x) => x + 1);
@@ -203,15 +206,36 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
       }
 
       if (!items.length) {
-        // Boş vitrin yerine: ürün adı varsa onunla normal aramaya düş (kural: affiliate/free -> en son paid)
-        const hint = String(product?.title || product?.name || '').trim();
-        const fallbackQ = hint && !/^\d{8,18}$/.test(hint) ? hint : qr;
+        // NO-JUNK POLICY:
+        // - Raw barcode with generic search produces unrelated results.
+        // - If backend says "needsImage", directly open camera upload.
+        const needsImage = !!json?.needsImage || !!product?.needsImage;
+        const msg = String(json?.message || "").trim();
+        const suggested = String(product?.suggestedQuery || "").trim();
 
-        setCalm(t("vitrine.noResults", { defaultValue: "Barkod okundu — eşleşme arıyorum." }), 1800);
-        try { setValue(fallbackQ); } catch {}
+        // If we have a real product name hint, we can safely fall back to normal search.
+        if (suggested && !/^\d{8,18}$/.test(suggested)) {
+          setCalm(t("vitrine.noResults", { defaultValue: "Barkod okundu — ürün adından arıyorum." }), 1800);
+          try { setValue(suggested); } catch {}
+          await doSearch(suggested, "barcode-hint");
+          return;
+        }
 
-        // Barcode endpoint boş döndüyse, aynı ekranda tek bir ek arama dene
-        await doSearch(fallbackQ, "barcode");
+        // Otherwise: ask user for a front photo (best identity source)
+        flashMsg(
+          msg || t("barcode.needsImage", { defaultValue: "Bu barkod için veri bulunamadı. Ürünün ön yüz fotoğrafını yükleyin." }),
+          2600,
+          needsImage ? "muted" : "danger"
+        );
+        setLoading(false);
+        clearStatus(STATUS_SRC);
+        try { forceVisionNextRef.current = true; } catch {}
+        openCamera();
+        window.dispatchEvent(
+          new CustomEvent("fae.vitrine.results", {
+            detail: { status: "needsImage", query: qr, items: [], source: "barcode", product },
+          })
+        );
         return;
       }
 
@@ -602,20 +626,25 @@ rec.lang =
 	  });
 
   let kickedSearch = false;
+	  const forceVision = !!(forceVisionNextRef?.current);
+	  try { forceVisionNextRef.current = false; } catch {}
 
 	  try {
 	    // 1) Ücretsiz: BarcodeDetector (barkod/QR)
-	    setStatus(STATUS_SRC, {
-	      text: t("qrScanner.scanning", { defaultValue: "Barkod/QR taranıyor…" }),
-	      showDots: true,
-	      tone: "gold",
-	      priority: STATUS_PRIO,
-	    });
-	    const codes = await detectBarcodesFromFile(f);
-	    if (codes?.length) {
-	      kickedSearch = true;
-	      await doBarcodeLookup(codes[0]);
-	      return;
+	    //    Eğer önceki adım "needsImage" verdiyse, burada barkod detektörü döngü yaratmasın diye SKIP.
+	    if (!forceVision) {
+	      setStatus(STATUS_SRC, {
+	        text: t("qrScanner.scanning", { defaultValue: "Barkod/QR taranıyor…" }),
+	        showDots: true,
+	        tone: "gold",
+	        priority: STATUS_PRIO,
+	      });
+	      const codes = await detectBarcodesFromFile(f);
+	      if (codes?.length) {
+	        kickedSearch = true;
+	        await doBarcodeLookup(codes[0]);
+	        return;
+	      }
 	    }
 
 	    // 2) Ücretsiz: TextDetector (varsa)
