@@ -1049,11 +1049,13 @@ function handleMicPointerDown(e) {
             arr.pop();
           }
           const sources = Array.isArray(j?.sources) ? j.sources.slice(0, 5) : [];
+          const trustScore = (typeof j?.trustScore === 'number' ? j.trustScore : (typeof j?.meta?.trustScore === 'number' ? j.meta.trustScore : null));
           arr.push({
             from: "ai",
             text: j?.answer || t("ai.noAnswer", { defaultValue: "Şu an cevap alamadım." }),
             suggestions: Array.isArray(j?.suggestions) ? j.suggestions.slice(0, 4) : [],
             sources,
+            trustScore,
           });
           return arr;
         });
@@ -1105,85 +1107,72 @@ function handleMicPointerDown(e) {
     await processQuery(text);
   }
 
-  // ✅ Konuşma / state reset (mod değişiminde “temiz sayfa”)
-  function resetThread({ withMessage = "" } = {}) {
-    // varsa bekleyen istekleri iptal et
+
+
+  // ✅ Konuşmayı sıfırla (mod değişince temiz sayfa)
+  function resetConversation(initialAiText) {
+    const msg = String(initialAiText || '').trim();
+
     try {
       if (abortControllerRef.current) abortControllerRef.current.abort();
     } catch {}
     abortControllerRef.current = null;
 
+    // state temizliği
     setThinking(false);
     setSearching(false);
     setListening(false);
     setPendingVoice(null);
-    setVoiceLive("");
+    setVoiceLive('');
 
-    try {
-      if (inputRef.current) inputRef.current.value = "";
-    } catch {}
-
-    // context + history sıfırla (mode'lar arası çöp kalmasın)
+    // context temizliği
     try {
       contextMemory.history = [];
     } catch {}
 
-    messagesRef.current = [];
-    greetedRef.current = false;
+    const arr = [{ from: 'ai', text: msg || (persona?.hello || '') }];
+    setMessages(arr);
+    queueMicrotask(() => {
+      messagesRef.current = arr;
+    });
 
-    clearStatus(STATUS_SRC);
-
-    const msg = String(withMessage || "").trim();
-    if (msg) {
-      const fresh = [{ from: "ai", text: msg }];
-      setMessages(fresh);
-      queueMicrotask(() => {
-        messagesRef.current = fresh;
-      });
-    } else {
-      setMessages([]);
-    }
+    if (msg) speak(msg);
   }
+  // ✅ Mode seçimi helper
+  
 
   // ✅ Mode seçimi helper
   function setMode(next) {
-    const m = String(next || "").toLowerCase();
-    if (m !== "search" && m !== "chat") return;
+    const m = String(next || '').toLowerCase();
+    if (m !== 'search' && m !== 'chat') return;
 
     setSonoMode(m);
     try {
-      if (typeof window !== "undefined") localStorage.setItem("sono_mode", m);
+      if (typeof window !== 'undefined') localStorage.setItem('sono_mode', m);
     } catch {}
 
     // Kullanıcıya kısa onay mesajı
     const msg =
-      m === "search"
-        ? t("ai.modeSetSearch", {
-            defaultValue: "Tamam — ürün/hizmet arama modundayım. Ne arıyoruz?",
-          })
-        : t("ai.modeSetChat", {
-            defaultValue: "Tamam — bilgi modu aktif. Sor bakalım.",
-          });
+      m === 'search'
+        ? t('ai.modeSetSearch', { defaultValue: 'Tamam — ürün/hizmet arama modundayım. Ne arıyoruz?' })
+        : t('ai.modeSetChat', { defaultValue: 'Tamam — bilgi modu aktif. Sor bakalım.' });
 
-    // ✅ Mod değişti: önceki konuşmayı temizle, yeni modda temiz sayfa aç
-    resetThread({ withMessage: msg });
-    speak(msg);
+    // ✅ Mod değişince: konuşmayı tamamen temizle
+    resetConversation(msg);
   }
 
   function resetMode() {
-    setSonoMode("");
+    setSonoMode('');
     try {
-      if (typeof window !== "undefined") localStorage.removeItem("sono_mode");
+      if (typeof window !== 'undefined') localStorage.removeItem('sono_mode');
     } catch {}
-    const choose = t("ai.helloChoose", {
-      defaultValue:
-        "Merhaba, ben Sono. Ne yapmak istersin? Ürün/Hizmet Ara veya Soru Sor / Bilgi Al.",
-    });
 
-    // ✅ Mod sıfırlandı: konuşmayı temizle, seçim ekranına dön
-    resetThread({ withMessage: choose });
-    flashMsg(t("ai.modeReset", { defaultValue: "Mod seçimini sıfırladım." }), 1200, "muted");
+    const msg = t('ai.modeReset', { defaultValue: 'Mod seçimini sıfırladım.' });
+    resetConversation(msg);
+    flashMsg(msg, 1200, 'muted');
   }
+
+
 
   // Açıldığında ilk selamlama + persona
 const greetNow = () => {
@@ -1335,7 +1324,7 @@ useEffect(() => {
                     m.from === "user"
                       ? "text-right text-[#d4af37]"
                       : "text-left text-gray-200"
-                  } text-sm leading-snug`}
+                  } text-sm leading-snug whitespace-pre-line`}
                 >
                   {m.text}
                 </p>
@@ -1361,6 +1350,15 @@ useEffect(() => {
                     ))}
                   </div>
                  ) : null}
+
+                {m.from !== "user" && typeof m.trustScore === 'number' ? (
+                  <div className="text-[11px] text-white/50 mt-1">
+                    {t('ai.confidence', { defaultValue: 'Güven' })}: {Math.round(m.trustScore)}/100
+                    {m.trustScore < 55 ? (
+                      <span className="text-white/60"> — {t('ai.lowConfidence', { defaultValue: 'Eminlik düşük' })}</span>
+                    ) : null}
+                  </div>
+                ) : null}
 
                 {m.from !== "user" && Array.isArray(m.sources) && m.sources.length > 0 ? (
                   <div className="mt-1">
