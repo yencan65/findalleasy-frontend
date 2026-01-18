@@ -190,7 +190,7 @@ export default function QRScanner({ onDetect, onClose }) {
 
       const raw = String(text || "").trim();
       const compact = raw.replace(/\s+/g, "");
-      const isBarcode = /^\d{8,18}$/.test(compact);
+      const isBarcode = /^\d{8,14}$/.test(compact);
       let query = isBarcode ? compact : raw;
 
       // Barcode: FE'de isim çözümleme yapma. Backend barcode two-stage bunu yönetiyor.

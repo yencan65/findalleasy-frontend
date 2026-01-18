@@ -135,7 +135,7 @@ function normalizeItems(qr, product) {
 
 async function callProductInfo(qr, locale, allowPaid) {
   const backend = API_BASE || "";
-  const url = `${backend}/api/product-info/product?force=0&diag=0&allowPaid=${allowPaid ? 1 : 0}&paid=${allowPaid ? 1 : 0}`;
+  const url = `${backend}/api/product-info/product?force=0&diag=0&paid=${allowPaid ? 1 : 0}`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

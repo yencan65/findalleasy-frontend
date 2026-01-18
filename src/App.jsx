@@ -1,7 +1,6 @@
 // ✅ src/App.jsx — TAMAMEN CERRAHİ OLARAK TEMİZLENMİŞ + GÜÇLENDİRİLMİŞ
 
 import React, { useState, useEffect, useRef } from "react";
-import { BrowserMultiFormatReader } from "@zxing/browser";
 import { API_BASE } from "./utils/api";
 import Header from "./components/Header.jsx";
 import NetworkStatusBanner from "./components/NetworkStatusBanner.jsx";
@@ -559,126 +558,87 @@ useEffect(() => {
   }
 
   async function onPickFile(e) {
-    const file = e?.target?.files?.[0];
-    // clear input so the same file can be re-picked
-    try { if (e?.target) e.target.value = ""; } catch {}
+    const f = e.target?.files?.[0];
+    if (!f) return;
 
-    if (!file) return;
+    const b64 = await compressImageForVision(f);
 
-    // guard: very large images can hang mobile + uploads
-    const MAX_MB = 10;
-    if (file.size && file.size > MAX_MB * 1024 * 1024) {
-      showVoiceToast(t("search.imageTooLarge", { defaultValue: "Görsel çok büyük. Daha küçük bir fotoğraf deneyin." }), "error");
+    if (!b64) {
+      console.warn("Vision image prepare failed");
       return;
     }
 
+    const backend = API_BASE || "";
+
+    // Kamera/galeri analizi sürecini kullanıcıya görünür yap
     setVisionBusy(true);
-    showVoiceToast(t("search.imageAnalyzing", { defaultValue: "Görsel analiz ediliyor..." }), "info");
-
-    const locale = (i18n?.language || "tr").slice(0, 2);
-
-    // --- 1) FREE-FIRST: barcode detection (BarcodeDetector -> ZXing) ---
-    const tryBarcodeDetector = async () => {
-      if (!window?.BarcodeDetector) return "";
-      try {
-        const supported = typeof window.BarcodeDetector.getSupportedFormats === "function"
-          ? await window.BarcodeDetector.getSupportedFormats()
-          : null;
-        const prefer = ["ean_13","ean_8","upc_a","upc_e","code_128","code_39","itf","qr_code","data_matrix","pdf417"];
-        const formats = supported ? prefer.filter(f => supported.includes(f)) : prefer;
-        const detector = new window.BarcodeDetector({ formats });
-        const bmp = await createImageBitmap(file);
-        const codes = await detector.detect(bmp);
-        try { bmp.close?.(); } catch {}
-        const raw = (codes && codes[0] && (codes[0].rawValue || codes[0].raw)) || "";
-        return (raw || "").trim();
-      } catch {
-        return "";
-      }
-    };
-
-    const tryZXing = async () => {
-      try {
-        const reader = new BrowserMultiFormatReader();
-        const url = URL.createObjectURL(file);
-        try {
-          const res = await reader.decodeFromImageUrl(url);
-          const txt = (res?.getText?.() || res?.text || "").trim();
-          return txt;
-        } finally {
-          try { URL.revokeObjectURL(url); } catch {}
-          try { reader.reset?.(); } catch {}
-        }
-      } catch {
-        return "";
-      }
-    };
+    showVoiceToast(
+      t("search.imageAnalyzing", { defaultValue: "Görsel analiz ediliyor…" }),
+      "info",
+      1800
+    );
 
     try {
-      let code = await tryBarcodeDetector();
-      if (!code) code = await tryZXing();
-
-      if (code && isLikelyBarcode(code)) {
-        // Barcode flow: call product-info pipeline, then populate vitrin
-        setVisionBusy(false);
-        setSearchBusy(true);
-        setValue(code);
-        try {
-          await barcodeLookupFlow(code, { locale, source: "camera-barcode" });
-          return;
-        } finally {
-          setSearchBusy(false);
-        }
-      }
-
-      // --- 2) FREE-FIRST: local text detection (TextDetector) ---
-      if (window?.TextDetector) {
-        try {
-          const td = new window.TextDetector();
-          const bmp = await createImageBitmap(file);
-          const blocks = await td.detect(bmp);
-          try { bmp.close?.(); } catch {}
-          const txt = (blocks || []).map(b => (b?.rawValue || b?.text || "")).join(" ").replace(/\s+/g, " ").trim();
-          if (txt && txt.length >= 3) {
-            // trim to a sane query
-            const q = txt.length > 120 ? txt.slice(0, 120) : txt;
-            setValue(q);
-            setVisionConfirm({ query: q, used: "text-local", weak: true });
-            return;
-          }
-        } catch {
-          // ignore
-        }
-      }
-
-      // --- 3) BACKEND vision fallback (paid/official) ---
-      const b64 = await compressImageForVision(file);
-      const r = await fetch(`${API_BASE}/api/vision?diag=1`, {
+      const r = await fetch(`${backend}/api/vision`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64: b64, locale }),
+        body: JSON.stringify({
+          imageBase64: b64,
+          locale: i18n.language,
+          source: "camera",
+        }),
       });
 
+      if (!r.ok) {
+        console.warn("Vision API hatası:", r.status);
+        showVoiceToast(t("search.cameraError", { defaultValue: "Kamera araması şu an çalışmadı." }), "error", 2200);
+        return;
+      }
+
       const j = await r.json().catch(() => null);
-      if (!j?.ok) {
-        showVoiceToast(t("search.cameraError", { defaultValue: "Görsel analizi başarısız. Lütfen tekrar dene." }), "error");
+      if (!j || j.ok === false) {
+        showVoiceToast(t("search.cameraError", { defaultValue: "Kamera araması sonucu alınamadı." }), "error", 2200);
+        return;
+      }
+      const q = String(j?.query || "").trim();
+      if (!q) {
+        // Kamera sonucu anlamsız/boşsa kullanıcı eli boş dönmesin.
+        showVoiceToast(
+          t("vitrine.noResults", {
+            defaultValue: "Üzgünüm, sonuç bulunamadı. Başka bir şey deneyin.",
+          }),
+          "warn",
+          2600
+        );
         return;
       }
 
-      const query = String(j.query || "").trim();
-      if (!query) {
-        showVoiceToast(t("search.cameraNoMatch", { defaultValue: "Görselde anlamlı bir şey bulunamadı." }), "info");
-        return;
+      {
+        const used = String(j?.meta?.used || "").trim();
+        const qLower = q.toLowerCase();
+        const weak = qLower === "ürün" || qLower === "urun" || q.length < 3 || /^\[object\s+object\]$/i.test(q);
+
+        // Önce input'u dolduralım.
+        setValue(q);
+
+        // Serp lens gibi daha “tahmini” kaynaklarda kullanıcı onayı iste.
+        if (weak || used.includes("serp_lens")) {
+          setVisionConfirm({ query: q, used: used || null, weak });
+          setTimeout(() => {
+            try { searchInputRef.current?.focus?.(); } catch {}
+          }, 0);
+          return;
+        }
+
+        // Güvenli/temiz sonuç: otomatik arama
+        doSearch(q, { source: "camera" });
       }
-
-      setValue(query);
-      setVisionConfirm({ query, used: j.used || "vision", weak: !!j.weak });
-
     } catch (err) {
-      console.error("onPickFile error", err);
-      showVoiceToast(t("search.cameraError", { defaultValue: "Görsel analizi başarısız. Lütfen tekrar dene." }), "error");
+      console.warn("Vision arama hatası:", err);
     } finally {
       setVisionBusy(false);
+      // aynı dosyayı tekrar seçebilmek için input değerini sıfırla
+      if (e.target) e.target.value = "";
     }
   }
 

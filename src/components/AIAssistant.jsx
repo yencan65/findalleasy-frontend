@@ -209,6 +209,19 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
   const [searching, setSearching] = useState(false);
   const [pendingVoice, setPendingVoice] = useState(null);
 
+  // ✅ Sono Mode (search/chat) — kullanıcı seçer, localStorage’da saklanır
+  const [sonoMode, setSonoMode] = useState(() => {
+    if (typeof window === "undefined") return "";
+    try {
+      return localStorage.getItem("sono_mode") || "";
+    } catch {
+      return "";
+    }
+  });
+
+  // ✅ Canlı ses yazımı (interim transcript)
+  const [voiceLive, setVoiceLive] = useState("");
+
   // Global status bus: tüm async işler tek standart bildirim diliyle konuşsun
   const { setStatus, clearStatus } = useStatusBus();
   const STATUS_SRC = "assistant";
@@ -657,8 +670,15 @@ function handleMicPointerDown(e) {
   const now = Date.now();
   if (now - (micTapGuardRef.current || 0) < 700) return;
   micTapGuardRef.current = now;
+  const m = String(sonoMode || "").toLowerCase();
+  if (!m) {
+    flashMsg(t("ai.chooseModeToast", { defaultValue: "Devam etmek için mod seç." }), 1400, "muted");
+    return;
+  }
   captureOnce();
-}  async function captureOnce() {
+}
+
+  async function captureOnce() {
     if (typeof window === "undefined") return;
 
     const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -721,6 +741,14 @@ function handleMicPointerDown(e) {
           if (finals.trim()) finalText = (finalText + " " + finals).trim();
           const merged = (finalText || interim || "").trim();
 
+          // ✅ Canlı yazım: kullanıcı konuşurken anında input'a yaz
+          try {
+            if (inputRef.current) inputRef.current.value = merged;
+          } catch {}
+          try {
+            setVoiceLive(merged);
+          } catch {}
+
           // kullanıcı duraklayınca yakala
           clearTimeout(idle);
           idle = setTimeout(() => {
@@ -757,8 +785,16 @@ function handleMicPointerDown(e) {
       try {
         if (inputRef.current) inputRef.current.value = clean;
       } catch {}
+      const toastKey = String(sonoMode || "").toLowerCase() === "chat"
+        ? "ai.voiceConfirmToastChat"
+        : "ai.voiceConfirmToast";
+
       flashMsg(
-        t("ai.voiceConfirmToast", { defaultValue: "Duydum — aramam için onay ver." }),
+        t(toastKey, {
+          defaultValue: String(sonoMode || "").toLowerCase() === "chat"
+            ? "Duydum — göndermem için onay ver."
+            : "Duydum — aramam için onay ver.",
+        }),
         1600,
         "muted"
       );
@@ -807,54 +843,87 @@ function handleMicPointerDown(e) {
       return;
     }
 
-    // 2) Intent & Context
-    const intent = detectIntent(text, locale);
+    // 2) Mode + Intent & Context
+    const mode = String(sonoMode || "").toLowerCase();
+
+    // ✅ Mode seçilmeden devam etme (profesyonel UX)
+    if (!mode) {
+      const msg = t("ai.chooseModeFirst", {
+        defaultValue: "Önce bir mod seç: Ürün/Hizmet Ara veya Soru Sor/Bilgi Al.",
+      });
+      setMessages((m) => [...m, { from: "ai", text: msg }]);
+      speak(msg);
+      flashMsg(
+        t("ai.chooseModeToast", { defaultValue: "Devam etmek için mod seç." }),
+        1400,
+        "muted"
+      );
+      return;
+    }
+
+    const intent =
+      mode === "search"
+        ? "product_search"
+        : mode === "chat"
+        ? "info"
+        : detectIntent(text, locale);
+
     contextMemory.add(text);
 
     // Intent bazlı davranış
     if (intent === "product_search") {
-  // ✅ Ürün/hizmet araması: /api/ai ÇAĞIRMA (kredi yakma). Sadece vitrine arama tetikle.
-  setSearching(true);
-  lastAssistantSearchRef.current = { ts: Date.now(), query: text };
+      // ✅ Ürün/hizmet araması: /api/ai ÇAĞIRMA (kredi yakma). Sadece vitrine arama tetikle.
+      setSearching(true);
+      lastAssistantSearchRef.current = { ts: Date.now(), query: text };
 
-  // Kullanıcı aramanın başladığını HEM görsün HEM duysun (dil çevirileri i18n'de)
-  setMessages((m) => [
-    ...m,
-    { from: "ai", text: t("ai.searching", { defaultValue: "Arıyorum…" }) },
-  ]);
+      // Kullanıcı sorgusunu + arama durumunu sohbet içine yaz
+      setMessages((m) => {
+        const updated = [
+          ...m,
+          { from: "user", text },
+          {
+            from: "ai",
+            text: t("ai.searching", { defaultValue: "Arıyorum…" }),
+          },
+        ];
+        queueMicrotask(() => {
+          messagesRef.current = updated;
+        });
+        return updated;
+      });
 
-  flashMsg(t("ai.analyzing", { defaultValue: "Analiz ediliyor…" }), 0);
+      flashMsg(t("ai.analyzing", { defaultValue: "Analiz ediliyor…" }), 0);
 
-  try {
-    if (typeof onProductSearch === "function") {
-      await onProductSearch(text);
-    } else if (typeof onSuggest === "function") {
-      await onSuggest(text);
-    } else {
-      pushQueryToVitrine(text, "ai");
-    }
-    // Sonuç mesajı (hazır / yok / hata) fae.vitrine.results event'inden gelecek.
-  } catch (err) {
-    console.warn("AI product_search trigger fail:", err?.message || err);
-    flashMsg(
-      t("ai.searchError", { defaultValue: "Arama sırasında bir hata oldu." }),
-      1800,
-      "danger"
-    );
-    setMessages((m) => [
-      ...m,
-      {
-        from: "ai",
-        text: t("ai.searchError", {
-          defaultValue: "Arama sırasında bir hata oldu.",
-        }),
-      },
-    ]);
-    setSearching(false);
-    lastAssistantSearchRef.current = { ts: 0, query: "" };
-  }
-  return;
-} else if (intent === "action") {
+      try {
+        if (typeof onProductSearch === "function") {
+          await onProductSearch(text);
+        } else if (typeof onSuggest === "function") {
+          await onSuggest(text);
+        } else {
+          pushQueryToVitrine(text, "ai");
+        }
+        // Sonuç mesajı (hazır / yok / hata) fae.vitrine.results event'inden gelecek.
+      } catch (err) {
+        console.warn("AI product_search trigger fail:", err?.message || err);
+        flashMsg(
+          t("ai.searchError", { defaultValue: "Arama sırasında bir hata oldu." }),
+          1800,
+          "danger"
+        );
+        setMessages((m) => [
+          ...m,
+          {
+            from: "ai",
+            text: t("ai.searchError", {
+              defaultValue: "Arama sırasında bir hata oldu.",
+            }),
+          },
+        ]);
+        setSearching(false);
+        lastAssistantSearchRef.current = { ts: 0, query: "" };
+      }
+      return;
+    } else if (intent === "action") {
       // S12: aksiyon niyeti için event fırlatıyoruz (ileride başka yerde yakalanabilir)
       try {
         if (typeof window !== "undefined") {
@@ -907,10 +976,12 @@ function handleMicPointerDown(e) {
       );
     }
 
+    const analyzingText = t("ai.analyzing", { defaultValue: "Analiz ediliyor..." });
+
     pulseHalo();
     setThinking(true);
-    flashMsg(t("ai.analyzing", { defaultValue: "Analiz ediliyor..." }), 0);
-    setMessages((m) => [...m, { from: "ai", text: t("ai.analyzing", { defaultValue: "Analiz ediliyor..." }) }]);
+    flashMsg(analyzingText, 0);
+    setMessages((m) => [...m, { from: "ai", text: analyzingText }]);
 
     // 5) Önceki istek abort
     if (abortControllerRef.current) abortControllerRef.current.abort();
@@ -970,16 +1041,22 @@ function handleMicPointerDown(e) {
           }
         }
 
-        setMessages((m) => [
-          ...m,
-          {
+        setMessages((prev) => {
+          const arr = Array.isArray(prev) ? [...prev] : [];
+          // Son eklenen "Analiz ediliyor..." placeholder'ını temizle
+          const last = arr[arr.length - 1];
+          if (last && last.from === "ai" && String(last.text || "").trim() === String(analyzingText || "").trim()) {
+            arr.pop();
+          }
+          const sources = Array.isArray(j?.sources) ? j.sources.slice(0, 5) : [];
+          arr.push({
             from: "ai",
-            text:
-              j?.answer ||
-              t("ai.noAnswer", { defaultValue: "Şu an cevap alamadım." }),
+            text: j?.answer || t("ai.noAnswer", { defaultValue: "Şu an cevap alamadım." }),
             suggestions: Array.isArray(j?.suggestions) ? j.suggestions.slice(0, 4) : [],
-          },
-        ]);
+            sources,
+          });
+          return arr;
+        });
       }
 
       if (!silent) {
@@ -1028,14 +1105,52 @@ function handleMicPointerDown(e) {
     await processQuery(text);
   }
 
+  // ✅ Mode seçimi helper
+  function setMode(next) {
+    const m = String(next || "").toLowerCase();
+    if (m !== "search" && m !== "chat") return;
+    setSonoMode(m);
+    try {
+      if (typeof window !== "undefined") localStorage.setItem("sono_mode", m);
+    } catch {}
+
+    // Kullanıcıya kısa onay mesajı
+    const msg =
+      m === "search"
+        ? t("ai.modeSetSearch", { defaultValue: "Tamam — ürün/hizmet arama modundayım. Ne arıyoruz?" })
+        : t("ai.modeSetChat", { defaultValue: "Tamam — bilgi modu aktif. Sor bakalım." });
+
+    setMessages((prev) => [...prev, { from: "ai", text: msg }]);
+    speak(msg);
+
+    // sesli taslak/ onay temizliği
+    setPendingVoice(null);
+    setVoiceLive("");
+  }
+
+  function resetMode() {
+    setSonoMode("");
+    try {
+      if (typeof window !== "undefined") localStorage.removeItem("sono_mode");
+    } catch {}
+    setPendingVoice(null);
+    setVoiceLive("");
+    flashMsg(t("ai.modeReset", { defaultValue: "Mod seçimini sıfırladım." }), 1200, "muted");
+  }
+
   // Açıldığında ilk selamlama + persona
 const greetNow = () => {
+  const modeNow = String(sonoMode || "").toLowerCase();
   const greet =
     t("ai.hello", {
       defaultValue: persona.hello,
     }) || persona.hello;
 
-  const intro = `${greet}`;
+  const choose = t("ai.helloChoose", {
+    defaultValue: "Merhaba, ben Sono. Ne yapmak istersin? Ürün/Hizmet Ara veya Soru Sor / Bilgi Al.",
+  });
+
+  const intro = !modeNow ? choose : greet;
   setMessages([{ from: "ai", text: intro }]);
   speak(intro);
 };
@@ -1122,6 +1237,49 @@ useEffect(() => {
           className="mt-2 bg-black/85 text-white border border-[#d4af37]/50 
           rounded-2xl shadow-2xl backdrop-blur-md p-3 w-[calc(100vw-32px)] max-w-[380px] md:w-[340px] md:max-w-[340px]"
         >
+          {/* ✅ Mode chooser / active mode badge */}
+          {!sonoMode ? (
+            <div className="mb-2 p-2 rounded-xl border border-[#d4af37]/30 bg-black/40">
+              <div className="text-xs text-white/80">
+                {t("ai.chooseModeTitle", { defaultValue: "Mod seç: Ürün/Hizmet Ara veya Soru Sor/Bilgi Al" })}
+              </div>
+              <div className="text-[11px] text-white/60 mt-1">
+                {t("ai.chooseModeSubtitle", { defaultValue: "Seçtiğin moda göre Sono ya vitrine arama yapar ya da bilgi verir." })}
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <button
+                  type="button"
+                  className="flex-1 px-3 py-2 rounded-xl bg-[#d4af37] text-black text-xs font-semibold"
+                  onClick={() => setMode("search")}
+                >
+                  {t("ai.modeSearch", { defaultValue: "Ürün/Hizmet Ara" })}
+                </button>
+                <button
+                  type="button"
+                  className="flex-1 px-3 py-2 rounded-xl border border-[#d4af37]/50 text-[#d4af37] text-xs font-semibold"
+                  onClick={() => setMode("chat")}
+                >
+                  {t("ai.modeChat", { defaultValue: "Soru Sor / Bilgi Al" })}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="text-[11px] px-2 py-1 rounded-full border border-[#d4af37]/30 text-white/80 bg-black/40">
+                {String(sonoMode).toLowerCase() === "search"
+                  ? t("ai.modeActiveSearch", { defaultValue: "Mod: Ürün/Hizmet Arama" })
+                  : t("ai.modeActiveChat", { defaultValue: "Mod: Bilgi / Sohbet" })}
+              </div>
+              <button
+                type="button"
+                className="text-[11px] px-2 py-1 rounded-full border border-white/20 text-white/70 hover:bg-white/5 transition"
+                onClick={resetMode}
+              >
+                {t("ai.changeMode", { defaultValue: "Mod değiştir" })}
+              </button>
+            </div>
+          )}
+
           <div className="overflow-auto max-h-[220px] my-2 space-y-2 pr-1 custom-scrollbar">
             {messages.map((m, i) => (
               <div key={i} className="space-y-1">
@@ -1155,6 +1313,32 @@ useEffect(() => {
                       </button>
                     ))}
                   </div>
+                 ) : null}
+
+                {m.from !== "user" && Array.isArray(m.sources) && m.sources.length > 0 ? (
+                  <div className="mt-1">
+                    <div className="text-[11px] text-white/50 mb-1">
+                      {t("ai.sources", { defaultValue: "Kaynaklar" })}
+                    </div>
+                    <div className={`flex flex-col gap-1 ${isRTL ? "items-end" : "items-start"}`}>
+                      {m.sources.slice(0, 5).map((src, k) => {
+                        const title = typeof src === "string" ? src : (src?.title || src?.url || "");
+                        const url = typeof src === "string" ? src : (src?.url || "");
+                        if (!url) return null;
+                        return (
+                          <a
+                            key={`${k}`}
+                            href={url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[11px] underline text-white/70 hover:text-white break-words"
+                          >
+                            {title || url}
+                          </a>
+                        );
+                      })}
+                    </div>
+                  </div>
                 ) : null}
               </div>
             ))}
@@ -1169,7 +1353,7 @@ useEffect(() => {
                 <span className="text-[#d4af37] font-semibold">{String(pendingVoice || "").trim()}</span>
               </div>
               <div className="text-xs text-white/60 mt-1">
-                {t("ai.voiceConfirmQuestion", { defaultValue: "Bunu mu arayayım?" })}
+                {t(String(sonoMode || "").toLowerCase() === "chat" ? "ai.voiceConfirmQuestionChat" : "ai.voiceConfirmQuestion", { defaultValue: String(sonoMode || "").toLowerCase() === "chat" ? "Bunu göndereyim mi?" : "Bunu mu arayayım?" })}
               </div>
               <div className="mt-2 flex items-center gap-2">
                 <button
@@ -1183,7 +1367,7 @@ useEffect(() => {
                     await processQuery(q);
                   }}
                 >
-                  {t("search.confirmSearch", { defaultValue: "Ara" })}
+                  {String(sonoMode || "").toLowerCase() === "chat" ? t("ai.send", { defaultValue: "Gönder" }) : t("search.confirmSearch", { defaultValue: "Ara" })}
                 </button>
                 <button
                   type="button"
@@ -1247,20 +1431,22 @@ useEffect(() => {
             <input
               ref={inputRef}
               type="text"
+              disabled={!sonoMode}
               enterKeyHint="send"
               autoComplete="off"
-              placeholder={t("ai.placeholder", {
-                defaultValue: "Mesaj yaz...",
-              })}
+              placeholder={!sonoMode ? t("ai.chooseModePlaceholder", { defaultValue: "Önce mod seç…" }) : (String(sonoMode).toLowerCase() === "search"
+                ? t("ai.placeholderSearch", { defaultValue: "Ürün veya hizmet ara…" })
+                : t("ai.placeholderChat", { defaultValue: "Soru sor / bilgi al…" }))}
               className="flex-grow bg-transparent outline-none border border-[#d4af37]/40 rounded-xl 
               px-2 py-2 text-white text-sm"
             />
 
             <button
               type="submit"
+              disabled={!sonoMode}
               className="grid place-items-center w-9 h-9 rounded-full border border-[#d4af37]/70 
               hover:bg-[#d4af37]/10 transition"
-              title={t("ai.send", { defaultValue: "Gönder" })}
+              title={String(sonoMode || "").toLowerCase() === "search" ? t("search.search", { defaultValue: "Ara" }) : t("ai.send", { defaultValue: "Gönder" })}
             >
               <svg
                 width="18"

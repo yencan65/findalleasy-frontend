@@ -1166,9 +1166,7 @@ export default function Vitrin() {
             />
           ) : (
             <div className="rounded-2xl border border-dashed border-white/15 text-xs text-white/40 p-4 flex items-center justify-center h-full min-h-[160px]">
-              {lastQuery && String(lastQuery).trim().length >= 2 && !loading
-                ? t("search.noResults", { defaultValue: "Sonuç bulunamadı." })
-                : t("trigger.customShowcase", { defaultValue: "Kişisel vitrinini hazırlıyorum..." })}
+              {t("trigger.customShowcase", { defaultValue: "Kişisel vitrinini hazırlıyorum..." })}
             </div>
           )}
         </div>
