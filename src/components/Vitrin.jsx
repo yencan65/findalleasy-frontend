@@ -327,12 +327,6 @@ export default function Vitrin() {
       "");
 
   const [lastQuery, setLastQuery] = useState(initialLastQuery);
-  const [resultMeta, setResultMeta] = useState({
-    status: initialLastQuery ? "loading" : "idle",
-    query: initialLastQuery || "",
-    error: null,
-    source: null,
-  });
   const [highlight, setHighlight] = useState(false);
 
   const [smartIndex, setSmartIndex] = useState(0);
@@ -589,7 +583,7 @@ export default function Vitrin() {
 
     const refreshHandler = () => loadVitrine(true);
 
-    // ✅ Inject: barcodeLookupFlow gibi akışlar Vitrin'e direkt kart basar
+    if (typeof window !== "undefined") {
     const onInject = (e) => {
       const d = e?.detail || {};
       if (!Array.isArray(d.items)) return;
@@ -599,13 +593,8 @@ export default function Vitrin() {
 
       setLoading(false);
       setLastQuery(q);
-      setResultMeta({
-        status: injectedItems.length > 0 ? "success" : "empty",
-        query: q,
-        error: null,
-        source: d.source || "inject",
-      });
 
+      // Inject ile gelenleri "best" olarak göster (tek liste)
       setBest(injectedItems);
       setSmart([]);
       setOthers([]);
@@ -625,45 +614,19 @@ export default function Vitrin() {
       );
     };
 
-    // ✅ Results: empty/error durumunda placeholder takılmasın, UI net olsun
-    const onResults = (e) => {
-      const d = e?.detail || {};
-      const status = String(d.status || "").toLowerCase();
-      const q = String(d.query || d.q || "").trim();
-
-      if (status) {
-        setResultMeta({
-          status,
-          query: q,
-          error: d.error || null,
-          source: d.source || null,
-        });
-      }
-
-      if ((status === "empty" || status === "error") && q) {
-        setLoading(false);
-        setLastQuery(q);
-        setBest([]);
-        setSmart([]);
-        setOthers([]);
-      }
-    };
-
-    if (typeof window !== "undefined") {
       window.addEventListener("fae.vitrine.inject", onInject);
       window.addEventListener("fae.vitrine.search", unifiedHandleSearch);
       window.addEventListener("fae.vitrine.refresh", refreshHandler);
       window.addEventListener("fie:vitrin", handleFIE);
-      window.addEventListener("fae.vitrine.results", onResults);
     }
 
     return () => {
       if (typeof window !== "undefined") {
         window.removeEventListener("fae.vitrine.inject", onInject);
         window.removeEventListener("fae.vitrine.search", unifiedHandleSearch);
+
         window.removeEventListener("fae.vitrine.refresh", refreshHandler);
         window.removeEventListener("fie:vitrin", handleFIE);
-        window.removeEventListener("fae.vitrine.results", onResults);
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1203,12 +1166,8 @@ export default function Vitrin() {
             />
           ) : (
             <div className="rounded-2xl border border-dashed border-white/15 text-xs text-white/40 p-4 flex items-center justify-center h-full min-h-[160px]">
-              {loading
-                ? t("trigger.customShowcase", { defaultValue: "Kişisel vitrinini hazırlıyorum..." })
-                : String(resultMeta?.status || "").toLowerCase() === "error"
-                ? t("vitrine.resultsError", { defaultValue: "Arama sırasında hata oluştu. Lütfen tekrar deneyin." })
-                : String(resultMeta?.status || "").toLowerCase() === "empty" || (lastQuery && String(lastQuery).trim())
-                ? t("vitrine.noResults", { defaultValue: "Üzgünüm, sonuç bulunamadı. Başka bir şey deneyin." })
+              {lastQuery && String(lastQuery).trim().length >= 2 && !loading
+                ? t("search.noResults", { defaultValue: "Sonuç bulunamadı." })
                 : t("trigger.customShowcase", { defaultValue: "Kişisel vitrinini hazırlıyorum..." })}
             </div>
           )}

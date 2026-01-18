@@ -89,8 +89,6 @@ const resources = {
         badQuery: "Arama metni hatalı. Lütfen tekrar dene.",
         imageAnalyzing: "Görsel analiz ediliyor…",
         imageDetected: "Görüntüden anladığım: {{query}}",
-        barcodeDetected: "Barkod algılandı: {{code}}",
-        textDetected: "Metin algılandı: {{text}}",
         // ✅ Kamera onay barı (App.jsx ile uyumlu)
         imageDetectedPrefix: "Görüntüden anladığım:",
         imageWeakGuess: "Emin olamadım, ama şöyle görünüyor:",
@@ -101,6 +99,9 @@ const resources = {
         edit: "Düzenle",
         cancel: "İptal",
         cameraError: "Görsel analizi başarısız. Lütfen tekrar dene.",
+        barcodeDetected: "Barkod algılandı: {{code}}",
+        cameraNoMatch: "Görselde okunabilir bir barkod/metin bulunamadı. Lütfen daha net bir fotoğraf deneyin.",
+    imageTooLarge: "Görsel çok büyük. Daha küçük bir fotoğraf deneyin.",
         voiceNotSupported: "Tarayıcın ses tanımayı desteklemiyor!",
         voiceStarted: "Sesli arama başladı — şimdi konuşabilirsin.",
         voiceHeardPrefix: "Sesli komuttan anladığım:",
@@ -471,8 +472,6 @@ const resources = {
         badQuery: "Invalid search text. Please try again.",
         imageAnalyzing: "Analyzing image…",
         imageDetected: "From the image, I think: {{query}}",
-        barcodeDetected: "Barcode detected: {{code}}",
-        textDetected: "Text detected: {{text}}",
         // ✅ Camera confirm bar (App.jsx)
         imageDetectedPrefix: "From the image, I understood:",
         imageWeakGuess: "Not 100% sure, but it looks like:",
@@ -482,8 +481,11 @@ const resources = {
         searchNow: "Search",
         edit: "Edit",
         cancel: "Cancel",
-        cameraError: "Image analysis failed. Please try again."
-      },
+        cameraError: "Image analysis failed. Please try again.",
+        imageTooLarge: "Image is too large. Please try a smaller photo.",
+        cameraNoMatch: "No readable barcode/text was found in the image. Please try a clearer photo.",
+        barcodeDetected: "Barcode detected: {{code}}",
+},
 
       // ✅ qrScanner (EN)
       qrScanner: {
@@ -846,8 +848,6 @@ const resources = {
         badQuery: "Texte de recherche invalide. Réessayez.",
         imageAnalyzing: "Analyse de l'image…",
         imageDetected: "D'après l'image : {{query}}",
-        barcodeDetected: "Code-barres détecté : {{code}}",
-        textDetected: "Texte détecté : {{text}}",
         // ✅ Barre de confirmation caméra (App.jsx)
         imageDetectedPrefix: "D'après l'image, j'ai compris :",
         imageWeakGuess: "Pas sûr à 100 %, mais on dirait :",
@@ -857,8 +857,11 @@ const resources = {
         searchNow: "Rechercher",
         edit: "Modifier",
         cancel: "Annuler",
-        cameraError: "Analyse d'image échouée. Réessayez."
-      },
+        cameraError: "Analyse d'image échouée. Réessayez.",
+        imageTooLarge: "L'image est trop grande. Essayez une photo plus petite.",
+        cameraNoMatch: "Aucun code-barres/texte lisible n'a été trouvé sur l'image. Essayez une photo plus nette.",
+        barcodeDetected: "Code-barres détecté : {{code}}",
+},
 
       // ✅ qrScanner (FR)
       qrScanner: {
@@ -1229,8 +1232,6 @@ const resources = {
         badQuery: "Некорректный запрос. Попробуйте ещё раз.",
         imageAnalyzing: "Анализ изображения…",
         imageDetected: "По изображению похоже на: {{query}}",
-        barcodeDetected: "Обнаружен штрих-код: {{code}}",
-        textDetected: "Обнаружен текст: {{text}}",
         // ✅ Панель подтверждения камеры (App.jsx)
         imageDetectedPrefix: "По изображению я понял:",
         imageWeakGuess: "Не уверен, но похоже на:",
@@ -1240,8 +1241,11 @@ const resources = {
         searchNow: "Поиск",
         edit: "Редактировать",
         cancel: "Отмена",
-        cameraError: "Анализ изображения не удался. Попробуйте ещё раз."
-      },
+        cameraError: "Анализ изображения не удался. Попробуйте ещё раз.",
+        imageTooLarge: "Изображение слишком большое. Попробуйте фото меньшего размера.",
+        cameraNoMatch: "На изображении не найден читаемый штрихкод/текст. Попробуйте более чёткое фото.",
+        barcodeDetected: "Обнаружен штрихкод: {{code}}",
+},
 
       // ✅ qrScanner (RU)
       qrScanner: {
@@ -1603,8 +1607,6 @@ const resources = {
         badQuery: "نص بحث غير صالح. حاول مرة أخرى.",
         imageAnalyzing: "جارٍ تحليل الصورة…",
         imageDetected: "من الصورة أظن: {{query}}",
-        barcodeDetected: "تم اكتشاف الرمز الشريطي: {{code}}",
-        textDetected: "تم اكتشاف نص: {{text}}",
         // ✅ شريط تأكيد الكاميرا (App.jsx)
         imageDetectedPrefix: "مما فهمته من الصورة:",
         imageWeakGuess: "لست متأكدًا تمامًا، لكن يبدو أنه:",
@@ -1614,8 +1616,11 @@ const resources = {
         searchNow: "ابحث",
         edit: "تعديل",
         cancel: "إلغاء",
-        cameraError: "فشل تحليل الصورة. حاول مرة أخرى."
-      },
+        cameraError: "فشل تحليل الصورة. حاول مرة أخرى.",
+        imageTooLarge: "الصورة كبيرة جداً. جرّب صورة أصغر.",
+        cameraNoMatch: "لم يتم العثور على باركود/نص قابل للقراءة في الصورة. جرّب صورة أوضح.",
+        barcodeDetected: "تم اكتشاف الباركود: {{code}}",
+},
 
       // ✅ qrScanner (AR)
       qrScanner: {
