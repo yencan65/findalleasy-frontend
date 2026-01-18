@@ -909,12 +909,18 @@ useEffect(() => {
 				          }
 
 				          // Eğer barkod hattı boş dönerse, ürün adını normal aramaya düşür.
-				          const humanQ = String(out?.query || "").trim();
-				          const isEmpty = out?.status === "empty" || out?.itemsLen === 0;
-				          if (isEmpty && humanQ && humanQ !== code) {
-				            try { setValue(humanQ); } catch {}
-				            doSearch(humanQ, { source: "barcode-fallback" });
-				          }
+			          const humanQ = String(out?.query || "").trim();
+			          const status = String(out?.status || "").toLowerCase();
+			          const isError = status === "error";
+			          const isEmpty = status === "empty" || (Number(out?.itemsLen || 0) <= 0);
+
+			          // ✅ Barkod çözülemediyse bile kullanıcı "Ara" dedi.
+			          // O yüzden en azından vitrin aramasına düşür (affiliate→free→paid sırasını S200 yönetir).
+			          if (!isError && isEmpty) {
+			            const fallbackQ = (humanQ && humanQ !== code) ? humanQ : code;
+			            try { setValue(fallbackQ); } catch {}
+			            doSearch(fallbackQ, { source: "barcode-fallback" });
+			          }
 				          return;
 				        }
 
