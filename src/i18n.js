@@ -89,6 +89,8 @@ const resources = {
         badQuery: "Arama metni hatalı. Lütfen tekrar dene.",
         imageAnalyzing: "Görsel analiz ediliyor…",
         imageDetected: "Görüntüden anladığım: {{query}}",
+        barcodeDetected: "Barkod algılandı: {{code}}",
+        textDetected: "Metin algılandı: {{text}}",
         // ✅ Kamera onay barı (App.jsx ile uyumlu)
         imageDetectedPrefix: "Görüntüden anladığım:",
         imageWeakGuess: "Emin olamadım, ama şöyle görünüyor:",
@@ -469,6 +471,8 @@ const resources = {
         badQuery: "Invalid search text. Please try again.",
         imageAnalyzing: "Analyzing image…",
         imageDetected: "From the image, I think: {{query}}",
+        barcodeDetected: "Barcode detected: {{code}}",
+        textDetected: "Text detected: {{text}}",
         // ✅ Camera confirm bar (App.jsx)
         imageDetectedPrefix: "From the image, I understood:",
         imageWeakGuess: "Not 100% sure, but it looks like:",
@@ -842,6 +846,8 @@ const resources = {
         badQuery: "Texte de recherche invalide. Réessayez.",
         imageAnalyzing: "Analyse de l'image…",
         imageDetected: "D'après l'image : {{query}}",
+        barcodeDetected: "Code-barres détecté : {{code}}",
+        textDetected: "Texte détecté : {{text}}",
         // ✅ Barre de confirmation caméra (App.jsx)
         imageDetectedPrefix: "D'après l'image, j'ai compris :",
         imageWeakGuess: "Pas sûr à 100 %, mais on dirait :",
@@ -1223,6 +1229,8 @@ const resources = {
         badQuery: "Некорректный запрос. Попробуйте ещё раз.",
         imageAnalyzing: "Анализ изображения…",
         imageDetected: "По изображению похоже на: {{query}}",
+        barcodeDetected: "Обнаружен штрих-код: {{code}}",
+        textDetected: "Обнаружен текст: {{text}}",
         // ✅ Панель подтверждения камеры (App.jsx)
         imageDetectedPrefix: "По изображению я понял:",
         imageWeakGuess: "Не уверен, но похоже на:",
@@ -1595,6 +1603,8 @@ const resources = {
         badQuery: "نص بحث غير صالح. حاول مرة أخرى.",
         imageAnalyzing: "جارٍ تحليل الصورة…",
         imageDetected: "من الصورة أظن: {{query}}",
+        barcodeDetected: "تم اكتشاف الرمز الشريطي: {{code}}",
+        textDetected: "تم اكتشاف نص: {{text}}",
         // ✅ شريط تأكيد الكاميرا (App.jsx)
         imageDetectedPrefix: "مما فهمته من الصورة:",
         imageWeakGuess: "لست متأكدًا تمامًا، لكن يبدو أنه:",

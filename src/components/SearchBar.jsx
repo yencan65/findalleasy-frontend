@@ -163,15 +163,11 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
 
     const postLookup = async (allowPaid) => {
       const url = `${backend}/api/product-info/product?force=0&diag=0&paid=${allowPaid ? 1 : 0}`;
-      const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-      const to = controller ? setTimeout(() => controller.abort(), 9000) : null;
       const resp = await fetch(url, {
-        signal: controller ? controller.signal : undefined,
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ qr, locale, allowPaid: !!allowPaid }),
       });
-      if (to) clearTimeout(to);
       const json = await resp.json().catch(() => null);
       return { resp, json };
     };
@@ -193,15 +189,12 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
       }
 
       if (!items.length) {
-        // Boş vitrin yerine: ürün adı varsa onunla normal aramaya düş (kural: affiliate/free -> en son paid)
-        const hint = String(product?.title || product?.name || '').trim();
-        const fallbackQ = hint && !/^\d{8,18}$/.test(hint) ? hint : qr;
-
-        setCalm(t("vitrine.noResults", { defaultValue: "Barkod okundu — eşleşme arıyorum." }), 1800);
-        try { setValue(fallbackQ); } catch {}
-
-        // Barcode endpoint boş döndüyse, aynı ekranda tek bir ek arama dene
-        await doSearch(fallbackQ, "barcode");
+        setCalm(t("vitrine.noResults", { defaultValue: "Üzgünüm, sonuç bulunamadı." }), 2100);
+        window.dispatchEvent(
+          new CustomEvent("fae.vitrine.results", {
+            detail: { status: "empty", query: product?.title || product?.name || qr, items: [], source: "barcode" },
+          })
+        );
         return;
       }
 
@@ -229,7 +222,286 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     }
   };
 
-// =========================
+    const backend = API_BASE || "";
+
+    const buildItems = (product) => {
+      const offers = [...(product?.offersTrusted || []), ...(product?.offersOther || [])];
+      return offers
+        .map((o) => {
+          const rawPrice = o?.price ?? o?.finalPrice;
+          const rawFinal = o?.finalPrice ?? o?.price;
+          const price = typeof rawPrice === "number" ? rawPrice : parsePrice(rawPrice);
+          const finalPrice = typeof rawFinal === "number" ? rawFinal : parsePrice(rawFinal);
+          return {
+            ...o,
+            title: o?.title || product?.title || product?.name || qr,
+            image: o?.image || product?.image,
+            price,
+            finalPrice,
+            currency: o?.currency || product?.currency || "TRY",
+          };
+        })
+        .filter((x) => typeof x.price === "number" && Number.isFinite(x.price) && x.price > 0);
+    };
+
+    const postLookup = async (allowPaid) => {
+      const url = `${backend}/api/product-info/product?force=0&diag=0&paid=${allowPaid ? 1 : 0}`;
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ qr, locale, allowPaid: !!allowPaid }),
+      });
+      const json = await resp.json().catch(() => null);
+      return { resp, json };
+    };
+
+    setLoading(true);
+    setBusy(t("ai.analyzing", { defaultValue: "Analiz yapılıyor…" }));
+
+    try {
+      // 1) Free-first
+      let { resp, json } = await postLookup(false);
+      let product = json?.product || {};
+      let items = buildItems(product);
+
+      // 2) Paid fallback (only if empty)
+      if ((!resp?.ok || json?.ok === false || !items.length) ) {
+        ({ resp, json } = await postLookup(true));
+        product = json?.product || product;
+        items = buildItems(product);
+      }
+
+      if (!items.length) {
+        setCalm(t("vitrine.noResults", { defaultValue: "Üzgünüm, sonuç bulunamadı." }), 2100);
+        window.dispatchEvent(
+          new CustomEvent("fae.vitrine.results", {
+            detail: { status: "empty", query: product?.title || product?.name || qr, items: [], source: "barcode" },
+          })
+        );
+        return;
+      }
+
+      const payload = {
+        query: product?.title || product?.name || qr,
+        items,
+        source: "barcode",
+        product,
+        ok: true,
+      };
+
+      setBarcodeCache(qr, payload);
+      injectVitrine(payload);
+      setCalm(t("vitrine.resultsReady", { defaultValue: "Sonuçlar vitrinde hazır." }), 2100);
+    } catch (e) {
+      setCalm(t("vitrine.resultsError", { defaultValue: "Arama sırasında hata oluştu." }), 2100);
+      window.dispatchEvent(
+        new CustomEvent("fae.vitrine.results", {
+          detail: { status: "error", query: qr, items: [], source: "barcode" },
+        })
+      );
+    } finally {
+      setLoading(false);
+      clearStatus(STATUS_SRC);
+    }
+  };
+
+    const backend = API_BASE || "";
+
+    const buildItems = (product) => {
+      const offers = [...(product?.offersTrusted || []), ...(product?.offersOther || [])];
+      return offers
+        .map((o) => {
+          const p = parsePrice(o?.price ?? o?.finalPrice);
+          const fp = parsePrice(o?.finalPrice ?? o?.price);
+          return {
+            ...o,
+            title: o?.title || product?.title || product?.name || qr,
+            image: o?.image || product?.image,
+            price: p,
+            finalPrice: fp ?? p,
+            currency: o?.currency || product?.currency || "TRY",
+          };
+        })
+        .filter((x) => typeof x.price === "number" && Number.isFinite(x.price) && x.price > 0);
+    };
+
+    const postLookup = async (allowPaid) => {
+      const url = `${backend}/api/product-info/product?force=0&diag=0&paid=${allowPaid ? 1 : 0}`;
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ qr, locale, allowPaid: !!allowPaid }),
+      });
+      const json = await resp.json().catch(() => null);
+      if (!resp.ok) {
+        const msg = json?.error || `HTTP_${resp.status}`;
+        throw new Error(msg);
+      }
+      return json || {};
+    };
+
+    setLoading(true);
+    setBusy(t("ai.analyzing", { defaultValue: "Analiz yapılıyor…" }));
+
+    try {
+      // 1) FREE-FIRST (paid kapalı)
+      let json = await postLookup(false);
+      let product = json?.product || {};
+      let items = buildItems(product);
+
+      // 2) Paid fallback (tek ek istek)
+      if (!items.length) {
+        json = await postLookup(true);
+        product = json?.product || {};
+        items = buildItems(product);
+      }
+
+      if (!items.length) {
+        setCalm(t("vitrine.noResults", { defaultValue: "Üzgünüm, sonuç bulunamadı." }), 2100);
+        window.dispatchEvent(
+          new CustomEvent("fae.vitrine.results", {
+            detail: {
+              status: "empty",
+              query: product.title || product.name || qr,
+              items: [],
+              source: "barcode",
+            },
+          })
+        );
+        return;
+      }
+
+      const payload = {
+        query: product.title || product.name || qr,
+        items,
+        source: "barcode",
+        product,
+        ok: true,
+      };
+
+      setBarcodeCache(qr, payload);
+      injectVitrine(payload);
+
+      setCalm(t("vitrine.resultsReady", { defaultValue: "Sonuçlar vitrinde hazır." }), 2100);
+    } catch (e) {
+      setCalm(t("vitrine.resultsError", { defaultValue: "Arama sırasında hata oluştu." }), 2100);
+      window.dispatchEvent(
+        new CustomEvent("fae.vitrine.results", {
+          detail: { status: "error", query: qr, items: [], source: "barcode" },
+        })
+      );
+    } finally {
+      setLoading(false);
+      clearStatus(STATUS_SRC);
+    }
+  };
+        })
+        .filter((x) => typeof x.price === "number" && Number.isFinite(x.price) && x.price > 0);
+      return items;
+    };
+
+    const parsePrice = (val) => {
+      if (typeof val === "number" && Number.isFinite(val)) return val;
+      if (val == null) return null;
+      let s = String(val).trim();
+      if (!s) return null;
+      s = s.replace(/[^0-9.,-]/g, "");
+      if (!s) return null;
+      const hasDot = s.includes(".");
+      const hasComma = s.includes(",");
+      if (hasDot && hasComma) {
+        // TR style: 1.234,56
+        s = s.replace(/\./g, "").replace(/,/g, ".");
+      } else if (hasComma && !hasDot) {
+        // 1234,56
+        s = s.replace(/,/g, ".");
+      } else {
+        // 1234.56 OR 1234
+        // keep dot
+      }
+      const n = Number.parseFloat(s);
+      return Number.isFinite(n) ? n : null;
+    };
+
+    const requestOnce = async (allowPaid) => {
+      const url = `${backend}/api/product-info/product?force=0&diag=0&paid=${allowPaid ? 1 : 0}`;
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ qr, locale, allowPaid: !!allowPaid }),
+      });
+      const json = await resp.json().catch(() => null);
+      const product = json?.product || {};
+      const items = buildItems(product);
+      return { ok: resp.ok && json?.ok !== false, json, product, items };
+    };
+
+    try {
+      // 1) Free-first
+      let r = await requestOnce(false);
+
+      // 2) Paid fallback only if empty
+      if (!r.items.length) {
+        r = await requestOnce(true);
+      }
+
+      if (!r.ok) {
+        throw new Error(r?.json?.error || "BARCODE_LOOKUP_FAILED");
+      }
+
+      if (!r.items.length) {
+        setCalm(t("vitrine.noResults", { defaultValue: "Üzgünüm, sonuç bulunamadı." }), 2100);
+        window.dispatchEvent(
+          new CustomEvent("fae.vitrine.results", {
+            detail: { status: "empty", query: r.product?.title || r.product?.name || qr, items: [], source: "barcode" },
+          })
+        );
+        return;
+      }
+
+      const payload = {
+        query: r.product?.title || r.product?.name || qr,
+        items: r.items,
+        source: "barcode",
+        product: r.product,
+        ok: true,
+      };
+
+      setBarcodeCache(qr, payload);
+      injectVitrine(payload);
+      setCalm(t("vitrine.resultsReady", { defaultValue: "Sonuçlar vitrinde hazır." }), 2100);
+    } catch (e) {
+      console.error("doBarcodeLookup error:", e);
+      setCalm(t("vitrine.resultsError", { defaultValue: "Arama sırasında hata oluştu." }), 2100);
+      window.dispatchEvent(
+        new CustomEvent("fae.vitrine.results", {
+          detail: { status: "error", query: qr, items: [], source: "barcode" },
+        })
+      );
+    } finally {
+      setLoading(false);
+      clearStatus(STATUS_SRC);
+    }
+  };
+
+      setBarcodeCache(qr, payload);
+      injectVitrine(payload);
+
+      setCalm(t("vitrine.resultsReady", { defaultValue: "Sonuçlar vitrinde hazır." }), 2100);
+    } catch (e) {
+      setCalm(t("vitrine.resultsError", { defaultValue: "Arama sırasında hata oluştu." }), 2100);
+      window.dispatchEvent(
+        new CustomEvent("fae.vitrine.results", {
+          detail: { status: "error", query: qr, items: [], source: "barcode" },
+        })
+      );
+    } finally {
+      setLoading(false);
+      clearStatus(STATUS_SRC);
+    }
+  };
+
+  // =========================
   // Tek arama: dedupe + runUnifiedSearch
   // =========================
   const lastSearchRef = useRef({ q: "", t: 0 });
@@ -341,221 +613,126 @@ rec.lang =
   // Kamera dosyası: Ücretsiz tespit (BarcodeDetector/TextDetector) → en son backend /api/vision
   // ============================================================
   const detectBarcodesFromFile = async (file) => {
-    if (typeof window === "undefined") return [];
+    try {
+      if (typeof window === "undefined") return [];
+      const BD = window.BarcodeDetector;
+      if (!BD) return [];
 
-    const normalizeCandidates = (vals) => {
-      const compact = (vals || [])
-        .map((v) => String(v || "").trim())
-        .filter(Boolean)
-        .map((v) => v.replace(/\s+/g, ""));
-      const numeric = compact.find((v) => /^[0-9]{8,14}$/.test(v));
-      return numeric ? [numeric] : compact;
-    };
+      const formats = [
+        "qr_code",
+        "ean_13",
+        "ean_8",
+        "upc_a",
+        "upc_e",
+        "code_128",
+        "code_39",
+        "itf",
+        "codabar",
+        "data_matrix",
+      ];
 
-    const tryBarcodeDetector = async () => {
+      const det = new BD({ formats });
+      let src = null;
       try {
-        const BD = window.BarcodeDetector;
-        if (!BD) return [];
-
-        const formats = [
-          "qr_code",
-          "ean_13",
-          "ean_8",
-          "upc_a",
-          "upc_e",
-          "code_128",
-          "code_39",
-          "itf",
-          "codabar",
-          "data_matrix",
-        ];
-
-        const det = new BD({ formats });
-        let src = null;
-
-        try {
-          if (typeof createImageBitmap === "function") {
-            src = await createImageBitmap(file);
-          }
-        } catch {
-          src = null;
+        if (typeof createImageBitmap === "function") {
+          src = await createImageBitmap(file);
         }
+      } catch {
+        src = null;
+      }
 
-        if (!src) {
-          src = await new Promise((resolve, reject) => {
-            try {
-              const url = URL.createObjectURL(file);
-              const img = new Image();
-              img.onload = () => {
-                try { URL.revokeObjectURL(url); } catch {}
-                resolve(img);
-              };
-              img.onerror = (e) => {
-                try { URL.revokeObjectURL(url); } catch {}
-                reject(e);
-              };
-              img.src = url;
-            } catch (e) {
+      // createImageBitmap yoksa <img> ile devam
+      if (!src) {
+        src = await new Promise((resolve, reject) => {
+          try {
+            const url = URL.createObjectURL(file);
+            const img = new Image();
+            img.onload = () => {
+              try {
+                URL.revokeObjectURL(url);
+              } catch {}
+              resolve(img);
+            };
+            img.onerror = (e) => {
+              try {
+                URL.revokeObjectURL(url);
+              } catch {}
               reject(e);
-            }
-          });
-        }
-
-        const w = src?.width || src?.naturalWidth || 0;
-        const h = src?.height || src?.naturalHeight || 0;
-        let input = src;
-
-        // Büyük görsellerde downscale ederek şansı artır
-        if (w && h) {
-          const maxDim = 1600;
-          const scale = Math.min(1, maxDim / Math.max(w, h));
-          if (scale < 1 && typeof document !== "undefined") {
-            const canvas = document.createElement("canvas");
-            canvas.width = Math.max(1, Math.round(w * scale));
-            canvas.height = Math.max(1, Math.round(h * scale));
-            const ctx = canvas.getContext("2d");
-            if (ctx) {
-              ctx.drawImage(src, 0, 0, canvas.width, canvas.height);
-              input = canvas;
-            }
+            };
+            img.src = url;
+          } catch (e) {
+            reject(e);
           }
-        }
-
-        const codes = await det.detect(input);
-        const vals = (codes || []).map((c) => c?.rawValue || c?.value || "");
-        return normalizeCandidates(vals);
-      } catch {
-        return [];
+        });
       }
-    };
 
-    const tryZXing = async () => {
-      try {
-        const { BrowserMultiFormatReader } = await import("@zxing/browser");
-        const reader = new BrowserMultiFormatReader();
-        const url = URL.createObjectURL(file);
-        try {
-          const result = await reader.decodeFromImageUrl(url);
-          const txt = String(result?.getText ? result.getText() : result?.text || "").trim();
-          return normalizeCandidates([txt]);
-        } finally {
-          try { URL.revokeObjectURL(url); } catch {}
-          try { reader.reset?.(); } catch {}
-        }
-      } catch {
-        return [];
-      }
-    };
-
-    const a = await tryBarcodeDetector();
-    if (a?.length) return a;
-    return await tryZXing();
-  };
-
-  const detectTextFromFile = async (file) => {
-    const cleanCandidate = (s) => {
-      let t = String(s || "").replace(/\s+/g, " " ).trim();
-      // çok gürültülü karakterleri kırp
-      t = t.replace(/[|_*#^~`]+/g, " " ).replace(/\s+/g, " " ).trim();
-      // aşırı kısa/yararsız
-      if (t.length < 3) return "";
-      // sırf rakam ve çok uzun ise barkod gibi, onu burada değil barkod hattında yakalamak daha iyi
-      if (/^[0-9]{8,18}$/.test(t)) return "";
-      if (t.length > 140) t = t.slice(0, 140);
-      return t;
-    };
-
-    const tryTextDetector = async () => {
-      try {
-        if (typeof window === "undefined") return "";
-        const TD = window.TextDetector;
-        if (!TD) return "";
-
-        const det = new TD();
-        let src = null;
-        try {
-          if (typeof createImageBitmap === "function") {
-            src = await createImageBitmap(file);
-          }
-        } catch {
-          src = null;
-        }
-        if (!src) return "";
-
-        const regions = await det.detect(src);
-        const texts = (regions || [])
-          .map((r) => String(r?.rawValue || r?.text || "").trim())
-          .filter((x) => x && x.length >= 3);
-
-        if (!texts.length) return "";
-        texts.sort((a, b) => b.length - a.length);
-        return cleanCandidate(texts[0]);
-      } catch {
-        return "";
-      }
-    };
-
-    const tryTesseract = async () => {
-      try {
-        if (typeof window === "undefined" || typeof document === "undefined") return "";
-        const mod = await import("tesseract.js");
-        const Tesseract = mod?.default || mod;
-
-        // downscale canvas
-        const url = URL.createObjectURL(file);
-        try {
-          const img = new Image();
-          img.crossOrigin = "anonymous";
-          img.src = url;
-          await new Promise((resolve, reject) => {
-            img.onload = resolve;
-            img.onerror = reject;
-          });
-
-          const w = img.naturalWidth || img.width;
-          const h = img.naturalHeight || img.height;
-          if (!w || !h) return "";
-
-          const maxDim = 1100;
-          const scale = Math.min(1, maxDim / Math.max(w, h));
+      // Büyük görsellerde downscale ederek şansı artır
+      const w = src?.width || src?.naturalWidth || 0;
+      const h = src?.height || src?.naturalHeight || 0;
+      let input = src;
+      if (w && h) {
+        const maxDim = 1600;
+        const scale = Math.min(1, maxDim / Math.max(w, h));
+        if (scale < 1 && typeof document !== "undefined") {
           const canvas = document.createElement("canvas");
           canvas.width = Math.max(1, Math.round(w * scale));
           canvas.height = Math.max(1, Math.round(h * scale));
           const ctx = canvas.getContext("2d");
-          if (!ctx) return "";
+          if (ctx) {
+            ctx.drawImage(src, 0, 0, canvas.width, canvas.height);
+            input = canvas;
+          }
+        }
+      }
 
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const codes = await det.detect(input);
+      const vals = (codes || [])
+        .map((c) => String(c?.rawValue || c?.value || "").trim())
+        .filter(Boolean);
 
-          const res = await Tesseract.recognize(canvas, "eng", { logger: () => {} });
-          const raw = String(res?.data?.text || "");
+      // en iyi aday: sayısal barkod varsa onu öne al
+      const compact = vals.map((v) => v.replace(/\s+/g, ""));
+      const numeric = compact.find((v) => /^[0-9]{8,14}$/.test(v));
+      if (numeric) return [numeric];
+      return compact;
+    } catch {
+      return [];
+    }
+  };
 
-                    // en iyi satırı seç
-          const lines = raw
-            .split(/\r?\n/)
-            .map((x) => cleanCandidate(x))
-            .filter(Boolean);
+  const detectTextFromFile = async (file) => {
+    try {
+      if (typeof window === "undefined") return "";
+      const TD = window.TextDetector;
+      if (!TD) return "";
 
-          if (!lines.length) return "";
-          lines.sort((a, b) => b.length - a.length);
-          return lines[0] || "";
-        } finally {
-          try { URL.revokeObjectURL(url); } catch {}
+      const det = new TD();
+      let src = null;
+      try {
+        if (typeof createImageBitmap === "function") {
+          src = await createImageBitmap(file);
         }
       } catch {
-        return "";
+        src = null;
       }
-    };
+      if (!src) return "";
 
-    const td = await tryTextDetector();
-    if (td) return td;
+      const regions = await det.detect(src);
+      const texts = (regions || [])
+        .map((r) => String(r?.rawValue || r?.text || "").trim())
+        .filter((x) => x && x.length >= 3);
 
-    // tesseract pahalı; 6.5 sn içinde bir şey vermezse boş kabul et
-    const out = await Promise.race([
-      tryTesseract(),
-      new Promise((resolve) => setTimeout(() => resolve(""), 6500)),
-    ]);
+      if (!texts.length) return "";
 
-    return cleanCandidate(out);
+      // En uzun metni seç (genelde en anlamlı)
+      texts.sort((a, b) => b.length - a.length);
+      let best = texts[0];
+      best = best.replace(/\s+/g, " ").trim();
+      if (best.length > 140) best = best.slice(0, 140);
+      return best;
+    } catch {
+      return "";
+    }
   };
 
 	async function onPickFile(e) {
