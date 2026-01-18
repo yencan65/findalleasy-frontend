@@ -725,7 +725,9 @@ rec.lang =
         className="search-bar-wrapper flex justify-center w-full"
       >
         <div
-          className="flex items-center !bg-white !border-2 !border-black !text-black rounded-full px-3 sm:px-4 py-2 shadow-sm w-[520px] max-w-[92%] sm:w-[420px] md:w-[500px] lg:w-[520px] transition-all duration-300 ease-in-out"
+          className="flex items-center bg-[linear-gradient(180deg,#F8EBC8_0%,#E7C876_55%,#D4AF37_100%)] border-2 border-black rounded-full px-3 sm:px-4 py-2 shadow-sm
+                     w-[520px] max-w-[92%] sm:w-[420px] md:w-[500px] lg:w-[520px]
+                     transition-all duration-300 ease-in-out"
         >
           <input
             ref={fileRef}
@@ -744,7 +746,7 @@ rec.lang =
               onChange={(e) => setValue(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && doSearch()}
               placeholder={placeholders[index]}
-              className="w-full bg-transparent outline-none !text-black placeholder:!text-black/40 text-base px-3 pr-24 sm:pr-3 min-w-[120px]"
+              className="w-full bg-transparent outline-none text-black placeholder:text-black/40 text-base px-3 pr-24 sm:pr-3 min-w-[120px]"
             />
 
 
@@ -752,10 +754,10 @@ rec.lang =
               type="button"
               onClick={() => doSearch()}
               disabled={loading}
-              className="sm:hidden absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full !bg-white !border-2 !border-black !text-black hover:!bg-black/5 flex items-center justify-center shadow-sm transition disabled:opacity-60"
+              className="sm:hidden absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full border-2 border-black text-black bg-white/20 hover:bg-white/30 flex items-center justify-center shadow-sm transition disabled:opacity-60"
               aria-label={t("search.search")}
             >
-              <Search size={18} className="!stroke-black" />
+              <Search size={18} />
             </button>
           </div>
 
@@ -763,37 +765,37 @@ rec.lang =
           <button
             type="button"
             onClick={startMic}
-            className="ml-1 w-10 h-10 rounded-full !bg-white !border-2 !border-black flex items-center justify-center !text-black hover:!bg-black/5 transition"
+            className="ml-1 text-black border-2 border-black bg-white/15 hover:bg-white/25 transition p-2 rounded-full"
             aria-label={t("search.voice", { defaultValue: "Sesli arama" })}
           >
-            <Mic className={`w-5 h-5 !stroke-black ${micListening ? "animate-pulse" : ""}`} />
+            <Mic className={`w-5 h-5 ${micListening ? "animate-pulse" : ""}`} />
           </button>
 
           <button
             type="button"
             onClick={openCamera}
-            className="ml-1 w-10 h-10 rounded-full !bg-white !border-2 !border-black flex items-center justify-center !text-black hover:!bg-black/5 transition"
+            className="text-black border-2 border-black bg-white/15 hover:bg-white/25 transition p-2 rounded-full"
             aria-label={t("cameraSearch", { defaultValue: "Kamera ile ara" })}
           >
-            <Camera className="w-5 h-5 !stroke-black" />
+            <Camera className="w-5 h-5" />
           </button>
 
           <button
             type="button"
             onClick={() => setScannerOpen(true)}
-            className="ml-1 w-10 h-10 rounded-full !bg-white !border-2 !border-black flex items-center justify-center !text-black hover:!bg-black/5 transition"
+            className="text-black border-2 border-black bg-white/15 hover:bg-white/25 transition p-2 rounded-full"
             aria-label={t("qrSearch", { defaultValue: "QR ile ara" })}
           >
-            <QrCode className="w-5 h-5 !stroke-black" />
+            <QrCode className="w-5 h-5" />
           </button>
 
           {/* ✅ SM+ ekranda klasik Ara butonu (input dışı) */}
           <button
             onClick={() => doSearch()}
             disabled={loading}
-            className="ml-1 hidden sm:flex items-center justify-center w-10 h-10 rounded-full !bg-white !border-2 !border-black !text-black hover:!bg-black/5 transition disabled:opacity-60"
+            className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full border-2 border-black text-black bg-white/20 hover:bg-white/30 transition disabled:opacity-60"
           >
-            <Search size={18} className="!stroke-black" />
+            <Search size={18} />
           </button>
         </div>
       </div>
