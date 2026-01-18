@@ -69,7 +69,17 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
   // =========================
   // Barkod helpers (15dk cache)
   // =========================
-  const isLikelyBarcode = (s) => /^[0-9]{8,14}$/.test(String(s || "").trim());
+  const isLikelyBarcode = (s) => /^[0-9]{8,18}$/.test(String(s || "").trim());
+
+  const extractBarcodeLike = (input) => {
+    try {
+      const s = String(input || "");
+      const m = s.match(/(\d{8,18})/);
+      return m ? String(m[1] || "") : "";
+    } catch {
+      return "";
+    }
+  };
 
   const barcodeCacheKey = (qr) => `fae.barcodeCache:${locale}:${qr}`;
   const getBarcodeCache = (qr) => {
@@ -168,7 +178,7 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
       const resp = await fetch(url, {
         signal: controller ? controller.signal : undefined,
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-fae-allow-serp-lens": "1" },
         body: JSON.stringify({ qr, locale, allowPaid: !!allowPaid }),
       });
       if (to) clearTimeout(to);
@@ -348,7 +358,7 @@ rec.lang =
         .map((v) => String(v || "").trim())
         .filter(Boolean)
         .map((v) => v.replace(/\s+/g, ""));
-      const numeric = compact.find((v) => /^[0-9]{8,14}$/.test(v));
+      const numeric = compact.find((v) => /^[0-9]{8,18}$/.test(v));
       return numeric ? [numeric] : compact;
     };
 
@@ -635,9 +645,11 @@ rec.lang =
 	      }
 	    });
 
-	    const r = await fetch("/api/vision?diag=0&allowSerpLens=1", {
+	    const backend = API_BASE || "";
+
+	    const r = await fetch(`${backend}/api/vision?diag=0&allowSerpLens=1`, {
 	      method: "POST",
-	      headers: { "Content-Type": "application/json" },
+	      headers: { "Content-Type": "application/json", "x-fae-allow-serp-lens": "1" },
 	      body: JSON.stringify({ imageBase64: b64, locale: i18n?.language || "tr", allowSerpLens: true }),
 	    });
 
@@ -651,8 +663,9 @@ rec.lang =
 	    ).trim();
 
 	    // Vision'dan barkod çıkarsa: barcode->product-info hattına git (kredi yakmaz).
-	    const bc = isLikelyBarcode(barcodeCandidate)
-	      ? barcodeCandidate.replace(/\s+/g, "")
+	    const bcGuess = extractBarcodeLike(barcodeCandidate || j?.rawText || j?.query || "");
+	    const bc = isLikelyBarcode(bcGuess)
+	      ? bcGuess.replace(/\s+/g, "")
 	      : null;
 	    if (bc) {
 	      kickedSearch = true;
@@ -706,8 +719,9 @@ rec.lang =
 	
 	  setScannerOpen(false);
 	
-	  if (isLikelyBarcode(compact)) {
-	    doBarcodeLookup(compact);
+	  const extracted = extractBarcodeLike(compact) || extractBarcodeLike(raw);
+	  if (isLikelyBarcode(extracted)) {
+	    doBarcodeLookup(extracted);
 	    return;
 	  }
 	
