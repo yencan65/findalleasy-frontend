@@ -15,7 +15,8 @@
 /* Hafif zıplama efekti */
 @keyframes softBounce {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+  /* ✅ Dikkat dağıtmasın: mikro hareket */
+  50% { transform: translateY(-2px); }
 }
 
 .ai-robot {
@@ -69,7 +70,8 @@
 /* Slogandaki küçük AI yüzü (Sono Vite) */
 .sono-vite {
   display: inline-block;
-  animation: softBounce 5s ease-in-out infinite;
+  /* ✅ Daha sakin: uzun periyot + küçük hareket */
+  animation: softBounce 8s ease-in-out infinite;
   /* SVG de olsa hafif derinlik */
   box-shadow: 0 10px 22px rgba(0,0,0,0.10);
   border-radius: 9999px;
@@ -120,9 +122,10 @@
 }
 
 .golden-ring {
-  border: 2px solid #d4af37;
+  /* ✅ Ring görünmesin (dikkat dağıtıcı) */
+  border: none;
   border-radius: 9999px;
-  animation: goldenGlow 3s ease-in-out infinite;
+  animation: none;
 }
 
 

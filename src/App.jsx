@@ -740,15 +740,9 @@ useEffect(() => {
           <span className="text-black">{t("gerisini")}</span>
 
           <div
-            className="relative group transition-transform duration-500 hover:scale-110"
+            className="relative group transition-transform duration-500 hover:scale-[1.03]"
             title="Sono AI"
           >
-            <div
-              className="absolute inset-0 rounded-full border-[2px] border-[#8b8b8b]
-              shadow-[0_0_10px_rgba(120,120,120,0.45),0_0_22px_rgba(120,120,120,0.35)] opacity-70
-              group-hover:shadow-[0_0_16px_rgba(120,120,120,0.55),0_0_34px_rgba(120,120,120,0.45)]
-              transition-all duration-500 ease-in-out"
-            ></div>
             <img
               src={sonoFace}
               alt="Sono"

@@ -259,18 +259,20 @@ export default function Header() {
             onClick={() => setOpenLang(!openLang)}
             className="
               flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-full
-              border border-black/20 text-black/85
+              border border-[#d4af37]/45 text-black/85
               bg-white/35 backdrop-blur-lg
               shadow-[inset_0_0_10px_rgba(255,255,255,0.45),0_10px_24px_rgba(0,0,0,0.06)]
               transition-all duration-300
-              hover:scale-[1.08]
-              hover:shadow-[0_0_14px_rgba(212,175,55,0.45)]
-              hover:bg-[#d4af37]/18 hover:text-black
+              hover:scale-[1.06]
+              hover:shadow-[0_0_14px_rgba(212,175,55,0.40)]
+              hover:bg-[#d4af37]/14 hover:text-black
               whitespace-nowrap
             "
           >
-            <Globe size={18} />
-            <span className="uppercase text-sm">{langLabel}</span>
+            <span className="text-[#d4af37]">
+              <Globe size={18} />
+            </span>
+            <span className="uppercase text-sm text-black/80">{langLabel}</span>
           </button>
 
           {openLang && (
@@ -317,9 +319,9 @@ export default function Header() {
         <button
           onClick={() => setWalletOpen(true)}
           className="
-            p-2 rounded-full border border-black/20
-            text-black/80 bg-white/35 backdrop-blur-lg
-            hover:bg-[#d4af37]/18 hover:text-black
+            p-2 rounded-full border border-[#d4af37]/45
+            text-[#d4af37] bg-white/35 backdrop-blur-lg
+            hover:bg-[#d4af37]/14
             transition-all
           "
         >
@@ -332,9 +334,9 @@ export default function Header() {
             onClick={() => setUserOpen(!userOpen)}
             className="
               p-2 rounded-full
-              border border-black/20 text-black/80
+              border border-[#d4af37]/45 text-[#d4af37]
               bg-white/35 backdrop-blur-lg
-              hover:bg-[#d4af37]/18 hover:text-black
+              hover:bg-[#d4af37]/14
               transition-all
             "
           >

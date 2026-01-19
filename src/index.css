@@ -27,9 +27,9 @@
   /* eski isimle uyumluluk (kırılmasın diye map) */
   --rezene-glow: var(--stone-glow);
 
-  /* Header/Footer: body ile aynı aile (cam gibi yüzey) */
-  --ui-surface: rgba(255, 255, 255, 0.52);
-  --ui-surface-strong: rgba(255, 255, 255, 0.72);
+  /* Header/Footer: soft gri (body ile uyumlu, göz yormayan) */
+  --ui-surface: rgba(238, 238, 238, 0.62);
+  --ui-surface-strong: rgba(232, 232, 232, 0.84);
 
   /* Search yüzeyi */
   --field-surface: rgba(255, 255, 255, 0.62);
