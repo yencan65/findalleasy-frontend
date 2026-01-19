@@ -204,12 +204,12 @@ export default function Header() {
     <header
       className="
         w-full flex flex-row justify-between items-center flex-nowrap gap-2 sm:gap-3
-        px-3 sm:px-6 py-3 sm:py-4 bg-transparent
-        border-b border-black/10
-        text-black font-sans backdrop-blur-xl
+        px-3 sm:px-6 py-3 sm:py-4 bg-[#3b3b3b]/92
+        border-b border-[#d4af37]/20
+        text-white font-sans backdrop-blur-xl
       "
       style={{
-        boxShadow: "0 10px 26px rgba(0,0,0,0.05)",
+        boxShadow: "0 10px 34px rgba(0,0,0,0.22)",
       }}
     >
       {/* LOGO */}
@@ -235,9 +235,9 @@ export default function Header() {
               overflow-hidden text-ellipsis
             "
           >
-            <span className="text-black">Find</span>
+            <span className="text-white">Find</span>
             <span className="text-[#d4af37]">All</span>
-            <span className="text-black">Easy</span>
+            <span className="text-white">Easy</span>
           </span>
 
           <SnapIcon
@@ -259,20 +259,18 @@ export default function Header() {
             onClick={() => setOpenLang(!openLang)}
             className="
               flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-full
-              border border-[#d4af37]/45 text-black/85
-              bg-white/35 backdrop-blur-lg
-              shadow-[inset_0_0_10px_rgba(255,255,255,0.45),0_10px_24px_rgba(0,0,0,0.06)]
+              border border-[#d4af37]/40 text-[#d4af37]
+              bg-white/5 backdrop-blur-lg
+              shadow-[inset_0_0_10px_rgba(255,255,255,0.10),0_0_6px_rgba(212,175,55,0.25)]
               transition-all duration-300
-              hover:scale-[1.06]
-              hover:shadow-[0_0_14px_rgba(212,175,55,0.40)]
-              hover:bg-[#d4af37]/14 hover:text-black
+              hover:scale-[1.08]
+              hover:shadow-[0_0_14px_rgba(212,175,55,0.45)]
+              hover:bg-[#d4af37]/12
               whitespace-nowrap
             "
           >
-            <span className="text-[#d4af37]">
-              <Globe size={18} />
-            </span>
-            <span className="uppercase text-sm text-black/80">{langLabel}</span>
+            <Globe size={18} className="text-[#d4af37]" />
+            <span className="uppercase text-sm text-[#d4af37]">{langLabel}</span>
           </button>
 
           {openLang && (
@@ -282,8 +280,8 @@ export default function Header() {
                 top-full mt-2 right-0
                 sm:top-1/2 sm:-translate-y-1/2
                 sm:right-full sm:mr-3 sm:mt-0
-                bg-white/75 backdrop-blur-2xl
-                border border-black/10
+                bg-black/45 backdrop-blur-2xl
+                border border-[#d4af37]/15
                 rounded-3xl
                 px-3 py-2
                 flex flex-nowrap gap-2
@@ -301,11 +299,11 @@ export default function Header() {
                   onClick={() => changeLanguage(lng)}
                   className={`
                     px-2.5 py-1 rounded-full text-[11px] sm:px-3 sm:py-1.5 sm:text-xs font-semibold shrink-0
-                    border border-black/15 text-black/80
+                    border border-[#d4af37]/25 text-[#d4af37]
                     hover:scale-[1.10]
-                    hover:bg-[#d4af37]/35 hover:text-black
+                    hover:bg-[#d4af37] hover:text-black
                     transition-all
-                    ${i18n.language === lng ? "bg-[#d4af37]/25 text-black" : ""}
+                    ${i18n.language === lng ? "bg-[#d4af37]/35 text-black" : ""}
                   `}
                 >
                   {LANG_LABELS[lng]}
@@ -319,9 +317,9 @@ export default function Header() {
         <button
           onClick={() => setWalletOpen(true)}
           className="
-            p-2 rounded-full border border-[#d4af37]/45
-            text-[#d4af37] bg-white/35 backdrop-blur-lg
-            hover:bg-[#d4af37]/14
+            p-2 rounded-full border border-[#d4af37]/60
+            text-[#d4af37] bg-white/5 backdrop-blur-lg
+            hover:bg-[#d4af37]/12 hover:text-[#d4af37]
             transition-all
           "
         >
@@ -334,9 +332,9 @@ export default function Header() {
             onClick={() => setUserOpen(!userOpen)}
             className="
               p-2 rounded-full
-              border border-[#d4af37]/45 text-[#d4af37]
-              bg-white/35 backdrop-blur-lg
-              hover:bg-[#d4af37]/14
+              border border-[#d4af37]/60 text-[#d4af37]
+              bg-white/5 backdrop-blur-lg
+              hover:bg-[#d4af37]/12 hover:text-[#d4af37]
               transition-all
             "
           >
@@ -347,9 +345,9 @@ export default function Header() {
             <div
               className="
                 absolute right-0 top-12
-                bg-white/85 backdrop-blur-xl
-                border border-black/10 rounded-2xl
-                p-4 shadow-[0_18px_44px_rgba(0,0,0,0.10)]
+                bg-black/75 backdrop-blur-xl
+                border border-[#d4af37]/35 rounded-2xl
+                p-4 shadow-[0_0_18px_rgba(212,175,55,0.25)]
                 text-sm w-56 z-50 animate-fadeIn
               "
             >
@@ -358,14 +356,14 @@ export default function Header() {
                   <p className="text-[#d4af37] font-semibold mb-1">
                     {sanitizeName(user.name) || t("username")}
                   </p>
-                  <p className="text-black/60 mb-3">
+                  <p className="text-gray-300 mb-3">
                     {t("Puan")}: {user.points}
                   </p>
                   <button
                     onClick={handleLogout}
                     className="
-                      w-full border border-black/20 rounded-lg
-                      text-black/80 hover:bg-black/5 py-1 transition-all
+                      w-full border border-[#d4af37]/60 rounded-lg
+                      text-[#d4af37] hover:bg-[#d4af37]/25 py-1 transition-all
                     "
                   >
                     {t("auth.logout")}

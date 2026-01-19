@@ -6,36 +6,28 @@
 :root {
   --gold: #d4af37;
 
-  /* ✅ Milk White (göz yormayan, sıcak kırık beyaz) */
-  --milk: #f6f2ea;
-  --milk-mid: #f1ece2;
-  --milk-deep: #e8e1d5;
+  /* ✅ BAZALT 35 (tek arka plan: mobil/tablet/pc aynı) */
+  --basalt-35: #5e6061;
+  --basalt-35-mid: #4b4d4e;
+  --basalt-35-deep: #343637;
 
-  /* Eski isimler (kırılmasın): bazalt map */
-  --basalt-35: #d7d1c6;
-  --basalt-35-mid: #e3ddd3;
-  --basalt-35-deep: #cfc8bb;
+  --bg: var(--basalt-35);
 
-  --bg: var(--milk);
+  /* okunurluk perdesi (taşı boğmadan) */
+  --bg-wash: rgba(0, 0, 0, 0.14);
 
-  /* okunurluk perdesi (light) */
-  --bg-wash: rgba(0, 0, 0, 0.02);
+  /* yumuşak taş ışığı */
+  --stone-glow: rgba(255, 255, 255, 0.08);
 
-  /* yumuşak üst ışık */
-  --stone-glow: rgba(255, 255, 255, 0.85);
-
-  /* eski isimle uyumluluk (kırılmasın diye map) */
+  /* eski isimle uyumluluk (kırılmasın) */
   --rezene-glow: var(--stone-glow);
 
-  /* Header/Footer: soft gri (body ile uyumlu, göz yormayan) */
-  --ui-surface: rgba(238, 238, 238, 0.62);
-  --ui-surface-strong: rgba(232, 232, 232, 0.84);
+  /* Header/Footer: biraz daha koyu (altın daha belirgin, daha "Apple" görünüm) */
+  --ui-surface: rgba(38, 40, 41, 0.56);
+  --ui-surface-strong: rgba(38, 40, 41, 0.78);
 
   /* Search yüzeyi */
-  --field-surface: rgba(255, 255, 255, 0.62);
-
-  /* Text base */
-  --ink: rgba(18, 18, 18, 0.92);
+  --field-surface: rgba(26, 27, 28, 0.42);
 }
 
 /* === Scroll unlock (legal/admin pages) === */
@@ -46,25 +38,25 @@ body.fae-allow-scroll {
 
 html,
 body {
-  /* ✅ Mobil/Tablet/PC tek dil: aynı sütbeyazı yüzey */
+  /* ✅ Mobil/Tablet/PC tek dil: aynı Bazalt 35 arka plan */
   background-image:
-    /* ince paper-grain (çok hafif) */
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.08'/%3E%3C/svg%3E"),
+    /* ince taş dokusu (grain) */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.16'/%3E%3C/svg%3E"),
+    /* okunurluk perdesi */
+    linear-gradient(var(--bg-wash), var(--bg-wash)),
     /* üstten yumuşak ışık */
-    radial-gradient(1400px 820px at 50% -10%, rgba(255,255,255,0.95), transparent 68%),
-    /* altın dokunuş (çok soft) */
-    radial-gradient(920px 520px at 14% 10%, rgba(212, 175, 55, 0.08), transparent 62%),
-    radial-gradient(860px 520px at 88% 18%, rgba(212, 175, 55, 0.05), transparent 66%),
-    /* çok hafif vignette (derinlik) */
-    radial-gradient(1100px 760px at 50% 118%, rgba(0,0,0,0.06), transparent 58%),
-    /* sütbeyazı gövde */
-    linear-gradient(135deg, var(--milk) 0%, var(--milk-mid) 55%, var(--milk-deep) 100%);
+    radial-gradient(1200px 700px at 50% 18%, var(--stone-glow), transparent 62%),
+    /* çok hafif altın dokunuş */
+    radial-gradient(900px 520px at 18% 12%, rgba(212, 175, 55, 0.04), transparent 60%),
+    radial-gradient(820px 480px at 86% 26%, rgba(212, 175, 55, 0.028), transparent 62%),
+    /* bazalt gövde */
+    linear-gradient(135deg, var(--basalt-35) 0%, var(--basalt-35-mid) 55%, var(--basalt-35-deep) 100%);
 
   background-repeat: repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
   background-size: 260px 260px, cover, cover, cover, cover, cover;
 
   background-color: var(--bg);
-  color: var(--ink);
+  color: rgba(255, 255, 255, 0.92);
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
   margin: 0;
   padding: 0;
@@ -72,7 +64,6 @@ body {
   overflow-y: hidden;
   -webkit-tap-highlight-color: transparent;
 }
-
 
 /* === MODAL OPEN (scroll lock) === */
 body.fae-modal-open {
@@ -119,19 +110,19 @@ header {
   justify-content: space-between;
   align-items: center;
 
-  /* yumuşak ayrım: keskin çizgi yok */
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  /* çizgi + yüzey aynı aile */
+  border-bottom: 1px solid rgba(212, 175, 55, 0.13);
 
-  /* çok hafif derinlik (white UI) */
-  box-shadow: 0 10px 28px rgba(0,0,0,0.06);
+  /* gölge çok hafif: “emanet” değil, ayrım çizgisi gibi */
+  box-shadow: 0 6px 18px rgba(0,0,0,0.10);
 
   position: sticky;
   top: 0;
   z-index: 50;
 
   background: var(--ui-surface-strong) !important;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .logo {
@@ -165,7 +156,7 @@ header {
   background: transparent;
   border: none;
   outline: none;
-  color: var(--ink);
+  color: rgba(255,255,255,0.95);
   font-size: clamp(0.9rem, 1.1vw, 1.1rem);
 }
 
@@ -201,9 +192,8 @@ header {
   margin-top: 4vh;
   text-align: center;
   font-size: clamp(1.1rem, 2vw, 1.6rem);
-  color: rgba(18,18,18,0.88);
+  color: rgba(255,255,255,0.92);
   line-height: 1.4;
-  text-shadow: 0 10px 28px rgba(0,0,0,0.10);
 }
 
 /* === VİTRİN === */
@@ -270,30 +260,29 @@ header {
 .legal-prose h1 { font-size: 1.6rem; line-height: 1.2; margin: 0 0 0.75rem 0; color: var(--gold); }
 .legal-prose h2 { font-size: 1.15rem; line-height: 1.3; margin: 1.25rem 0 0.5rem 0; color: rgba(212, 175, 55, 0.90); }
 .legal-prose p,
-.legal-prose li { color: rgba(18, 18, 18, 0.84); line-height: 1.7; font-size: 0.98rem; }
+.legal-prose li { color: rgba(255, 255, 255, 0.88); line-height: 1.7; font-size: 0.98rem; }
 .legal-prose ul { margin-left: 1.2rem; list-style: disc; }
 .legal-prose a { color: var(--gold); text-decoration: underline; }
-.legal-prose .muted { color: rgba(18, 18, 18, 0.62); font-size: 0.85rem; }
+.legal-prose .muted { color: rgba(212, 175, 55, 0.68); font-size: 0.85rem; }
 
 /* === FOOTER === */
 footer {
   margin-top: auto;
   width: 100%;
 
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 -10px 28px rgba(0,0,0,0.05);
+  border-top: 1px solid rgba(212, 175, 55, 0.13);
+  box-shadow: 0 -6px 18px rgba(0,0,0,0.10);
 
   text-align: center;
   padding: 1rem 0;
 
   background: var(--ui-surface-strong) !important;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 
-  color: rgba(18, 18, 18, 0.70);
+  color: rgba(255,255,255,0.70);
   font-size: clamp(0.8rem, 1vw, 0.9rem);
 }
-
 
 /* === RESPONSIVE === */
 @media (max-width: 1024px) {
@@ -331,12 +320,3 @@ img, video, canvas, iframe { max-width: 100%; height: auto; }
 .fae-dot { width: 4px; height: 4px; border-radius: 9999px; background: currentColor; animation: faeDotBounce 1.05s infinite; }
 .fae-dot:nth-child(2) { animation-delay: 0.12s; }
 .fae-dot:nth-child(3) { animation-delay: 0.24s; }
-
-
-/* === LIGHT THEME HELPERS === */
-.fae-slogan {
-  text-shadow: 0 10px 30px rgba(0,0,0,0.10), 0 2px 0 rgba(255,255,255,0.55);
-}
-.fae-sono-shadow {
-  filter: drop-shadow(0 10px 20px rgba(0,0,0,0.12));
-}

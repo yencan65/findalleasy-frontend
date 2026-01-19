@@ -14,56 +14,56 @@ export default function Footer({ fixed = false }) {
   }, []);
 
   return (
-    <footer className={`py-2 sm:py-3 px-3 w-full border-t border-black/10 text-black ${fixed ? "fixed bottom-0 left-0 z-[60]" : ""}`}>
+    <footer className={`py-2 sm:py-3 px-3 w-full border-t border-[#d4af37]/20 ${fixed ? "fixed bottom-0 left-0 z-[60] bg-[#3b3b3b]/88 backdrop-blur-xl shadow-[0_-10px_34px_rgba(0,0,0,0.24)]" : ""}`}>
       <hr className="footer-line" />
       <div className="phi-gap text-[11px] md:text-sm" />
       {/* ✅ Info + Legal links (reviewers want these) */}
       <nav className="mt-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs">
         <a
           href="/about"
-          className="text-[#a67c00] hover:text-[#d4af37] underline underline-offset-4 whitespace-nowrap"
+          className="text-[#d4af37]/90 hover:text-[#d4af37] underline underline-offset-4 whitespace-nowrap"
         >
           {t("site.about", { defaultValue: "Hakkımızda" })}
         </a>
-        <span className="text-black/25">•</span>
+        <span className="text-[#d4af37]/40">•</span>
         <a
           href="/how-it-works"
-          className="text-[#a67c00] hover:text-[#d4af37] underline underline-offset-4 whitespace-nowrap"
+          className="text-[#d4af37]/90 hover:text-[#d4af37] underline underline-offset-4 whitespace-nowrap"
         >
           {t("site.how", { defaultValue: "Nasıl Çalışır?" })}
         </a>
-        <span className="text-black/25">•</span>
+        <span className="text-[#d4af37]/40">•</span>
         <a
           href="/contact"
-          className="text-[#a67c00] hover:text-[#d4af37] underline underline-offset-4 whitespace-nowrap"
+          className="text-[#d4af37]/90 hover:text-[#d4af37] underline underline-offset-4 whitespace-nowrap"
         >
           {t("site.contact", { defaultValue: "İletişim" })}
         </a>
-        <span className="text-black/25">•</span>
+        <span className="text-[#d4af37]/40">•</span>
         <a
           href="/privacy"
-          className="text-[#a67c00] hover:text-[#d4af37] underline underline-offset-4 whitespace-nowrap"
+          className="text-[#d4af37]/90 hover:text-[#d4af37] underline underline-offset-4 whitespace-nowrap"
         >
           {t("legal.privacy", { defaultValue: "Gizlilik" })}
         </a>
-        <span className="text-black/25">•</span>
+        <span className="text-[#d4af37]/40">•</span>
         <a
           href="/cookies"
-          className="text-[#a67c00] hover:text-[#d4af37] underline underline-offset-4 whitespace-nowrap"
+          className="text-[#d4af37]/90 hover:text-[#d4af37] underline underline-offset-4 whitespace-nowrap"
         >
           {t("legal.cookies", { defaultValue: "Çerezler" })}
         </a>
-        <span className="text-black/25">•</span>
+        <span className="text-[#d4af37]/40">•</span>
         <a
           href="/terms"
-          className="text-[#a67c00] hover:text-[#d4af37] underline underline-offset-4 whitespace-nowrap"
+          className="text-[#d4af37]/90 hover:text-[#d4af37] underline underline-offset-4 whitespace-nowrap"
         >
           {t("legal.terms", { defaultValue: "Kullanım Şartları" })}
         </a>
-        <span className="text-black/25">•</span>
+        <span className="text-[#d4af37]/40">•</span>
         <a
           href="/affiliate-disclosure"
-          className="text-[#a67c00] hover:text-[#d4af37] underline underline-offset-4 whitespace-nowrap"
+          className="text-[#d4af37]/90 hover:text-[#d4af37] underline underline-offset-4 whitespace-nowrap"
         >
           {t("legal.affiliate", { defaultValue: "Affiliate Açıklaması" })}
         </a>
