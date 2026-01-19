@@ -281,6 +281,9 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
   // İstek İptali için Ref (Anti-Race Condition)
   const abortControllerRef = useRef(null);
 
+  // Request id (StrictMode / rapid-send race guard)
+  const requestIdRef = useRef(0);
+
   // Otomatik Scroll için Ref
   const messagesEndRef = useRef(null);
 
@@ -978,10 +981,13 @@ function handleMicPointerDown(e) {
 
     const analyzingText = t("ai.analyzing", { defaultValue: "Analiz ediliyor..." });
 
+    // Unique id per request to avoid removing / overwriting wrong placeholders
+    const reqId = ++requestIdRef.current;
+
     pulseHalo();
     setThinking(true);
     flashMsg(analyzingText, 0);
-    setMessages((m) => [...m, { from: "ai", text: analyzingText }]);
+    setMessages((m) => [...m, { from: "ai", text: analyzingText, rid: reqId }]);
 
     // 5) Önceki istek abort
     if (abortControllerRef.current) abortControllerRef.current.abort();
@@ -1027,6 +1033,9 @@ function handleMicPointerDown(e) {
         });
 
         const j = await res.json();
+
+        // Stale response guard
+        if (reqId !== requestIdRef.current) return;
         if (j?.cards) {
           try {
             if (typeof window !== "undefined") {
@@ -1043,11 +1052,9 @@ function handleMicPointerDown(e) {
 
         setMessages((prev) => {
           const arr = Array.isArray(prev) ? [...prev] : [];
-          // Son eklenen "Analiz ediliyor..." placeholder'ını temizle
-          const last = arr[arr.length - 1];
-          if (last && last.from === "ai" && String(last.text || "").trim() === String(analyzingText || "").trim()) {
-            arr.pop();
-          }
+          // Only remove this request's placeholder
+          const idx = arr.findLastIndex?.((x) => x && x.from === "ai" && x.rid === reqId) ?? -1;
+          if (idx >= 0) arr.splice(idx, 1);
           const sources = Array.isArray(j?.sources) ? j.sources.slice(0, 5) : [];
           const trustScore = (typeof j?.trustScore === 'number' ? j.trustScore : (typeof j?.meta?.trustScore === 'number' ? j.meta.trustScore : null));
           arr.push({
@@ -1056,6 +1063,7 @@ function handleMicPointerDown(e) {
             suggestions: Array.isArray(j?.suggestions) ? j.suggestions.slice(0, 4) : [],
             sources,
             trustScore,
+            rid: reqId,
           });
           return arr;
         });

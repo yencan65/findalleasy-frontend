@@ -177,7 +177,7 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     const postLookup = async (allowPaid) => {
       const url = `${backend}/api/product-info/product?force=0&diag=0&paid=${allowPaid ? 1 : 0}`;
       const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-      const to = controller ? setTimeout(() => controller.abort(), 5500) : null;
+      const to = controller ? setTimeout(() => controller.abort(), 9000) : null;
       const resp = await fetch(url, {
         signal: controller ? controller.signal : undefined,
         method: "POST",
@@ -193,12 +193,17 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     setBusy(t("ai.analyzing", { defaultValue: "Analiz yapılıyor…" }));
 
     try {
-      // 1) Free-first only (paid fallbacks are last-resort and should remain OFF here)
-      //    to protect credits + speed; backend already has its own gating.)
+      // 1) Free-first
       let { resp, json } = await postLookup(false);
       let product = json?.product || {};
       let items = buildItems(product);
 
+      // 2) Paid fallback (only if empty)
+      if ((!resp?.ok || json?.ok === false || !items.length) ) {
+        ({ resp, json } = await postLookup(true));
+        product = json?.product || product;
+        items = buildItems(product);
+      }
 
       if (!items.length) {
         // NO-JUNK POLICY:
@@ -555,7 +560,8 @@ rec.lang =
 
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-          const res = await Tesseract.recognize(canvas, "eng", { logger: () => {} });
+          const lang = String(locale || "tr").startsWith("tr") ? "tur+eng" : "eng";
+          const res = await Tesseract.recognize(canvas, lang, { logger: () => {} });
           const raw = String(res?.data?.text || "");
 
                     // en iyi satırı seç
@@ -657,7 +663,7 @@ rec.lang =
 	      return;
 	    }
 
-	    // 3) En son: Backend /api/vision (buradan ücretli fallback'ler çalışabilir)
+	    // 3) Backend FREE /api/vision/free (no paid credits)
 	    const b64 = await new Promise((ok, bad) => {
 	      try {
 	        const r = new FileReader();
@@ -671,50 +677,50 @@ rec.lang =
 
 	    const backend = API_BASE || "";
 
-	    // 3) Backend /api/vision/free — ÜCRETSİZ OCR fallback
-	    if (!forceVision) {
-	      try {
-	        const fr = await fetch(`${backend}/api/vision/free?diag=0`, {
-	          method: "POST",
-	          headers: { "Content-Type": "application/json", "x-fae-free-vision": "1" },
-	          body: JSON.stringify({ imageBase64: b64, locale: i18n?.language || "tr" }),
-	        });
+	    try {
+	      const rf = await fetch(`${backend}/api/vision/free?diag=0`, {
+	        method: "POST",
+	        headers: { "Content-Type": "application/json", "x-fae-use-free-vision": "1" },
+	        body: JSON.stringify({ imageBase64: b64, locale: i18n?.language || "tr" }),
+	      });
+	      const jf = await rf.json().catch(() => null);
+	      const qf = String(jf?.query || "").trim();
+	      const bcf = String(
+	        jf?.barcode ||
+	          (Array.isArray(jf?.barcodes) ? jf.barcodes[0] : "") ||
+	          jf?.qr ||
+	          ""
+	      ).trim();
 
-	        const fj = await fr.json().catch(() => null);
-	        const fQuery = String(fj?.query || "").trim();
-	        const fBarcodeCandidate = String(
-	          fj?.barcode || (Array.isArray(fj?.barcodes) ? fj.barcodes[0] : "") || fj?.qr || ""
-	        ).trim();
-
-	        // Free vision barkod yakalarsa: product-info hattına git (kredi yakmaz)
-	        const fBcGuess = extractBarcodeLike(fBarcodeCandidate || fj?.rawText || fj?.query || "");
-	        const fBc = isLikelyBarcode(fBcGuess) ? fBcGuess.replace(/\s+/g, "") : null;
-	        if (fBc) {
-	          kickedSearch = true;
-	          await doBarcodeLookup(fBc);
-	          return;
-	        }
-
-	        if (fr.ok && fj?.ok && fQuery) {
-	          setValue(fQuery);
-	          flashMsg(
-	            t("search.imageDetected", {
-	              defaultValue: "Görüntüden anladığım: {{query}}",
-	              query: fQuery,
-	            }),
-	            850,
-	            "muted"
-	          );
-	          kickedSearch = true;
-	          await doSearch(fQuery, "camera");
-	          return;
-	        }
-	      } catch (freeErr) {
-	        console.log("free vision failed", freeErr);
+	      const bcGuessF = extractBarcodeLike(bcf || jf?.rawText || qf || "");
+	      const bcF = isLikelyBarcode(bcGuessF) ? bcGuessF.replace(/\s+/g, "") : null;
+	      if (bcF) {
+	        kickedSearch = true;
+	        await doBarcodeLookup(bcF);
+	        return;
 	      }
+
+	      if (rf.ok && jf?.ok !== false && qf) {
+	        setValue(qf);
+	        flashMsg(
+	          t("search.imageDetected", {
+	            defaultValue: "Görüntüden anladığım: {{query}}",
+	            query: qf,
+	          }),
+	          900,
+	          "muted"
+	        );
+	        setCalm(t("search.voiceDone", { defaultValue: "Tamam — arıyorum." }), 600);
+	        kickedSearch = true;
+	        await doSearch(qf, "camera");
+	        return;
+	      }
+	      // free no-match -> paid fallback below
+	    } catch {
+	      // ignore; paid fallback below
 	    }
 
-	    // 4) En son: Backend /api/vision (buradan ücretli fallback'ler çalışabilir)
+	    // 4) LAST RESORT: Backend /api/vision (paid fallback may run if enabled)
 	    const r = await fetch(`${backend}/api/vision?diag=0&allowSerpLens=1`, {
 	      method: "POST",
 	      headers: { "Content-Type": "application/json", "x-fae-allow-serp-lens": "1" },
@@ -741,6 +747,34 @@ rec.lang =
 	      return;
 	    }
 
+	    // NO_MATCH is not a "disabled" situation; it's just "couldn't understand".
+	    if (String(j?.error || "") === "NO_MATCH") {
+	      flashMsg(
+	        t("search.imageNoMatch", {
+	          defaultValue:
+	            "Görselden net bir ürün çıkaramadım. Daha yakından/ışıkta veya ön yüz fotoğrafıyla tekrar dene.",
+	        }),
+	        2800,
+	        "muted"
+	      );
+	      setLoading(false);
+	      clearStatus(STATUS_SRC);
+	      return;
+	    }
+	    if (String(j?.error || "") === "VISION_DISABLED") {
+	      flashMsg(
+	        t("cameraVisionDisabled", {
+	          defaultValue:
+	            "Kamera ile arama hattı hazır ama görsel tanıma kapalı görünüyor. Şimdilik metinle arayın; API anahtarı gelince kamera otomatik çalışır.",
+	        }),
+	        3500,
+	        "danger"
+	      );
+	      setLoading(false);
+	      clearStatus(STATUS_SRC);
+	      return;
+	    }
+
 	    if (!r.ok || j?.ok === false || !finalQuery) {
 	      const msg = j?.error || `VISION_FAILED_HTTP_${r.status}`;
 	      throw new Error(msg);
@@ -760,66 +794,15 @@ rec.lang =
 	    kickedSearch = true;
 	    await doSearch(finalQuery, "camera");
 	  } catch (err) {
-    const msg = String(err?.message || err || "");
     console.error("Vision error:", err);
-
-    if (msg.includes("VISION_DISABLED")) {
-      flashMsg(
-        t("cameraVisionDisabled", {
-          defaultValue:
-            "Görsel tanıma şu an kapalı görünüyor. API anahtarı eklenince kamera otomatik çalışır.",
-        }),
-        3200,
-        "danger"
-      );
-    } else if (msg.includes("NO_MATCH")) {
-      flashMsg(
-        t("cameraNoMatch", {
-          defaultValue:
-            "Görsel tanınamadı. İpucu: Ürünün ön yüzünü daha net çek, ışığı artır veya barkod tarayın.",
-        }),
-        3200,
-        "muted"
-      );
-      try {
-        const helpItems = [
-          {
-            title: t("cameraTipsTitle", { defaultValue: "📸 Fotoğraf için ipuçları" }),
-            summary: t("cameraTipsBody", {
-              defaultValue:
-                "• Ürünün ön yüzünü çek
-• Işığı iyi ayarla
-• Yakınlaştır ve kadrajı doldur
-• Barkod varsa barkodu tara",
-            }),
-            provider: t("help", { defaultValue: "Yardım" }),
-            providerFamily: "help",
-            trustScore: 100,
-            price: null,
-            url: "",
-            image: "",
-          },
-        ];
-        window.dispatchEvent(
-          new CustomEvent("fae.vitrine.inject", {
-            detail: { query: "", items: helpItems, source: "camera-help" },
-          })
-        );
-        window.dispatchEvent(
-          new CustomEvent("fae.vitrine.results", {
-            detail: { status: "needs_better_image", query: "", items: [], source: "camera" },
-          })
-        );
-      } catch {}
-    } else {
-      flashMsg(
-        t("cameraVisionFailed", {
-          defaultValue: "Görsel analizinde hata oluştu. Lütfen tekrar deneyin.",
-        }),
-        2800,
-        "danger"
-      );
-    }
+    flashMsg(
+      t("cameraVisionDisabled", {
+        defaultValue:
+          "Kamera ile arama hattı hazır ama görsel tanıma kapalı görünüyor. Şimdilik metinle arayın; API anahtarı gelince kamera otomatik çalışır.",
+      }),
+      3500,
+      "danger"
+    );
   } finally {
     // Eğer arama hattına devrettiysek, loading'i doSearch yönetir.
     if (!kickedSearch) setLoading(false);
