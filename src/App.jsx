@@ -598,16 +598,28 @@ useEffect(() => {
       }
     };
 
+    const fileToDataUrl = (f) =>
+      new Promise((resolve, reject) => {
+        try {
+          const r = new FileReader();
+          r.onload = () => resolve(String(r.result || ""));
+          r.onerror = () => reject(new Error("FILE_READ_ERROR"));
+          r.readAsDataURL(f);
+        } catch (err) {
+          reject(err);
+        }
+      });
+
     const tryZXing = async () => {
       try {
         const reader = new BrowserMultiFormatReader();
-        const url = URL.createObjectURL(file);
         try {
-          const res = await reader.decodeFromImageUrl(url);
+          // ✅ CSP-safe: use data URL instead of blob:
+          const dataUrl = await fileToDataUrl(file);
+          const res = await reader.decodeFromImageUrl(dataUrl);
           const txt = (res?.getText?.() || res?.text || "").trim();
           return txt;
         } finally {
-          try { URL.revokeObjectURL(url); } catch {}
           try { reader.reset?.(); } catch {}
         }
       } catch {
@@ -620,12 +632,48 @@ useEffect(() => {
       if (!code) code = await tryZXing();
 
       if (code && isLikelyBarcode(code)) {
-        // ✅ User must confirm before search
         const compact = String(code).trim().replace(/\s+/g, "");
-        setValue(compact);
-        setVisionConfirm(null);
-        setVoiceConfirm(null);
-        setScanConfirm({ kind: "barcode", isBarcode: true, code: compact, source: "camera" });
+        try { setValue(compact); } catch {}
+        try {
+          setVisionConfirm(null);
+          setVoiceConfirm(null);
+          setScanConfirm(null);
+        } catch {}
+
+        // ✅ AUTO: barcode -> product-info -> vitrin inject (free-first)
+        try { localStorage.setItem("lastQuerySource", "camera"); } catch {}
+        setSearchBusy(true);
+        showVoiceToast(t("search.searching", { defaultValue: "Arama yapılıyor…" }), "info", 1800);
+
+        let out = null;
+        try {
+          out = await barcodeLookupFlow(compact, {
+            locale,
+            allowPaidSecondStage: true,
+            source: "camera-barcode",
+          });
+        } catch (err) {
+          console.warn("barcodeLookupFlow error:", err);
+          setSearchBusy(false);
+          showVoiceToast(
+            t("search.searchError", {
+              defaultValue: "Arama sırasında hata oluştu. Lütfen tekrar deneyin.",
+            }),
+            "error",
+            2600
+          );
+          return;
+        }
+
+        // Eğer barkod hattı boş dönerse, ürün adını normal aramaya düşür (barcode değilse)
+        const humanQ = String(out?.query || "").trim();
+        const status = String(out?.status || "").toLowerCase();
+        const isError = status === "error";
+        const isEmpty = status === "empty" || Number(out?.itemsLen || 0) <= 0;
+        if (!isError && isEmpty && humanQ && humanQ !== compact && humanQ.length >= 3) {
+          try { setValue(humanQ); } catch {}
+          doSearch(humanQ, { source: "barcode-fallback" });
+        }
         return;
       }
 
@@ -642,6 +690,8 @@ useEffect(() => {
             const q = txt.length > 120 ? txt.slice(0, 120) : txt;
             setValue(q);
             setVisionConfirm({ query: q, used: "text-local", weak: true });
+            // ✅ AUTO: text -> search
+            doSearch(q, { source: "camera-text" });
             return;
           }
         } catch {
@@ -651,15 +701,53 @@ useEffect(() => {
 
       // --- 3) BACKEND vision fallback (paid/official) ---
       const b64 = await compressImageForVision(file);
-      const r = await fetch(`${API_BASE}/api/vision?diag=1`, {
+      if (!b64) {
+        showVoiceToast(t("search.cameraError", { defaultValue: "Görsel analizi başarısız. Lütfen tekrar dene." }), "error");
+        return;
+      }
+
+      const r = await fetch(`${API_BASE}/api/vision?diag=1&allowSerpLens=1`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64: b64, locale }),
+        headers: { "Content-Type": "application/json", "x-fae-allow-serp-lens": "1" },
+        body: JSON.stringify({ imageBase64: b64, locale, allowSerpLens: true }),
       });
 
       const j = await r.json().catch(() => null);
-      if (!j?.ok) {
-        showVoiceToast(t("search.cameraError", { defaultValue: "Görsel analizi başarısız. Lütfen tekrar dene." }), "error");
+
+      // Vision bazen barcode döndürür: onu ürün hattına çevir
+      const bc = String(j?.barcode || (Array.isArray(j?.barcodes) ? j.barcodes[0] : "") || "").trim();
+      const bcCompact = bc.replace(/\s+/g, "");
+      if (bcCompact && isLikelyBarcode(bcCompact)) {
+        try {
+          try { setValue(bcCompact); } catch {}
+          setSearchBusy(true);
+          showVoiceToast(t("search.searching", { defaultValue: "Arama yapılıyor…" }), "info", 1800);
+          await barcodeLookupFlow(bcCompact, {
+            locale,
+            allowPaidSecondStage: true,
+            source: "vision-barcode",
+          });
+        } catch (err) {
+          console.warn("vision->barcodeLookupFlow error:", err);
+          setSearchBusy(false);
+          showVoiceToast(t("search.searchError", { defaultValue: "Arama sırasında hata oluştu. Lütfen tekrar deneyin." }), "error", 2600);
+        }
+        return;
+      }
+
+      if (!r.ok || !j?.ok) {
+        const msg = String(j?.error || j?.message || "").toLowerCase();
+        if (msg.includes("disabled") || msg.includes("kapali") || msg.includes("closed")) {
+          showVoiceToast(
+            t("search.cameraVisionDisabled", {
+              defaultValue: "Kamera görsel tanıma kapalı görünüyor (backend). Render env: VISION_ALLOW_GEMINI=1 ve/veya VISION_ALLOW_SERP_LENS=1 yap.",
+            }),
+            "error",
+            3600
+          );
+        } else {
+          showVoiceToast(t("search.cameraError", { defaultValue: "Görsel analizi başarısız. Lütfen tekrar dene." }), "error");
+        }
         return;
       }
 
@@ -671,6 +759,8 @@ useEffect(() => {
 
       setValue(query);
       setVisionConfirm({ query, used: j.used || "vision", weak: !!j.weak });
+      // ✅ AUTO: vision query -> search
+      doSearch(query, { source: "camera" });
 
     } catch (err) {
       console.error("onPickFile error", err);
@@ -1124,21 +1214,50 @@ useEffect(() => {
 	      const isBarcode = isLikelyBarcode(compact);
 	      if (!q) return;
 
-	      // ✅ QR/BARKOD: kullanıcı onayı olmadan arama başlatma.
-	      // Burada sadece query'i input'a yaz ve confirm barı aç.
+	      // ✅ AUTO: QR/BARKOD anında ara (kullanıcıyı onay ekranına hapsetme)
 	      try {
 	        setVisionConfirm(null);
 	        setVoiceConfirm(null);
+	        setScanConfirm(null);
 	      } catch {}
 
 	      if (isBarcode) {
 	        try { setValue(compact); } catch {}
-	        setScanConfirm({ kind: "barcode", isBarcode: true, code: compact, source: "qr" });
+	        try { localStorage.setItem("lastQuerySource", "qr"); } catch {}
+	        setSearchBusy(true);
+	        showVoiceToast(t("search.searching", { defaultValue: "Arama yapılıyor…" }), "info", 1800);
+	        let out = null;
+	        try {
+	          out = await barcodeLookupFlow(compact, {
+	            locale: (i18n?.language || "tr").toLowerCase(),
+	            allowPaidSecondStage: true,
+	            source: "qr-barcode",
+	          });
+	        } catch (err) {
+	          console.warn("barcodeLookupFlow(qr) error:", err);
+	          setSearchBusy(false);
+	          showVoiceToast(
+	            t("search.searchError", { defaultValue: "Arama sırasında hata oluştu. Lütfen tekrar deneyin." }),
+	            "error",
+	            2600
+	          );
+	          return;
+	        }
+
+	        // Barkod çözülemezse (empty) ve elimizde insan okunur bir başlık varsa normal aramaya düşür.
+	        const humanQ = String(out?.query || "").trim();
+	        const status = String(out?.status || "").toLowerCase();
+	        const isError = status === "error";
+	        const isEmpty = status === "empty" || Number(out?.itemsLen || 0) <= 0;
+	        if (!isError && isEmpty && humanQ && humanQ !== compact && humanQ.length >= 3) {
+	          try { setValue(humanQ); } catch {}
+	          doSearch(humanQ, { source: "barcode-fallback" });
+	        }
 	        return;
 	      }
 
 	      try { setValue(q); } catch {}
-	      setScanConfirm({ kind: "qr", isBarcode: false, query: q, source: "qr" });
+	      doSearch(q, { source: "qr" });
     }}
     onClose={() => setQrScanOpen(false)}
   />
