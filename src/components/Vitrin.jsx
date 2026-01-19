@@ -25,33 +25,22 @@ import { BADGE_LABELS } from "../utils/badgeMap";
 // 1) getFinalPrice: 0 veya negatifse null dön
 export function getFinalPrice(item) {
   const v = item?.optimizedPrice ?? item?.finalPrice ?? item?.price ?? null;
+
+  // ✅ Barcode/ID gibi uzun saf sayıları fiyat sanma (8690... -> ₺8.690.506... saçmalığı biter)
   const rawStr = typeof v === "string" ? v.trim() : "";
+  if (rawStr && /^[0-9]{8,18}$/.test(rawStr)) return null;
+
   const n =
     typeof v === "number"
       ? v
       : Number(String(v ?? "").replace(/[^0-9.,]/g, "").replace(",", "."));
+
   if (!Number.isFinite(n) || n <= 0) return null;
 
-  // ✅ Barcode-as-price guard
-  // Bazı akışlarda barkod (8-18 haneli sayı) price alanına düşebiliyor.
-  // Bu durumda ₺8.690.506.549.732 gibi rezillik çıkar.
-  // Barkod görünümlü ham sayıları fiyat olarak göstermiyoruz.
-  try {
-    const isDigitsOnly = rawStr && /^\d{8,18}$/.test(rawStr);
-    if (isDigitsOnly) {
-      const prov = String(
-        item?.providerFamily || item?.provider || item?.providerKey || item?.source || ""
-      ).toLowerCase();
-      const title = String(item?.title || item?.name || "").trim();
-      const qr = String(item?.qrCode || "").trim();
-
-      // Barkod kaynaklı item veya title/qrCode barkodsa fiyatı kes
-      if (prov.includes("barcode") || title === rawStr || qr === rawStr) return null;
-
-      // Aşırı büyük tamsayılar (10+ hane) neredeyse kesin barkod/ID
-      if (rawStr.length >= 10 && n > 999999) return null;
-    }
-  } catch {}
+  // Extra guard: aşırı büyük, virgülsüz, uzun sayılar genelde barkod/seri numarasıdır.
+  if (rawStr && !/[.,]/.test(rawStr) && rawStr.replace(/\D/g, "").length >= 8 && n >= 1000000) {
+    return null;
+  }
 
   return n;
 }
