@@ -84,46 +84,6 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     }
   };
 
-  const looksLikeUrl = (s) => {
-    const v = String(s || "").trim();
-    return /^https?:\/\//i.test(v) || v.toLowerCase().startsWith("www.");
-  };
-
-  // OCR/TextDetector çıktısı sık sık 'NET 500 ML' gibi gürültü verir.
-  // Kötü ipucunu doğrudan aramaya sokarsan vitrin boş döner ve kullanıcı kaçar.
-  const isGoodOcrHint = (raw) => {
-    const s = String(raw || "").replace(/\s+/g, " " ).trim();
-    if (!s) return false;
-
-    const compact = s.replace(/\s+/g, "");
-    // salt sayı (barkod benzeri) değil
-    if (/^[0-9]{6,}$/.test(compact)) return false;
-
-    const letters = (s.match(/[A-Za-zğüşöçıİıĞÜŞÖÇ]/g) || []).length;
-    if (letters < 4) return false;
-
-    const bad = new Set([
-      "net","brut","ml","gr","g","kg","lt","l","adet","pcs","piece","pieces",
-      "made","manufactured","expiry","exp","son","tuketim","tüketim","tarih","date",
-      "barcode","barkod","lot","sk","ingredients","içindekiler","icindekiler",
-    ]);
-
-    const tokens = s
-      .toLowerCase()
-      .replace(/[^a-z0-9ğüşöçıİıĞÜŞÖÇ\s]/gi, " " )
-      .split(/\s+/)
-      .filter(Boolean);
-
-    const meaningful = tokens.filter((t) => t.length >= 3 && !bad.has(t));
-    if (meaningful.length >= 2) return true;
-    if (meaningful.length == 1 && meaningful[0].length >= 6) return true;
-
-    const modelish = tokens.find((t) => /[a-zğüşöçıİıĞÜŞÖÇ]/i.test(t) && /[0-9]/.test(t) && t.length >= 4);
-    if (modelish) return true;
-
-    return false;
-  };
-
   const barcodeCacheKey = (qr) => `fae.barcodeCache:${locale}:${qr}`;
   const getBarcodeCache = (qr) => {
     try {
@@ -600,7 +560,8 @@ rec.lang =
 
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-          const res = await Tesseract.recognize(canvas, "eng", { logger: () => {} });
+          const lang = String(locale || "tr").startsWith("tr") ? "tur+eng" : "eng";
+          const res = await Tesseract.recognize(canvas, lang, { logger: () => {} });
           const raw = String(res?.data?.text || "");
 
                     // en iyi satırı seç
@@ -681,23 +642,9 @@ rec.lang =
 	      });
 	      const codes = await detectBarcodesFromFile(f);
 	      if (codes?.length) {
-	        const rawCode = String(codes[0] || "").trim();
-	        const digits = extractBarcodeLike(rawCode);
-	
-	        // ✅ Sadece gerçek barkodsa product-info hattına gir
-	        if (isLikelyBarcode(digits)) {
-	          kickedSearch = true;
-	          await doBarcodeLookup(digits);
-	          return;
-	        }
-	
-	        // QR bazen URL/metin döndürür — barkod diye zorlamıyoruz, normal aramaya bırakıyoruz
-	        if (rawCode && rawCode.length >= 3 && rawCode.length <= 180 && (looksLikeUrl(rawCode) || /[a-zA-ZğüşöçıİıĞÜŞÖÇ]/.test(rawCode))) {
-	          setValue(rawCode);
-	          kickedSearch = true;
-	          await doSearch(rawCode, "qr");
-	          return;
-	        }
+	        kickedSearch = true;
+	        await doBarcodeLookup(codes[0]);
+	        return;
 	      }
 	    }
 
@@ -709,14 +656,14 @@ rec.lang =
 	      priority: STATUS_PRIO,
 	    });
 	    const text = await detectTextFromFile(f);
-	    if (text && isGoodOcrHint(text)) {
+	    if (text) {
 	      setValue(text);
 	      kickedSearch = true;
 	      await doSearch(text, "camera");
 	      return;
 	    }
 
-	    // 3) En son: Backend /api/vision (buradan ücretli fallback'ler çalışabilir)
+	    // 3) Backend FREE /api/vision/free (no paid credits)
 	    const b64 = await new Promise((ok, bad) => {
 	      try {
 	        const r = new FileReader();
@@ -730,6 +677,50 @@ rec.lang =
 
 	    const backend = API_BASE || "";
 
+	    try {
+	      const rf = await fetch(`${backend}/api/vision/free?diag=0`, {
+	        method: "POST",
+	        headers: { "Content-Type": "application/json", "x-fae-use-free-vision": "1" },
+	        body: JSON.stringify({ imageBase64: b64, locale: i18n?.language || "tr" }),
+	      });
+	      const jf = await rf.json().catch(() => null);
+	      const qf = String(jf?.query || "").trim();
+	      const bcf = String(
+	        jf?.barcode ||
+	          (Array.isArray(jf?.barcodes) ? jf.barcodes[0] : "") ||
+	          jf?.qr ||
+	          ""
+	      ).trim();
+
+	      const bcGuessF = extractBarcodeLike(bcf || jf?.rawText || qf || "");
+	      const bcF = isLikelyBarcode(bcGuessF) ? bcGuessF.replace(/\s+/g, "") : null;
+	      if (bcF) {
+	        kickedSearch = true;
+	        await doBarcodeLookup(bcF);
+	        return;
+	      }
+
+	      if (rf.ok && jf?.ok !== false && qf) {
+	        setValue(qf);
+	        flashMsg(
+	          t("search.imageDetected", {
+	            defaultValue: "Görüntüden anladığım: {{query}}",
+	            query: qf,
+	          }),
+	          900,
+	          "muted"
+	        );
+	        setCalm(t("search.voiceDone", { defaultValue: "Tamam — arıyorum." }), 600);
+	        kickedSearch = true;
+	        await doSearch(qf, "camera");
+	        return;
+	      }
+	      // free no-match -> paid fallback below
+	    } catch {
+	      // ignore; paid fallback below
+	    }
+
+	    // 4) LAST RESORT: Backend /api/vision (paid fallback may run if enabled)
 	    const r = await fetch(`${backend}/api/vision?diag=0&allowSerpLens=1`, {
 	      method: "POST",
 	      headers: { "Content-Type": "application/json", "x-fae-allow-serp-lens": "1" },
@@ -756,42 +747,36 @@ rec.lang =
 	      return;
 	    }
 
-	    if (!r.ok) {
-	      throw new Error(`VISION_FAILED_HTTP_${r.status}`);
+	    // NO_MATCH is not a "disabled" situation; it's just "couldn't understand".
+	    if (String(j?.error || "") === "NO_MATCH") {
+	      flashMsg(
+	        t("search.imageNoMatch", {
+	          defaultValue:
+	            "Görselden net bir ürün çıkaramadım. Daha yakından/ışıkta veya ön yüz fotoğrafıyla tekrar dene.",
+	        }),
+	        2800,
+	        "muted"
+	      );
+	      setLoading(false);
+	      clearStatus(STATUS_SRC);
+	      return;
+	    }
+	    if (String(j?.error || "") === "VISION_DISABLED") {
+	      flashMsg(
+	        t("cameraVisionDisabled", {
+	          defaultValue:
+	            "Kamera ile arama hattı hazır ama görsel tanıma kapalı görünüyor. Şimdilik metinle arayın; API anahtarı gelince kamera otomatik çalışır.",
+	        }),
+	        3500,
+	        "danger"
+	      );
+	      setLoading(false);
+	      clearStatus(STATUS_SRC);
+	      return;
 	    }
 
-	    // ✅ NO_MATCH != DISABLED. Yanlış mesaj gösterme.
-	    if (j?.ok !== true || !finalQuery) {
-	      const code = String(j?.error || "").trim();
-	
-	      if (code === "NO_MATCH") {
-	        flashMsg(
-	          t("camera.noMatch", {
-	            defaultValue: "Ürün tespit edilemedi. Daha yakından/ön yüzden çekmeyi dene.",
-	          }),
-	          2600,
-	          "muted"
-	        );
-	        window.dispatchEvent(
-	          new CustomEvent("fae.vitrine.results", {
-	            detail: { status: "empty", query: "", items: [], source: "camera", reason: "NO_MATCH" },
-	          })
-	        );
-	        return;
-	      }
-	
-	      if (code === "VISION_DISABLED") {
-	        flashMsg(
-	          t("camera.visionDisabled", {
-	            defaultValue: "Görsel tanıma kapalı. Backend'de GOOGLE_VISION_API_KEY veya SERPAPI_KEY ayarlanmalı.",
-	          }),
-	          3200,
-	          "danger"
-	        );
-	        return;
-	      }
-	
-	      const msg = code || `VISION_FAILED_HTTP_${r.status}`;
+	    if (!r.ok || j?.ok === false || !finalQuery) {
+	      const msg = j?.error || `VISION_FAILED_HTTP_${r.status}`;
 	      throw new Error(msg);
 	    }
 
@@ -810,32 +795,14 @@ rec.lang =
 	    await doSearch(finalQuery, "camera");
 	  } catch (err) {
     console.error("Vision error:", err);
-    const em = String(err?.message || err || "");
-    if (em.includes("NO_MATCH")) {
-      flashMsg(
-        t("camera.noMatch", {
-          defaultValue: "Ürün tespit edilemedi. Daha yakından/ön yüzden çekmeyi dene.",
-        }),
-        2600,
-        "muted"
-      );
-    } else if (em.includes("VISION_DISABLED")) {
-      flashMsg(
-        t("camera.visionDisabled", {
-          defaultValue: "Görsel tanıma kapalı. Backend'de GOOGLE_VISION_API_KEY veya SERPAPI_KEY ayarlanmalı.",
-        }),
-        3200,
-        "danger"
-      );
-    } else {
-      flashMsg(
-        t("camera.visionError", {
-          defaultValue: "Görsel arama sırasında hata oluştu.",
-        }),
-        2600,
-        "danger"
-      );
-    }
+    flashMsg(
+      t("cameraVisionDisabled", {
+        defaultValue:
+          "Kamera ile arama hattı hazır ama görsel tanıma kapalı görünüyor. Şimdilik metinle arayın; API anahtarı gelince kamera otomatik çalışır.",
+      }),
+      3500,
+      "danger"
+    );
   } finally {
     // Eğer arama hattına devrettiysek, loading'i doSearch yönetir.
     if (!kickedSearch) setLoading(false);
