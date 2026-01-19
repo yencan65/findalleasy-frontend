@@ -177,7 +177,9 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     const postLookup = async (allowPaid) => {
       const url = `${backend}/api/product-info/product?force=0&diag=0&paid=${allowPaid ? 1 : 0}`;
       const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-      const to = controller ? setTimeout(() => controller.abort(), 9000) : null;
+      // Mobilde 9s beklemek öldürüyor; barcode lookup hızlı olmalı.
+      // Backend ağırlaşırsa kullanıcı zaten kamera/normal search'e düşecek.
+      const to = controller ? setTimeout(() => controller.abort(), 5500) : null;
       const resp = await fetch(url, {
         signal: controller ? controller.signal : undefined,
         method: "POST",
@@ -221,16 +223,25 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
           return;
         }
 
-        // Otherwise: ask user for a front photo (best identity source)
+        // Otherwise:
+        //  - Fotoğraf en iyi kimlik kaynağı (özellikle SerpApi kapalıysa).
+        //  - AMA kullanıcıyı eli boş da göndermeyelim: barkodla normal arama başlatalım.
+        //    (Adapter/affiliate tarafı bazen barkoddan sonuç döndürüyor.)
         flashMsg(
-          msg || t("barcode.needsImage", { defaultValue: "Bu barkod için veri bulunamadı. Ürünün ön yüz fotoğrafını yükleyin." }),
+          msg || t("barcode.needsImage", { defaultValue: "Bu barkod için net veri yok. Fotoğraf daha iyi sonuç verir; yine de barkoddan arıyorum." }),
           2600,
           needsImage ? "muted" : "danger"
         );
-        setLoading(false);
         clearStatus(STATUS_SRC);
+
+        // Barkodla normal arama (kredi kontrolü runUnifiedSearch içinde)
+        try {
+          setValue(qr);
+        } catch {}
+        kickedSearch = true;
+        await doSearch(qr, "barcode");
+        // Bir sonraki foto seçimi için: barcode döngüsüne girme
         try { forceVisionNextRef.current = true; } catch {}
-        openCamera();
         window.dispatchEvent(
           new CustomEvent("fae.vitrine.results", {
             detail: { status: "needsImage", query: qr, items: [], source: "barcode", product },
@@ -560,8 +571,7 @@ rec.lang =
 
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-          const lang = String(locale || "tr").startsWith("tr") ? "tur+eng" : "eng";
-          const res = await Tesseract.recognize(canvas, lang, { logger: () => {} });
+          const res = await Tesseract.recognize(canvas, "eng", { logger: () => {} });
           const raw = String(res?.data?.text || "");
 
                     // en iyi satırı seç
@@ -663,7 +673,7 @@ rec.lang =
 	      return;
 	    }
 
-	    // 3) Backend FREE /api/vision/free (no paid credits)
+	    // 3) En son: Backend /api/vision (buradan ücretli fallback'ler çalışabilir)
 	    const b64 = await new Promise((ok, bad) => {
 	      try {
 	        const r = new FileReader();
@@ -677,50 +687,6 @@ rec.lang =
 
 	    const backend = API_BASE || "";
 
-	    try {
-	      const rf = await fetch(`${backend}/api/vision/free?diag=0`, {
-	        method: "POST",
-	        headers: { "Content-Type": "application/json", "x-fae-use-free-vision": "1" },
-	        body: JSON.stringify({ imageBase64: b64, locale: i18n?.language || "tr" }),
-	      });
-	      const jf = await rf.json().catch(() => null);
-	      const qf = String(jf?.query || "").trim();
-	      const bcf = String(
-	        jf?.barcode ||
-	          (Array.isArray(jf?.barcodes) ? jf.barcodes[0] : "") ||
-	          jf?.qr ||
-	          ""
-	      ).trim();
-
-	      const bcGuessF = extractBarcodeLike(bcf || jf?.rawText || qf || "");
-	      const bcF = isLikelyBarcode(bcGuessF) ? bcGuessF.replace(/\s+/g, "") : null;
-	      if (bcF) {
-	        kickedSearch = true;
-	        await doBarcodeLookup(bcF);
-	        return;
-	      }
-
-	      if (rf.ok && jf?.ok !== false && qf) {
-	        setValue(qf);
-	        flashMsg(
-	          t("search.imageDetected", {
-	            defaultValue: "Görüntüden anladığım: {{query}}",
-	            query: qf,
-	          }),
-	          900,
-	          "muted"
-	        );
-	        setCalm(t("search.voiceDone", { defaultValue: "Tamam — arıyorum." }), 600);
-	        kickedSearch = true;
-	        await doSearch(qf, "camera");
-	        return;
-	      }
-	      // free no-match -> paid fallback below
-	    } catch {
-	      // ignore; paid fallback below
-	    }
-
-	    // 4) LAST RESORT: Backend /api/vision (paid fallback may run if enabled)
 	    const r = await fetch(`${backend}/api/vision?diag=0&allowSerpLens=1`, {
 	      method: "POST",
 	      headers: { "Content-Type": "application/json", "x-fae-allow-serp-lens": "1" },
@@ -747,34 +713,6 @@ rec.lang =
 	      return;
 	    }
 
-	    // NO_MATCH is not a "disabled" situation; it's just "couldn't understand".
-	    if (String(j?.error || "") === "NO_MATCH") {
-	      flashMsg(
-	        t("search.imageNoMatch", {
-	          defaultValue:
-	            "Görselden net bir ürün çıkaramadım. Daha yakından/ışıkta veya ön yüz fotoğrafıyla tekrar dene.",
-	        }),
-	        2800,
-	        "muted"
-	      );
-	      setLoading(false);
-	      clearStatus(STATUS_SRC);
-	      return;
-	    }
-	    if (String(j?.error || "") === "VISION_DISABLED") {
-	      flashMsg(
-	        t("cameraVisionDisabled", {
-	          defaultValue:
-	            "Kamera ile arama hattı hazır ama görsel tanıma kapalı görünüyor. Şimdilik metinle arayın; API anahtarı gelince kamera otomatik çalışır.",
-	        }),
-	        3500,
-	        "danger"
-	      );
-	      setLoading(false);
-	      clearStatus(STATUS_SRC);
-	      return;
-	    }
-
 	    if (!r.ok || j?.ok === false || !finalQuery) {
 	      const msg = j?.error || `VISION_FAILED_HTTP_${r.status}`;
 	      throw new Error(msg);
@@ -795,14 +733,36 @@ rec.lang =
 	    await doSearch(finalQuery, "camera");
 	  } catch (err) {
     console.error("Vision error:", err);
-    flashMsg(
-      t("cameraVisionDisabled", {
-        defaultValue:
-          "Kamera ile arama hattı hazır ama görsel tanıma kapalı görünüyor. Şimdilik metinle arayın; API anahtarı gelince kamera otomatik çalışır.",
-      }),
-      3500,
-      "danger"
-    );
+    const em = String(err?.message || "").toUpperCase();
+
+    // Backend hata kodlarını daha insancıl mesajlara çevir
+    if (em.includes("VISION_DISABLED")) {
+      flashMsg(
+        t("cameraVisionDisabled", {
+          defaultValue:
+            "Görsel tanıma şu an kapalı (API anahtarı yok). GOOGLE_VISION_API_KEY eklenince kamera araması otomatik çalışır.",
+        }),
+        3600,
+        "danger"
+      );
+    } else if (em.includes("NO_MATCH")) {
+      flashMsg(
+        t("cameraNoMatch", {
+          defaultValue:
+            "Ürünü net yakalayamadım. Daha aydınlıkta, önden ve yazılar görünecek şekilde çekip tekrar dene.",
+        }),
+        3200,
+        "muted"
+      );
+    } else {
+      flashMsg(
+        t("cameraVisionFailed", {
+          defaultValue: "Görsel analizi başarısız. Lütfen tekrar dene.",
+        }),
+        3000,
+        "danger"
+      );
+    }
   } finally {
     // Eğer arama hattına devrettiysek, loading'i doSearch yönetir.
     if (!kickedSearch) setLoading(false);
