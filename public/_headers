@@ -7,7 +7,7 @@
   Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
   Report-To: {"group":"csp","max_age":10886400,"endpoints":[{"url":"https://api.findalleasy.com/api/csp/report"}]}
   Reporting-Endpoints: csp="https://api.findalleasy.com/api/csp/report"
-  Content-Security-Policy-Report-Only: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: https:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'sha256-i2XRFshO7PYq1+eid2iWhN5NQEAOPJ7/rL5AkbFY570='; connect-src 'self' https://api.findalleasy.com https://*.cloudflare.com; worker-src 'self' blob:; upgrade-insecure-requests; report-to csp; report-uri https://api.findalleasy.com/api/csp/report
+  Content-Security-Policy-Report-Only: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: https: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'sha256-i2XRFshO7PYq1+eid2iWhN5NQEAOPJ7/rL5AkbFY570=' https://static.cloudflareinsights.com; connect-src 'self' https://api.findalleasy.com https://*.cloudflare.com; worker-src 'self' blob:; upgrade-insecure-requests; report-to csp; report-uri https://api.findalleasy.com/api/csp/report
 
 /deploy-id.txt
   Cache-Control: no-store
