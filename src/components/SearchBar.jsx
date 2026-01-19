@@ -782,6 +782,29 @@ rec.lang =
         "muted"
       );
       try {
+        const helpItems = [
+          {
+            title: t("cameraTipsTitle", { defaultValue: "📸 Fotoğraf için ipuçları" }),
+            summary: t("cameraTipsBody", {
+              defaultValue:
+                "• Ürünün ön yüzünü çek
+• Işığı iyi ayarla
+• Yakınlaştır ve kadrajı doldur
+• Barkod varsa barkodu tara",
+            }),
+            provider: t("help", { defaultValue: "Yardım" }),
+            providerFamily: "help",
+            trustScore: 100,
+            price: null,
+            url: "",
+            image: "",
+          },
+        ];
+        window.dispatchEvent(
+          new CustomEvent("fae.vitrine.inject", {
+            detail: { query: "", items: helpItems, source: "camera-help" },
+          })
+        );
         window.dispatchEvent(
           new CustomEvent("fae.vitrine.results", {
             detail: { status: "needs_better_image", query: "", items: [], source: "camera" },
