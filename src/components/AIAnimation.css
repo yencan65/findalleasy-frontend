@@ -70,6 +70,9 @@
 .sono-vite {
   display: inline-block;
   animation: softBounce 5s ease-in-out infinite;
+  /* SVG de olsa hafif derinlik */
+  box-shadow: 0 10px 22px rgba(0,0,0,0.10);
+  border-radius: 9999px;
 }
 
 .sono-vite:hover {
@@ -120,4 +123,14 @@
   border: 2px solid #d4af37;
   border-radius: 9999px;
   animation: goldenGlow 3s ease-in-out infinite;
+}
+
+
+/* === Light UI shadows (slogan + Sono) === */
+.fae-slogan {
+  text-shadow: 0 10px 28px rgba(0,0,0,0.12);
+}
+
+.fae-sono-shadow {
+  box-shadow: 0 10px 26px rgba(0,0,0,0.14);
 }

@@ -598,28 +598,16 @@ useEffect(() => {
       }
     };
 
-    const fileToDataUrl = (f) =>
-      new Promise((resolve, reject) => {
-        try {
-          const r = new FileReader();
-          r.onload = () => resolve(String(r.result || ""));
-          r.onerror = () => reject(new Error("FILE_READ_ERROR"));
-          r.readAsDataURL(f);
-        } catch (err) {
-          reject(err);
-        }
-      });
-
     const tryZXing = async () => {
       try {
         const reader = new BrowserMultiFormatReader();
+        const url = URL.createObjectURL(file);
         try {
-          // ✅ CSP-safe: use data URL instead of blob:
-          const dataUrl = await fileToDataUrl(file);
-          const res = await reader.decodeFromImageUrl(dataUrl);
+          const res = await reader.decodeFromImageUrl(url);
           const txt = (res?.getText?.() || res?.text || "").trim();
           return txt;
         } finally {
+          try { URL.revokeObjectURL(url); } catch {}
           try { reader.reset?.(); } catch {}
         }
       } catch {
@@ -632,48 +620,12 @@ useEffect(() => {
       if (!code) code = await tryZXing();
 
       if (code && isLikelyBarcode(code)) {
+        // ✅ User must confirm before search
         const compact = String(code).trim().replace(/\s+/g, "");
-        try { setValue(compact); } catch {}
-        try {
-          setVisionConfirm(null);
-          setVoiceConfirm(null);
-          setScanConfirm(null);
-        } catch {}
-
-        // ✅ AUTO: barcode -> product-info -> vitrin inject (free-first)
-        try { localStorage.setItem("lastQuerySource", "camera"); } catch {}
-        setSearchBusy(true);
-        showVoiceToast(t("search.searching", { defaultValue: "Arama yapılıyor…" }), "info", 1800);
-
-        let out = null;
-        try {
-          out = await barcodeLookupFlow(compact, {
-            locale,
-            allowPaidSecondStage: true,
-            source: "camera-barcode",
-          });
-        } catch (err) {
-          console.warn("barcodeLookupFlow error:", err);
-          setSearchBusy(false);
-          showVoiceToast(
-            t("search.searchError", {
-              defaultValue: "Arama sırasında hata oluştu. Lütfen tekrar deneyin.",
-            }),
-            "error",
-            2600
-          );
-          return;
-        }
-
-        // Eğer barkod hattı boş dönerse, ürün adını normal aramaya düşür (barcode değilse)
-        const humanQ = String(out?.query || "").trim();
-        const status = String(out?.status || "").toLowerCase();
-        const isError = status === "error";
-        const isEmpty = status === "empty" || Number(out?.itemsLen || 0) <= 0;
-        if (!isError && isEmpty && humanQ && humanQ !== compact && humanQ.length >= 3) {
-          try { setValue(humanQ); } catch {}
-          doSearch(humanQ, { source: "barcode-fallback" });
-        }
+        setValue(compact);
+        setVisionConfirm(null);
+        setVoiceConfirm(null);
+        setScanConfirm({ kind: "barcode", isBarcode: true, code: compact, source: "camera" });
         return;
       }
 
@@ -690,8 +642,6 @@ useEffect(() => {
             const q = txt.length > 120 ? txt.slice(0, 120) : txt;
             setValue(q);
             setVisionConfirm({ query: q, used: "text-local", weak: true });
-            // ✅ AUTO: text -> search
-            doSearch(q, { source: "camera-text" });
             return;
           }
         } catch {
@@ -701,53 +651,15 @@ useEffect(() => {
 
       // --- 3) BACKEND vision fallback (paid/official) ---
       const b64 = await compressImageForVision(file);
-      if (!b64) {
-        showVoiceToast(t("search.cameraError", { defaultValue: "Görsel analizi başarısız. Lütfen tekrar dene." }), "error");
-        return;
-      }
-
-      const r = await fetch(`${API_BASE}/api/vision?diag=1&allowSerpLens=1`, {
+      const r = await fetch(`${API_BASE}/api/vision?diag=1`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-fae-allow-serp-lens": "1" },
-        body: JSON.stringify({ imageBase64: b64, locale, allowSerpLens: true }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64: b64, locale }),
       });
 
       const j = await r.json().catch(() => null);
-
-      // Vision bazen barcode döndürür: onu ürün hattına çevir
-      const bc = String(j?.barcode || (Array.isArray(j?.barcodes) ? j.barcodes[0] : "") || "").trim();
-      const bcCompact = bc.replace(/\s+/g, "");
-      if (bcCompact && isLikelyBarcode(bcCompact)) {
-        try {
-          try { setValue(bcCompact); } catch {}
-          setSearchBusy(true);
-          showVoiceToast(t("search.searching", { defaultValue: "Arama yapılıyor…" }), "info", 1800);
-          await barcodeLookupFlow(bcCompact, {
-            locale,
-            allowPaidSecondStage: true,
-            source: "vision-barcode",
-          });
-        } catch (err) {
-          console.warn("vision->barcodeLookupFlow error:", err);
-          setSearchBusy(false);
-          showVoiceToast(t("search.searchError", { defaultValue: "Arama sırasında hata oluştu. Lütfen tekrar deneyin." }), "error", 2600);
-        }
-        return;
-      }
-
-      if (!r.ok || !j?.ok) {
-        const msg = String(j?.error || j?.message || "").toLowerCase();
-        if (msg.includes("disabled") || msg.includes("kapali") || msg.includes("closed")) {
-          showVoiceToast(
-            t("search.cameraVisionDisabled", {
-              defaultValue: "Kamera görsel tanıma kapalı görünüyor (backend). Render env: VISION_ALLOW_GEMINI=1 ve/veya VISION_ALLOW_SERP_LENS=1 yap.",
-            }),
-            "error",
-            3600
-          );
-        } else {
-          showVoiceToast(t("search.cameraError", { defaultValue: "Görsel analizi başarısız. Lütfen tekrar dene." }), "error");
-        }
+      if (!j?.ok) {
+        showVoiceToast(t("search.cameraError", { defaultValue: "Görsel analizi başarısız. Lütfen tekrar dene." }), "error");
         return;
       }
 
@@ -759,8 +671,6 @@ useEffect(() => {
 
       setValue(query);
       setVisionConfirm({ query, used: j.used || "vision", weak: !!j.weak });
-      // ✅ AUTO: vision query -> search
-      doSearch(query, { source: "camera" });
 
     } catch (err) {
       console.error("onPickFile error", err);
@@ -806,7 +716,7 @@ useEffect(() => {
   }, [i18n.language, t]);
 
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-transparent text-white font-sans overflow-x-hidden">
+    <div className="min-h-[100dvh] flex flex-col bg-transparent text-black font-sans overflow-x-hidden">
       <Header />
       <NetworkStatusBanner />
 
@@ -825,7 +735,7 @@ useEffect(() => {
         className="flex-1 flex flex-col items-center justify-start w-full px-4 pt-10 sm:pt-14 pb-28 sm:pb-8"
       >
         {/* ◆ SLOGAN */}
-        <h2 className="flex flex-wrap justify-center items-center gap-x-2 gap-y-1 text-[18px] sm:text-[20px] md:text-[24px] lg:text-[29px] font-semibold text-center select-none px-2 leading-tight text-black">
+        <h2 className="flex flex-wrap justify-center items-center gap-x-2 gap-y-1 text-[18px] sm:text-[20px] md:text-[24px] lg:text-[29px] font-semibold text-center select-none px-2 leading-tight text-black fae-slogan">
           <span className="text-black">{t("yazman yeterli,")}</span>
           <span className="text-black">{t("gerisini")}</span>
 
@@ -842,7 +752,7 @@ useEffect(() => {
             <img
               src={sonoFace}
               alt="Sono"
-              className="relative w-[24px] h-[24px] sm:w-[26px] sm:h-[26px] rounded-full drop-shadow-[0_0_4px_rgba(120,120,120,0.55)]"
+              className="relative w-[24px] h-[24px] sm:w-[26px] sm:h-[26px] rounded-full sono-vite fae-sono-shadow drop-shadow-[0_0_4px_rgba(120,120,120,0.55)]"
             />
           </div>
 
@@ -865,13 +775,13 @@ useEffect(() => {
                 }}
                 onKeyDown={(e) => e.key === "Enter" && doSearch()}
                 placeholder={t("ph.searchProduct", { defaultValue: "Ürün veya hizmet ara" })}
-                className="w-full h-11 sm:h-12 rounded-xl pl-9 sm:pl-11 pr-11 sm:pr-12 text-black placeholder:text-black/40 outline-none border border-black/35 focus:border-black/55 bg-[rgba(255,255,255,0.16)] backdrop-blur"
+                className="w-full h-11 sm:h-12 rounded-xl pl-9 sm:pl-11 pr-11 sm:pr-12 text-black placeholder:text-black/40 outline-none border border-black/25 focus:border-black/45 bg-[rgba(255,255,255,0.66)] backdrop-blur shadow-[0_10px_30px_rgba(0,0,0,0.06)]"
               />
 
               <button
                 id="search-button"
                 onClick={doSearch}
-                className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 p-1 rounded-md bg-transparent hover:bg-white/5 active:scale-95 transition"
+                className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 p-1 rounded-md bg-transparent hover:bg-black/5 active:scale-95 transition"
                 aria-label={t("search.search")}
                 title={t("search.search")}
               >
@@ -889,11 +799,11 @@ useEffect(() => {
                       searchInputRef.current?.focus?.();
                     } catch {}
                   }}
-                  className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-md bg-transparent hover:bg-white/5 active:scale-95 transition"
+                  className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-md bg-transparent hover:bg-black/5 active:scale-95 transition"
                   aria-label={t("actions.clear", { defaultValue: "Temizle" })}
                   title={t("actions.clear", { defaultValue: "Temizle" })}
                 >
-                  <X className="w-4 h-4 sm:w-5 sm:h-5 text-white/60" aria-hidden />
+                  <X className="w-4 h-4 sm:w-5 sm:h-5 text-black/55" aria-hidden />
                 </button>
               ) : null}
             </div>
@@ -902,7 +812,7 @@ useEffect(() => {
             <div className="flex items-center justify-end gap-2">
               <button
                 onClick={startMic}
-                className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl border border-black/35 bg-[rgba(255,255,255,0.10)] hover:bg-[rgba(255,255,255,0.16)] flex items-center justify-center transition ${voiceListening ? "ring-2 ring-black/30 bg-black/5" : ""}`}
+                className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl border border-black/25 bg-[rgba(255,255,255,0.55)] hover:bg-[rgba(255,255,255,0.70)] flex items-center justify-center transition ${voiceListening ? "ring-2 ring-black/30 bg-black/5" : ""}`}
                 title={t("search.voice")}
                 aria-label={t("search.voice")}
               >
@@ -915,7 +825,7 @@ useEffect(() => {
 
               <button
                 onClick={openCamera}
-                className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl border border-black/35 bg-[rgba(255,255,255,0.10)] hover:bg-[rgba(255,255,255,0.16)] flex items-center justify-center transition"
+                className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl border border-black/25 bg-[rgba(255,255,255,0.55)] hover:bg-[rgba(255,255,255,0.70)] flex items-center justify-center transition"
                 title={t("search.camera")}
                 aria-label={t("search.camera")}
               >
@@ -924,7 +834,7 @@ useEffect(() => {
 
               <button
                 onClick={startQRScanner}
-                className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl border border-black/35 bg-[rgba(255,255,255,0.10)] hover:bg-[rgba(255,255,255,0.16)] flex items-center justify-center transition"
+                className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl border border-black/25 bg-[rgba(255,255,255,0.55)] hover:bg-[rgba(255,255,255,0.70)] flex items-center justify-center transition"
                 title={t("search.qr")}
                 aria-label={t("search.qr")}
               >
@@ -937,28 +847,28 @@ useEffect(() => {
         {/* ◆ Arama / Kamera durum göstergesi (kullanıcıya net geri bildirim) */}
         <div className="w-full max-w-[760px] -mt-1 mb-2">
           {visionBusy ? (
-            <div className="flex items-center justify-center gap-2 text-[12px] sm:text-[13px] text-white/80 select-none">
+            <div className="flex items-center justify-center gap-2 text-[12px] sm:text-[13px] text-black/70 select-none">
               <div className="w-3 h-3 rounded-full border border-[#D9A441] border-t-transparent animate-spin" />
               <span>{t("search.imageAnalyzing", { defaultValue: "Görsel analiz ediliyor..." })}</span>
             </div>
           ) : searchBusy ? (
-            <div className="flex items-center justify-center gap-2 text-[12px] sm:text-[13px] text-white/80 select-none">
+            <div className="flex items-center justify-center gap-2 text-[12px] sm:text-[13px] text-black/70 select-none">
               <div className="w-3 h-3 rounded-full border border-[#D9A441] border-t-transparent animate-spin" />
               <span>{t("search.searching", { defaultValue: "Arama yapılıyor..." })}</span>
             </div>
 			  ) : scanConfirm ? (
-				<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl border border-[#D9A441]/35 bg-black/25 px-3 py-2">
-				  <div className="text-[12px] sm:text-[13px] text-white/85">
+				<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl border border-black/15 bg-[rgba(255,255,255,0.60)] px-3 py-2 shadow-[0_10px_28px_rgba(0,0,0,0.06)]">
+				  <div className="text-[12px] sm:text-[13px] text-black/75">
 				    {scanConfirm?.isBarcode ? (
 				      <>
-				        <span className="text-white/70">{t("search.barcodeDetected", { defaultValue: "Barkod algılandı: {{code}}", code: String(scanConfirm?.code || value || "").trim() })}</span>
-				        <span className="text-white/70">{" "}— {t("search.confirmQuestion", { defaultValue: "Bu aramayı yapmak istiyor musunuz?" })}</span>
+				        <span className="text-black/65">{t("search.barcodeDetected", { defaultValue: "Barkod algılandı: {{code}}", code: String(scanConfirm?.code || value || "").trim() })}</span>
+				        <span className="text-black/65">{" "}— {t("search.confirmQuestion", { defaultValue: "Bu aramayı yapmak istiyor musunuz?" })}</span>
 				      </>
 				    ) : (
 				      <>
-				        <span className="text-white/70">{t("search.voiceHeardPrefix", { defaultValue: "Anladığım:" })}</span>{" "}
+				        <span className="text-black/65">{t("search.voiceHeardPrefix", { defaultValue: "Anladığım:" })}</span>{" "}
 				        <span className="text-[#D9A441] font-semibold">{String(value || scanConfirm?.query || "").trim()}</span>
-				        <span className="text-white/70">{" "}— {t("search.confirmQuestion", { defaultValue: "Bu aramayı yapmak istiyor musunuz?" })}</span>
+				        <span className="text-black/65">{" "}— {t("search.confirmQuestion", { defaultValue: "Bu aramayı yapmak istiyor musunuz?" })}</span>
 				      </>
 				    )}
 				  </div>
@@ -1028,27 +938,27 @@ useEffect(() => {
 				          try { searchInputRef.current?.focus?.(); } catch {}
 				        }, 0);
 				      }}
-				      className="text-xs px-3 py-1 rounded-lg border border-white/20 text-white/80 hover:bg-white/5"
+				      className="text-xs px-3 py-1 rounded-lg border border-white/20 text-white/80 hover:bg-black/5"
 				    >
 				      {t("search.editQuery", { defaultValue: "Düzenle" })}
 				    </button>
 
 				    <button
 				      onClick={() => setScanConfirm(null)}
-				      className="text-xs px-3 py-1 rounded-lg border border-white/15 text-white/60 hover:bg-white/5"
+				      className="text-xs px-3 py-1 rounded-lg border border-white/15 text-white/60 hover:bg-black/5"
 				    >
 				      {t("search.cancel", { defaultValue: "Vazgeç" })}
 				    </button>
 				  </div>
 				</div>
 			  ) : voiceConfirm ? (
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl border border-[#D9A441]/35 bg-black/25 px-3 py-2">
-              <div className="text-[12px] sm:text-[13px] text-white/85">
-                <span className="text-white/70">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl border border-black/15 bg-[rgba(255,255,255,0.60)] px-3 py-2 shadow-[0_10px_28px_rgba(0,0,0,0.06)]">
+              <div className="text-[12px] sm:text-[13px] text-black/75">
+                <span className="text-black/65">
                   {t("search.voiceHeardPrefix", { defaultValue: "Sesli komuttan anladığım:" })}
                 </span>{" "}
                 <span className="text-[#D9A441] font-semibold">{voiceConfirm?.query}</span>
-                <span className="text-white/70">
+                <span className="text-black/65">
                   {" "}
                   — {t("search.voiceConfirmQuestion", { defaultValue: "Bunu mu arayayım?" })}
                 </span>
@@ -1074,23 +984,23 @@ useEffect(() => {
                       try { searchInputRef.current?.focus?.(); } catch {}
                     }, 0);
                   }}
-                  className="text-xs px-3 py-1 rounded-lg border border-white/20 text-white/80 hover:bg-white/5"
+                  className="text-xs px-3 py-1 rounded-lg border border-white/20 text-white/80 hover:bg-black/5"
                 >
                   {t("search.editQuery", { defaultValue: "Düzenle" })}
                 </button>
 
                 <button
                   onClick={() => setVoiceConfirm(null)}
-                  className="text-xs px-3 py-1 rounded-lg border border-white/15 text-white/60 hover:bg-white/5"
+                  className="text-xs px-3 py-1 rounded-lg border border-white/15 text-white/60 hover:bg-black/5"
                 >
                   {t("search.cancel", { defaultValue: "Vazgeç" })}
                 </button>
               </div>
             </div>
           ) : visionConfirm ? (
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-xl border border-[#D9A441]/35 bg-black/25 px-3 py-2">
-              <div className="text-[12px] sm:text-[13px] text-white/85">
-                <span className="text-white/70">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-xl border border-black/15 bg-[rgba(255,255,255,0.60)] px-3 py-2 shadow-[0_10px_28px_rgba(0,0,0,0.06)]">
+              <div className="text-[12px] sm:text-[13px] text-black/75">
+                <span className="text-black/65">
                   {visionConfirm?.weak
                     ? t("search.imageWeakGuess", { defaultValue: "Emin olamadım, ama şöyle görünüyor:" })
                     : t("search.imageDetectedPrefix", { defaultValue: "Görüntüden anladığım:" })}
@@ -1114,13 +1024,13 @@ useEffect(() => {
                       searchInputRef.current?.focus?.();
                     } catch {}
                   }}
-                  className="px-3 py-1.5 rounded-lg border border-[#D9A441]/45 text-white text-[12px] hover:bg-white/5 active:scale-95 transition"
+                  className="px-3 py-1.5 rounded-lg border border-[#D9A441]/45 text-white text-[12px] hover:bg-black/5 active:scale-95 transition"
                 >
                   {t("search.editQuery", { defaultValue: "Düzenle" })}
                 </button>
                 <button
                   onClick={() => setVisionConfirm(null)}
-                  className="px-3 py-1.5 rounded-lg border border-white/20 text-white/80 text-[12px] hover:bg-white/5 active:scale-95 transition"
+                  className="px-3 py-1.5 rounded-lg border border-white/20 text-white/80 text-[12px] hover:bg-black/5 active:scale-95 transition"
                 >
                   {t("search.cancel", { defaultValue: "İptal" })}
                 </button>
@@ -1214,50 +1124,21 @@ useEffect(() => {
 	      const isBarcode = isLikelyBarcode(compact);
 	      if (!q) return;
 
-	      // ✅ AUTO: QR/BARKOD anında ara (kullanıcıyı onay ekranına hapsetme)
+	      // ✅ QR/BARKOD: kullanıcı onayı olmadan arama başlatma.
+	      // Burada sadece query'i input'a yaz ve confirm barı aç.
 	      try {
 	        setVisionConfirm(null);
 	        setVoiceConfirm(null);
-	        setScanConfirm(null);
 	      } catch {}
 
 	      if (isBarcode) {
 	        try { setValue(compact); } catch {}
-	        try { localStorage.setItem("lastQuerySource", "qr"); } catch {}
-	        setSearchBusy(true);
-	        showVoiceToast(t("search.searching", { defaultValue: "Arama yapılıyor…" }), "info", 1800);
-	        let out = null;
-	        try {
-	          out = await barcodeLookupFlow(compact, {
-	            locale: (i18n?.language || "tr").toLowerCase(),
-	            allowPaidSecondStage: true,
-	            source: "qr-barcode",
-	          });
-	        } catch (err) {
-	          console.warn("barcodeLookupFlow(qr) error:", err);
-	          setSearchBusy(false);
-	          showVoiceToast(
-	            t("search.searchError", { defaultValue: "Arama sırasında hata oluştu. Lütfen tekrar deneyin." }),
-	            "error",
-	            2600
-	          );
-	          return;
-	        }
-
-	        // Barkod çözülemezse (empty) ve elimizde insan okunur bir başlık varsa normal aramaya düşür.
-	        const humanQ = String(out?.query || "").trim();
-	        const status = String(out?.status || "").toLowerCase();
-	        const isError = status === "error";
-	        const isEmpty = status === "empty" || Number(out?.itemsLen || 0) <= 0;
-	        if (!isError && isEmpty && humanQ && humanQ !== compact && humanQ.length >= 3) {
-	          try { setValue(humanQ); } catch {}
-	          doSearch(humanQ, { source: "barcode-fallback" });
-	        }
+	        setScanConfirm({ kind: "barcode", isBarcode: true, code: compact, source: "qr" });
 	        return;
 	      }
 
 	      try { setValue(q); } catch {}
-	      doSearch(q, { source: "qr" });
+	      setScanConfirm({ kind: "qr", isBarcode: false, query: q, source: "qr" });
     }}
     onClose={() => setQrScanOpen(false)}
   />
