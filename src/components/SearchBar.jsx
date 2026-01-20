@@ -31,6 +31,7 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [tick, setTick] = useState(0);
   const fileRef = useRef(null);
+
   // When a barcode cannot be resolved, we ask for a front photo.
   // In that case, skip barcode detection on the next pick to avoid an endless loop.
   const forceVisionNextRef = useRef(false);
@@ -58,7 +59,10 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
   useEffect(() => setIndex(0), [i18n.language]);
 
   useEffect(() => {
-    const id = setInterval(() => setIndex((p) => (p + 1) % placeholders.length), 3000);
+    const id = setInterval(
+      () => setIndex((p) => (p + 1) % placeholders.length),
+      3000
+    );
     return () => clearInterval(id);
   }, [placeholders]);
 
@@ -173,9 +177,9 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     };
 
     const postLookup = async (allowPaid) => {
-      // ✅ (1) force=1 (suggestedQuery/suggestedCategory daha sağlam geliyor)
+      // ✅ CHANGE #1: force=1
       const url = `${backend}/api/product-info/product?force=1&diag=0&paid=${allowPaid ? 1 : 0}`;
-      const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+      const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
       const to = controller ? setTimeout(() => controller.abort(), 9000) : null;
       const resp = await fetch(url, {
         signal: controller ? controller.signal : undefined,
@@ -198,18 +202,13 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
       let items = buildItems(product);
 
       // 2) Paid fallback (only if empty)
-      if (!resp?.ok || json?.ok === false || !items.length) {
+      if ((!resp?.ok || json?.ok === false || !items.length)) {
         ({ resp, json } = await postLookup(true));
         product = json?.product || product;
         items = buildItems(product);
       }
 
       if (!items.length) {
-        // ✅ (2) suggestedCategory capture
-        const suggestedCategory = String(
-          json?.suggestedCategory || product?.suggestedCategory || json?.categoryHint || ""
-        ).trim();
-
         // NO-JUNK POLICY:
         // - Raw barcode with generic search produces unrelated results.
         // - If backend says "needsImage", directly open camera upload.
@@ -217,11 +216,16 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
         const msg = String(json?.message || "").trim();
         const suggested = String(product?.suggestedQuery || "").trim();
 
+        // ✅ CHANGE #2: suggestedCategory capture
+        const suggestedCategory = String(
+          json?.suggestedCategory || product?.suggestedCategory || json?.categoryHint || ""
+        ).trim();
+
         // If we have a real product name hint, we can safely fall back to normal search.
         if (suggested && !/^\d{8,18}$/.test(suggested)) {
           setCalm(t("vitrine.noResults", { defaultValue: "Barkod okundu — ürün adından arıyorum." }), 1800);
           try { setValue(suggested); } catch {}
-          // ✅ (2) category override ile gönder
+          // ✅ CHANGE #2: category override ile gönder
           await doSearch(suggested, "barcode-hint", { categoryHint: suggestedCategory });
           return;
         }
@@ -274,7 +278,7 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
   const lastSearchRef = useRef({ q: "", t: 0 });
 
   const doSearch = useCallback(
-    // ✅ (3) opts eklendi
+    // ✅ CHANGE #3: opts param
     async (raw, source = "typed", opts = {}) => {
       const cleaned = String(raw ?? value).trim();
       if (!cleaned) return;
@@ -291,14 +295,13 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
       setBusy(t("ai.analyzing", { defaultValue: "Analiz yapılıyor…" }));
 
       try {
-        // ✅ (3) category override
+        // ✅ CHANGE #3: category override
         const forcedCategory = String(opts?.categoryHint || "").trim();
         const category = forcedCategory || detectCategory(cleaned, locale);
 
         try {
           window?.localStorage?.setItem?.("lastQueryCategory", String(category || ""));
         } catch {}
-
         await runUnifiedSearch(cleaned, { region: selectedRegion, categoryHint: category, locale, source });
       } finally {
         setLoading(false);
@@ -310,11 +313,14 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
 
   // 🔥 Voice Search
   async function startMic() {
-    const Rec = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+    const Rec =
+      window.SpeechRecognition || window.webkitSpeechRecognition || null;
 
     if (!Rec) {
       flashMsg(
-        t("search.voiceNotSupported", { defaultValue: "Tarayıcın ses tanımayı desteklemiyor!" }),
+        t("search.voiceNotSupported", {
+          defaultValue: "Tarayıcın ses tanımayı desteklemiyor!",
+        }),
         2500
       );
       return;
@@ -323,7 +329,9 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     const rec = new Rec();
     setMicListening(true);
     setStatus(STATUS_SRC, {
-      text: t("search.voiceStarted", { defaultValue: "Sesli arama başladı — şimdi konuşabilirsin." }),
+      text: t("search.voiceStarted", {
+        defaultValue: "Sesli arama başladı — şimdi konuşabilirsin.",
+      }),
       showDots: true,
       tone: "gold",
       priority: STATUS_PRIO,
@@ -345,7 +353,10 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     rec.onresult = (e) => {
       const text = e.results[0][0].transcript;
       setMicListening(false);
-      flashMsg(t("search.voiceDone", { defaultValue: "Tamam — arıyorum." }), 800);
+      flashMsg(
+        t("search.voiceDone", { defaultValue: "Tamam — arıyorum." }),
+        800
+      );
       setValue(text);
       doSearch(text, "mic");
     };
@@ -583,9 +594,10 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     const td = await tryTextDetector();
     if (td) return td;
 
-    // ✅ (4) tesseract pahalı; 16 sn içinde bir şey vermezse boş kabul et
+    // tesseract pahalı; mobilde süre lazım
     const out = await Promise.race([
       tryTesseract(),
+      // ✅ CHANGE #4: 6.5s -> 16s
       new Promise((resolve) => setTimeout(() => resolve(""), 16000)),
     ]);
 
@@ -737,7 +749,9 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
 
       // Vision'dan barkod çıkarsa: barcode->product-info hattına git (kredi yakmaz).
       const bcGuess = extractBarcodeLike(barcodeCandidate || j?.rawText || j?.query || "");
-      const bc = isLikelyBarcode(bcGuess) ? bcGuess.replace(/\s+/g, "") : null;
+      const bc = isLikelyBarcode(bcGuess)
+        ? bcGuess.replace(/\s+/g, "")
+        : null;
       if (bc) {
         kickedSearch = true;
         await doBarcodeLookup(bc);
@@ -753,19 +767,6 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
           }),
           2800,
           "muted"
-        );
-        setLoading(false);
-        clearStatus(STATUS_SRC);
-        return;
-      }
-      if (String(j?.error || "") === "VISION_DISABLED") {
-        flashMsg(
-          t("cameraVisionDisabled", {
-            defaultValue:
-              "Kamera ile arama hattı hazır ama görsel tanıma kapalı görünüyor. Şimdilik metinle arayın; API anahtarı gelince kamera otomatik çalışır.",
-          }),
-          3500,
-          "danger"
         );
         setLoading(false);
         clearStatus(STATUS_SRC);
@@ -791,8 +792,8 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
       kickedSearch = true;
       await doSearch(finalQuery, "camera");
     } catch (err) {
-      // ✅ (5) artık her hataya "vision disabled" demiyoruz + status temizliği finally'de
       console.error("Vision error:", err);
+      // ✅ CHANGE #5: daha doğru hata + status temizliği
       flashMsg(
         t("search.imageProcessError", {
           defaultValue: "Görsel işlenirken hata oluştu. Daha net bir fotoğrafla tekrar dene.",
@@ -835,7 +836,10 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
   // ============================================================
   return (
     <>
-      <div key={"searchbar-" + tick} className="search-bar-wrapper flex justify-center w-full">
+      <div
+        key={"searchbar-" + tick}
+        className="search-bar-wrapper flex justify-center w-full"
+      >
         <div
           className="flex items-center bg-[rgba(255,255,255,0.16)] border border-black/35 rounded-full px-3 sm:px-4 py-2 
                      w-[520px] max-w-[92%] sm:w-[420px] md:w-[500px] lg:w-[520px]
@@ -872,7 +876,7 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
             </button>
           </div>
 
-          {/* ✅ MOBILE: Mic/Camera/QR */}
+          {/* ✅ MOBILE: Mic/Camera/QR, eskiden Ara'nın durduğu yere kayar */}
           <button
             type="button"
             onClick={startMic}
@@ -911,8 +915,13 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
         </div>
       </div>
 
-      {/* Kullanıcı beklemesin: net durum göstergesi */}
-      {scannerOpen && <QRScanner onDetect={handleQRDetect} onClose={() => setScannerOpen(false)} />}
+      {/* Kullanıcı "mal mal" beklemesin: net durum göstergesi */}
+      {scannerOpen && (
+        <QRScanner
+          onDetect={handleQRDetect}
+          onClose={() => setScannerOpen(false)}
+        />
+      )}
     </>
   );
 }
