@@ -7,6 +7,7 @@ import { useStatusBus } from "../context/StatusBusContext";
 import QRScanner from "./QRScanner";
 import { API_BASE } from "../utils/api";
 import { detectCategory } from "../utils/categoryExtractor";
+
 export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
   const { t, i18n } = useTranslation();
 
@@ -23,17 +24,19 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
   const flashMsg = (text, ms = 1600, tone = "muted") =>
     flash(STATUS_SRC, text, ms, { tone, priority: STATUS_PRIO });
 
-
   const [value, setValue] = useState("");
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [micListening, setMicListening] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [tick, setTick] = useState(0);
+
   const fileRef = useRef(null);
+
   // When a barcode cannot be resolved, we ask for a front photo.
   // In that case, skip barcode detection on the next pick to avoid an endless loop.
   const forceVisionNextRef = useRef(false);
+
   // Dil değişiminde placeholder reset
   useEffect(() => {
     const rerender = () => setTick((x) => x + 1);
@@ -57,10 +60,7 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
   useEffect(() => setIndex(0), [i18n.language]);
 
   useEffect(() => {
-    const id = setInterval(
-      () => setIndex((p) => (p + 1) % placeholders.length),
-      3000
-    );
+    const id = setInterval(() => setIndex((p) => (p + 1) % placeholders.length), 3000);
     return () => clearInterval(id);
   }, [placeholders]);
 
@@ -85,6 +85,7 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
   };
 
   const barcodeCacheKey = (qr) => `fae.barcodeCache:${locale}:${qr}`;
+
   const getBarcodeCache = (qr) => {
     try {
       const raw = window?.localStorage?.getItem(barcodeCacheKey(qr));
@@ -99,10 +100,7 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
 
   const setBarcodeCache = (qr, payload) => {
     try {
-      window?.localStorage?.setItem(
-        barcodeCacheKey(qr),
-        JSON.stringify({ ts: Date.now(), payload })
-      );
+      window?.localStorage?.setItem(barcodeCacheKey(qr), JSON.stringify({ ts: Date.now(), payload }));
     } catch {}
   };
 
@@ -132,8 +130,10 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
       // strip currency + spaces
       s = s.replace(/[^0-9.,-]/g, "");
       if (!s) return null;
+
       const hasDot = s.includes(".");
       const hasComma = s.includes(",");
+
       if (hasDot && hasComma) {
         // TR style: 1.234,56
         s = s.replace(/\./g, "").replace(/,/g, ".");
@@ -148,6 +148,7 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
           s = parts.join("") + "." + dec;
         }
       }
+
       const n = Number.parseFloat(s);
       return Number.isFinite(n) ? n : null;
     };
@@ -175,17 +176,19 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     };
 
     const postLookup = async (allowPaid) => {
+      // ✅ (1) Barkod çağrısı FORCE=1
       const url = `${backend}/api/product-info/product?force=1&diag=0&paid=${allowPaid ? 1 : 0}`;
-      const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-      // Mobilde 9s beklemek öldürüyor; barcode lookup hızlı olmalı.
-      // Backend ağırlaşırsa kullanıcı zaten kamera/normal search'e düşecek.
-      const to = controller ? setTimeout(() => controller.abort(), 5500) : null;
+
+      const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+      const to = controller ? setTimeout(() => controller.abort(), 9000) : null;
+
       const resp = await fetch(url, {
         signal: controller ? controller.signal : undefined,
         method: "POST",
         headers: { "Content-Type": "application/json", "x-fae-allow-serp-lens": "1" },
         body: JSON.stringify({ qr, locale, allowPaid: !!allowPaid }),
       });
+
       if (to) clearTimeout(to);
       const json = await resp.json().catch(() => null);
       return { resp, json };
@@ -201,7 +204,7 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
       let items = buildItems(product);
 
       // 2) Paid fallback (only if empty)
-      if ((!resp?.ok || json?.ok === false || !items.length) ) {
+      if (!resp?.ok || json?.ok === false || !items.length) {
         ({ resp, json } = await postLookup(true));
         product = json?.product || product;
         items = buildItems(product);
@@ -214,40 +217,40 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
         const needsImage = !!json?.needsImage || !!product?.needsImage;
         const msg = String(json?.message || "").trim();
         const suggested = String(product?.suggestedQuery || "").trim();
+
+        // ✅ (2) suggestedCategory yakala
         const suggestedCategory = String(
-          json?.suggestedCategory ||
-            product?.suggestedCategory ||
-            json?.categoryHint ||
-            ""
+          json?.suggestedCategory || product?.suggestedCategory || json?.categoryHint || ""
         ).trim();
 
         // If we have a real product name hint, we can safely fall back to normal search.
         if (suggested && !/^\d{8,18}$/.test(suggested)) {
           setCalm(t("vitrine.noResults", { defaultValue: "Barkod okundu — ürün adından arıyorum." }), 1800);
-          try { setValue(suggested); } catch {}
+          try {
+            setValue(suggested);
+          } catch {}
+
+          // ✅ (2) category override ile gönder
           await doSearch(suggested, "barcode-hint", { categoryHint: suggestedCategory });
           return;
         }
 
-        // Otherwise:
-        //  - Fotoğraf en iyi kimlik kaynağı (özellikle SerpApi kapalıysa).
-        //  - AMA kullanıcıyı eli boş da göndermeyelim: barkodla normal arama başlatalım.
-        //    (Adapter/affiliate tarafı bazen barkoddan sonuç döndürüyor.)
+        // Otherwise: ask user for a front photo (best identity source)
         flashMsg(
-          msg || t("barcode.needsImage", { defaultValue: "Bu barkod için net veri yok. Fotoğraf daha iyi sonuç verir; yine de barkoddan arıyorum." }),
+          msg || t("barcode.needsImage", { defaultValue: "Bu barkod için veri bulunamadı. Ürünün ön yüz fotoğrafını yükleyin." }),
           2600,
           needsImage ? "muted" : "danger"
         );
+
+        setLoading(false);
         clearStatus(STATUS_SRC);
 
-        // Barkodla normal arama (kredi kontrolü runUnifiedSearch içinde)
         try {
-          setValue(qr);
+          forceVisionNextRef.current = true;
         } catch {}
-        kickedSearch = true;
-        await doSearch(qr, "barcode");
-        // Bir sonraki foto seçimi için: barcode döngüsüne girme
-        try { forceVisionNextRef.current = true; } catch {}
+
+        openCamera();
+
         window.dispatchEvent(
           new CustomEvent("fae.vitrine.results", {
             detail: { status: "needsImage", query: qr, items: [], source: "barcode", product },
@@ -280,12 +283,13 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     }
   };
 
-// =========================
+  // =========================
   // Tek arama: dedupe + runUnifiedSearch
   // =========================
   const lastSearchRef = useRef({ q: "", t: 0 });
 
   const doSearch = useCallback(
+    // ✅ (3) opts parametresi eklendi
     async (raw, source = "typed", opts = {}) => {
       const cleaned = String(raw ?? value).trim();
       if (!cleaned) return;
@@ -302,26 +306,31 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
       setBusy(t("ai.analyzing", { defaultValue: "Analiz yapılıyor…" }));
 
       try {
+        // ✅ (3) category override
         const forcedCategory = String(opts?.categoryHint || "").trim();
         const category = forcedCategory || detectCategory(cleaned, locale);
+
         try {
           window?.localStorage?.setItem?.("lastQueryCategory", String(category || ""));
         } catch {}
-        await runUnifiedSearch(cleaned, { region: selectedRegion, categoryHint: category, locale, source });
+
+        await runUnifiedSearch(cleaned, {
+          region: selectedRegion,
+          categoryHint: category,
+          locale,
+          source,
+        });
       } finally {
         setLoading(false);
         clearStatus(STATUS_SRC);
       }
     },
-    [value, selectedRegion, locale, runUnifiedSearch, t]
+    [value, selectedRegion, locale, t]
   );
-
-
 
   // 🔥 Voice Search
   async function startMic() {
-    const Rec =
-      window.SpeechRecognition || window.webkitSpeechRecognition || null;
+    const Rec = window.SpeechRecognition || window.webkitSpeechRecognition || null;
 
     if (!Rec) {
       flashMsg(
@@ -336,14 +345,13 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     const rec = new Rec();
     setMicListening(true);
     setStatus(STATUS_SRC, {
-      text: t("search.voiceStarted", {
-        defaultValue: "Sesli arama başladı — şimdi konuşabilirsin.",
-      }),
+      text: t("search.voiceStarted", { defaultValue: "Sesli arama başladı — şimdi konuşabilirsin." }),
       showDots: true,
       tone: "gold",
       priority: STATUS_PRIO,
     });
-rec.lang =
+
+    rec.lang =
       i18n.language === "tr"
         ? "tr-TR"
         : i18n.language === "en"
@@ -359,10 +367,7 @@ rec.lang =
     rec.onresult = (e) => {
       const text = e.results[0][0].transcript;
       setMicListening(false);
-      flashMsg(
-        t("search.voiceDone", { defaultValue: "Tamam — arıyorum." }),
-        800
-      );
+      flashMsg(t("search.voiceDone", { defaultValue: "Tamam — arıyorum." }), 800);
       setValue(text);
       doSearch(text, "mic");
     };
@@ -370,7 +375,6 @@ rec.lang =
     rec.onerror = () => {
       setMicListening(false);
       flashMsg(t("search.voiceError", { defaultValue: "Sesli arama hatası." }), 2000, "danger");
-      // hata sonrası durumun takılı kalmasını engelle
       setTimeout(() => clearStatus(STATUS_SRC), 2100);
     };
 
@@ -379,7 +383,6 @@ rec.lang =
       clearStatus(STATUS_SRC);
     };
 
-
     rec.start();
   }
 
@@ -387,7 +390,6 @@ rec.lang =
   function openCamera() {
     fileRef.current?.click();
   }
-
 
   // ============================================================
   // Kamera dosyası: Ücretsiz tespit (BarcodeDetector/TextDetector) → en son backend /api/vision
@@ -439,11 +441,15 @@ rec.lang =
               const url = URL.createObjectURL(file);
               const img = new Image();
               img.onload = () => {
-                try { URL.revokeObjectURL(url); } catch {}
+                try {
+                  URL.revokeObjectURL(url);
+                } catch {}
                 resolve(img);
               };
               img.onerror = (e) => {
-                try { URL.revokeObjectURL(url); } catch {}
+                try {
+                  URL.revokeObjectURL(url);
+                } catch {}
                 reject(e);
               };
               img.src = url;
@@ -491,8 +497,12 @@ rec.lang =
           const txt = String(result?.getText ? result.getText() : result?.text || "").trim();
           return normalizeCandidates([txt]);
         } finally {
-          try { URL.revokeObjectURL(url); } catch {}
-          try { reader.reset?.(); } catch {}
+          try {
+            URL.revokeObjectURL(url);
+          } catch {}
+          try {
+            reader.reset?.();
+          } catch {}
         }
       } catch {
         return [];
@@ -506,15 +516,12 @@ rec.lang =
 
   const detectTextFromFile = async (file) => {
     const cleanCandidate = (s) => {
-      let t = String(s || "").replace(/\s+/g, " " ).trim();
-      // çok gürültülü karakterleri kırp
-      t = t.replace(/[|_*#^~`]+/g, " " ).replace(/\s+/g, " " ).trim();
-      // aşırı kısa/yararsız
-      if (t.length < 3) return "";
-      // sırf rakam ve çok uzun ise barkod gibi, onu burada değil barkod hattında yakalamak daha iyi
-      if (/^[0-9]{8,18}$/.test(t)) return "";
-      if (t.length > 140) t = t.slice(0, 140);
-      return t;
+      let t2 = String(s || "").replace(/\s+/g, " ").trim();
+      t2 = t2.replace(/[|_*#^~`]+/g, " ").replace(/\s+/g, " ").trim();
+      if (t2.length < 3) return "";
+      if (/^[0-9]{8,18}$/.test(t2)) return "";
+      if (t2.length > 140) t2 = t2.slice(0, 140);
+      return t2;
     };
 
     const tryTextDetector = async () => {
@@ -553,7 +560,6 @@ rec.lang =
         const mod = await import("tesseract.js");
         const Tesseract = mod?.default || mod;
 
-        // downscale canvas
         const url = URL.createObjectURL(file);
         try {
           const img = new Image();
@@ -578,10 +584,10 @@ rec.lang =
 
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-          const res = await Tesseract.recognize(canvas, "eng", { logger: () => {} });
+          const lang = String(locale || "tr").startsWith("tr") ? "tur+eng" : "eng";
+          const res = await Tesseract.recognize(canvas, lang, { logger: () => {} });
           const raw = String(res?.data?.text || "");
 
-                    // en iyi satırı seç
           const lines = raw
             .split(/\r?\n/)
             .map((x) => cleanCandidate(x))
@@ -591,7 +597,9 @@ rec.lang =
           lines.sort((a, b) => b.length - a.length);
           return lines[0] || "";
         } finally {
-          try { URL.revokeObjectURL(url); } catch {}
+          try {
+            URL.revokeObjectURL(url);
+          } catch {}
         }
       } catch {
         return "";
@@ -601,7 +609,7 @@ rec.lang =
     const td = await tryTextDetector();
     if (td) return td;
 
-    // tesseract pahalı; 6.5 sn içinde bir şey vermezse boş kabul et
+    // ✅ (4) OCR timeout 16s
     const out = await Promise.race([
       tryTesseract(),
       new Promise((resolve) => setTimeout(() => resolve(""), 16000)),
@@ -610,183 +618,230 @@ rec.lang =
     return cleanCandidate(out);
   };
 
-	async function onPickFile(e) {
-  const f = e.target.files?.[0];
-  if (!f) return;
+  async function onPickFile(e) {
+    const f = e.target.files?.[0];
+    if (!f) return;
 
-  // Aynı dosya tekrar seçilince de onChange tetiklensin
-  try {
-    e.target.value = "";
-  } catch {}
+    try {
+      e.target.value = "";
+    } catch {}
 
-  // Basit boyut kalkanı (backend de ayrıca clamp var)
-  const MAX_BYTES = 6 * 1024 * 1024;
-  if (f.size > MAX_BYTES) {
-    flashMsg(
-      t("cameraTooLarge", {
-        defaultValue: "Fotoğraf çok büyük. Lütfen daha küçük bir görsel seç.",
-      }),
-      2400,
-      "danger"
-    );
-    return;
+    const MAX_BYTES = 6 * 1024 * 1024;
+    if (f.size > MAX_BYTES) {
+      flashMsg(
+        t("cameraTooLarge", { defaultValue: "Fotoğraf çok büyük. Lütfen daha küçük bir görsel seç." }),
+        2400,
+        "danger"
+      );
+      return;
+    }
+
+    setLoading(true);
+    try {
+      window?.localStorage?.setItem?.("lastQuerySource", "camera");
+    } catch {}
+
+    setStatus(STATUS_SRC, {
+      text: t("search.imageAnalyzing", { defaultValue: "Görsel analiz ediliyor…" }),
+      showDots: true,
+      tone: "gold",
+      priority: STATUS_PRIO,
+    });
+
+    let kickedSearch = false;
+    const forceVision = !!forceVisionNextRef?.current;
+    try {
+      forceVisionNextRef.current = false;
+    } catch {}
+
+    try {
+      if (!forceVision) {
+        setStatus(STATUS_SRC, {
+          text: t("qrScanner.scanning", { defaultValue: "Barkod/QR taranıyor…" }),
+          showDots: true,
+          tone: "gold",
+          priority: STATUS_PRIO,
+        });
+
+        const codes = await detectBarcodesFromFile(f);
+        if (codes?.length) {
+          kickedSearch = true;
+          await doBarcodeLookup(codes[0]);
+          return;
+        }
+      }
+
+      setStatus(STATUS_SRC, {
+        text: t("search.imageAnalyzing", { defaultValue: "Görsel analiz ediliyor…" }),
+        showDots: true,
+        tone: "gold",
+        priority: STATUS_PRIO,
+      });
+
+      const text = await detectTextFromFile(f);
+      if (text) {
+        setValue(text);
+        kickedSearch = true;
+        await doSearch(text, "camera");
+        return;
+      }
+
+      const b64 = await new Promise((ok, bad) => {
+        try {
+          const r = new FileReader();
+          r.onerror = () => bad(new Error("FILE_READ_ERROR"));
+          r.onload = () => ok(String(r.result || ""));
+          r.readAsDataURL(f);
+        } catch (e2) {
+          bad(e2);
+        }
+      });
+
+      const backend = API_BASE || "";
+
+      try {
+        const rf = await fetch(`${backend}/api/vision/free?diag=0`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-fae-use-free-vision": "1" },
+          body: JSON.stringify({ imageBase64: b64, locale: i18n?.language || "tr" }),
+        });
+
+        const jf = await rf.json().catch(() => null);
+        const qf = String(jf?.query || "").trim();
+        const bcf = String(jf?.barcode || (Array.isArray(jf?.barcodes) ? jf.barcodes[0] : "") || jf?.qr || "").trim();
+
+        const bcGuessF = extractBarcodeLike(bcf || jf?.rawText || qf || "");
+        const bcF = isLikelyBarcode(bcGuessF) ? bcGuessF.replace(/\s+/g, "") : null;
+
+        if (bcF) {
+          kickedSearch = true;
+          await doBarcodeLookup(bcF);
+          return;
+        }
+
+        if (rf.ok && jf?.ok !== false && qf) {
+          setValue(qf);
+          flashMsg(
+            t("search.imageDetected", { defaultValue: "Görüntüden anladığım: {{query}}", query: qf }),
+            900,
+            "muted"
+          );
+          setCalm(t("search.voiceDone", { defaultValue: "Tamam — arıyorum." }), 600);
+          kickedSearch = true;
+          await doSearch(qf, "camera");
+          return;
+        }
+      } catch {
+        // ignore; paid fallback below
+      }
+
+      const r = await fetch(`${backend}/api/vision?diag=0&allowSerpLens=1`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-fae-allow-serp-lens": "1" },
+        body: JSON.stringify({ imageBase64: b64, locale: i18n?.language || "tr", allowSerpLens: true }),
+      });
+
+      const j = await r.json().catch(() => null);
+      const finalQuery = String(j?.query || "").trim();
+
+      const barcodeCandidate = String(j?.barcode || (Array.isArray(j?.barcodes) ? j.barcodes[0] : "") || j?.qr || "").trim();
+      const bcGuess = extractBarcodeLike(barcodeCandidate || j?.rawText || j?.query || "");
+      const bc = isLikelyBarcode(bcGuess) ? bcGuess.replace(/\s+/g, "") : null;
+
+      if (bc) {
+        kickedSearch = true;
+        await doBarcodeLookup(bc);
+        return;
+      }
+
+      if (String(j?.error || "") === "NO_MATCH") {
+        flashMsg(
+          t("search.imageNoMatch", {
+            defaultValue: "Görselden net bir ürün çıkaramadım. Daha yakından/ışıkta veya ön yüz fotoğrafıyla tekrar dene.",
+          }),
+          2800,
+          "muted"
+        );
+        setLoading(false);
+        clearStatus(STATUS_SRC);
+        return;
+      }
+
+      if (String(j?.error || "") === "VISION_DISABLED") {
+        flashMsg(
+          t("cameraVisionDisabled", {
+            defaultValue:
+              "Kamera ile arama hattı hazır ama görsel tanıma kapalı görünüyor. Şimdilik metinle arayın; API anahtarı gelince kamera otomatik çalışır.",
+          }),
+          3500,
+          "danger"
+        );
+        setLoading(false);
+        clearStatus(STATUS_SRC);
+        return;
+      }
+
+      if (!r.ok || j?.ok === false || !finalQuery) {
+        const msg = j?.error || `VISION_FAILED_HTTP_${r.status}`;
+        throw new Error(msg);
+      }
+
+      setValue(finalQuery);
+      flashMsg(
+        t("search.imageDetected", { defaultValue: "Görüntüden anladığım: {{query}}", query: finalQuery }),
+        900,
+        "muted"
+      );
+
+      setCalm(t("search.voiceDone", { defaultValue: "Tamam — arıyorum." }), 600);
+      kickedSearch = true;
+      await doSearch(finalQuery, "camera");
+    } catch (err) {
+      // ✅ (5) her hataya “vision disabled” basma
+      console.error("Vision error:", err);
+      flashMsg(
+        t("search.imageProcessError", {
+          defaultValue: "Görsel işlenirken hata oluştu. Daha net bir fotoğrafla tekrar dene.",
+        }),
+        2800,
+        "danger"
+      );
+    } finally {
+      // ✅ (5) status temizle
+      if (!kickedSearch) {
+        setLoading(false);
+        clearStatus(STATUS_SRC);
+      }
+    }
   }
 
-	  setLoading(true);
-	  try {
-	    window?.localStorage?.setItem?.("lastQuerySource", "camera");
-	  } catch {}
-	  setStatus(STATUS_SRC, {
-	    text: t("search.imageAnalyzing", { defaultValue: "Görsel analiz ediliyor…" }),
-	    showDots: true,
-	    tone: "gold",
-	    priority: STATUS_PRIO,
-	  });
+  function handleQRDetect(result) {
+    if (!result) return;
+    const raw = String(result || "").trim();
+    const compact = raw.replace(/\s+/g, "");
 
-  let kickedSearch = false;
-	  const forceVision = !!(forceVisionNextRef?.current);
-	  try { forceVisionNextRef.current = false; } catch {}
+    try {
+      window?.localStorage?.setItem?.("lastQuery", raw);
+      window?.localStorage?.setItem?.("lastQuerySource", "qr");
+    } catch {}
 
-	  try {
-	    // 1) Ücretsiz: BarcodeDetector (barkod/QR)
-	    //    Eğer önceki adım "needsImage" verdiyse, burada barkod detektörü döngü yaratmasın diye SKIP.
-	    if (!forceVision) {
-	      setStatus(STATUS_SRC, {
-	        text: t("qrScanner.scanning", { defaultValue: "Barkod/QR taranıyor…" }),
-	        showDots: true,
-	        tone: "gold",
-	        priority: STATUS_PRIO,
-	      });
-	      const codes = await detectBarcodesFromFile(f);
-	      if (codes?.length) {
-	        kickedSearch = true;
-	        await doBarcodeLookup(codes[0]);
-	        return;
-	      }
-	    }
+    setScannerOpen(false);
 
-	    // 2) Ücretsiz: TextDetector (varsa)
-	    setStatus(STATUS_SRC, {
-	      text: t("search.imageAnalyzing", { defaultValue: "Görsel analiz ediliyor…" }),
-	      showDots: true,
-	      tone: "gold",
-	      priority: STATUS_PRIO,
-	    });
-	    const text = await detectTextFromFile(f);
-	    if (text) {
-	      setValue(text);
-	      kickedSearch = true;
-	      await doSearch(text, "camera");
-	      return;
-	    }
+    const extracted = extractBarcodeLike(compact) || extractBarcodeLike(raw);
+    if (isLikelyBarcode(extracted)) {
+      doBarcodeLookup(extracted);
+      return;
+    }
 
-	    // 3) En son: Backend /api/vision (buradan ücretli fallback'ler çalışabilir)
-	    const b64 = await new Promise((ok, bad) => {
-	      try {
-	        const r = new FileReader();
-	        r.onerror = () => bad(new Error("FILE_READ_ERROR"));
-	        r.onload = () => ok(String(r.result || ""));
-	        r.readAsDataURL(f);
-	      } catch (e2) {
-	        bad(e2);
-	      }
-	    });
-
-	    const backend = API_BASE || "";
-
-	    const r = await fetch(`${backend}/api/vision?diag=0&allowSerpLens=1`, {
-	      method: "POST",
-	      headers: { "Content-Type": "application/json", "x-fae-allow-serp-lens": "1" },
-	      body: JSON.stringify({ imageBase64: b64, locale: i18n?.language || "tr", allowSerpLens: true }),
-	    });
-
-	    const j = await r.json().catch(() => null);
-	    const finalQuery = String(j?.query || "").trim();
-	    const barcodeCandidate = String(
-	      j?.barcode ||
-	        (Array.isArray(j?.barcodes) ? j.barcodes[0] : "") ||
-	        j?.qr ||
-	        ""
-	    ).trim();
-
-	    // Vision'dan barkod çıkarsa: barcode->product-info hattına git (kredi yakmaz).
-	    const bcGuess = extractBarcodeLike(barcodeCandidate || j?.rawText || j?.query || "");
-	    const bc = isLikelyBarcode(bcGuess)
-	      ? bcGuess.replace(/\s+/g, "")
-	      : null;
-	    if (bc) {
-	      kickedSearch = true;
-	      await doBarcodeLookup(bc);
-	      return;
-	    }
-
-	    if (!r.ok || j?.ok === false || !finalQuery) {
-	      const msg = j?.error || `VISION_FAILED_HTTP_${r.status}`;
-	      throw new Error(msg);
-	    }
-
-	    setValue(finalQuery);
-	    flashMsg(
-	      t("search.imageDetected", {
-	        defaultValue: "Görüntüden anladığım: {{query}}",
-	        query: finalQuery,
-	      }),
-	      900,
-	      "muted"
-	    );
-
-	    setCalm(t("search.voiceDone", { defaultValue: "Tamam — arıyorum." }), 600);
-	    kickedSearch = true;
-	    await doSearch(finalQuery, "camera");
-	  } catch (err) {
-	    console.error("Vision error:", err);
-	    flashMsg(
-	      t("search.imageProcessError", {
-	        defaultValue: "Görsel işlenirken hata oluştu. Daha net bir fotoğrafla tekrar dene.",
-	      }),
-	      2800,
-	      "danger"
-	    );
-	  } finally {
-	    // Eğer arama hattına devrettiysek, loading'i doSearch yönetir.
-	    if (!kickedSearch) {
-	      setLoading(false);
-	      clearStatus(STATUS_SRC);
-	    }
-	  }
-}
-
-	function handleQRDetect(result) {
-	  if (!result) return;
-	  const raw = String(result || "").trim();
-	  const compact = raw.replace(/\s+/g, "");
-	
-	  try {
-	    window?.localStorage?.setItem?.("lastQuery", raw);
-	    window?.localStorage?.setItem?.("lastQuerySource", "qr");
-	  } catch {}
-	
-	  setScannerOpen(false);
-	
-	  const extracted = extractBarcodeLike(compact) || extractBarcodeLike(raw);
-	  if (isLikelyBarcode(extracted)) {
-	    doBarcodeLookup(extracted);
-	    return;
-	  }
-	
-	  doSearch(raw, "qr");
-	}
-
+    doSearch(raw, "qr");
+  }
 
   // ============================================================
   // RENDER
   // ============================================================
   return (
     <>
-      <div
-        key={"searchbar-" + tick}
-        className="search-bar-wrapper flex justify-center w-full"
-      >
+      <div key={"searchbar-" + tick} className="search-bar-wrapper flex justify-center w-full">
         <div
           className="flex items-center bg-[rgba(255,255,255,0.16)] border border-black/35 rounded-full px-3 sm:px-4 py-2 
                      w-[520px] max-w-[92%] sm:w-[420px] md:w-[500px] lg:w-[520px]
@@ -801,7 +856,6 @@ rec.lang =
             onChange={onPickFile}
           />
 
-          {/* ✅ MOBILE: "Ara" butonu inputun içinde.  SM+ ekranda eski düzen korunur. */}
           <div className="relative flex-grow min-w-[120px]">
             <input
               key={"input-" + i18n.language}
@@ -811,7 +865,6 @@ rec.lang =
               placeholder={placeholders[index]}
               className="w-full bg-transparent outline-none text-black placeholder:text-black/40 text-base px-3 pr-24 sm:pr-3 min-w-[120px]"
             />
-
 
             <button
               type="button"
@@ -824,7 +877,6 @@ rec.lang =
             </button>
           </div>
 
-          {/* ✅ MOBILE: Mic/Camera/QR, eskiden Ara'nın durduğu yere kayar */}
           <button
             type="button"
             onClick={startMic}
@@ -852,7 +904,6 @@ rec.lang =
             <QrCode className="w-5 h-5" />
           </button>
 
-          {/* ✅ SM+ ekranda klasik Ara butonu (input dışı) */}
           <button
             onClick={() => doSearch()}
             disabled={loading}
@@ -863,13 +914,7 @@ rec.lang =
         </div>
       </div>
 
-      {/* Kullanıcı "mal mal" beklemesin: net durum göstergesi */}
-      {scannerOpen && (
-        <QRScanner
-          onDetect={handleQRDetect}
-          onClose={() => setScannerOpen(false)}
-        />
-      )}
+      {scannerOpen && <QRScanner onDetect={handleQRDetect} onClose={() => setScannerOpen(false)} />}
     </>
   );
 }
