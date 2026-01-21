@@ -37,6 +37,9 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
   // In that case, skip barcode detection on the next pick to avoid an endless loop.
   const forceVisionNextRef = useRef(false);
 
+  // Barcode unresolved flow: remember last scanned barcode so the next photo can teach the system.
+  const pendingBarcodeRef = useRef("");
+
   // Dil değişiminde placeholder reset
   useEffect(() => {
     const rerender = () => setTick((x) => x + 1);
@@ -243,6 +246,10 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
         try {
           forceVisionNextRef.current = true;
         } catch {}
+          try {
+            pendingBarcodeRef.current = qr;
+          } catch {}
+
 
         openCamera();
 
@@ -384,6 +391,24 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
   // 🔥 Camera Vision Search
   function openCamera() {
     fileRef.current?.click();
+  }
+
+  async function learnBarcodeHint(barcode, query) {
+    try {
+      const b = String(barcode || "").trim();
+      const q = String(query || "").trim();
+      if (!b || !/^\d{8,18}$/.test(b)) return;
+      if (!q || /^\d{8,18}$/.test(q) || q.length < 3) return;
+
+      const backend = API_BASE || "";
+      await fetch(`${backend}/api/product-info/product?learn=1&diag=0`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ qr: b, hintQuery: q, locale: i18n?.language || "tr" }),
+      });
+    } catch {
+      // ignore
+    }
   }
 
   // ============================================================
@@ -703,6 +728,14 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
       if (text) {
         setValue(text);
         kickedSearch = true;
+        try {
+          const pb = String(pendingBarcodeRef.current || "").trim();
+          if (pb) {
+            pendingBarcodeRef.current = "";
+            await learnBarcodeHint(pb, text);
+          }
+        } catch {}
+
         await doSearch(text, "camera");
         return;
       }
@@ -755,6 +788,14 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
           setCalm(t("search.voiceDone", { defaultValue: "Tamam — arıyorum." }), 600);
           kickedSearch = true;
           freeVisionHandled = true;
+          try {
+            const pb = String(pendingBarcodeRef.current || "").trim();
+            if (pb) {
+              pendingBarcodeRef.current = "";
+              await learnBarcodeHint(pb, qf);
+            }
+          } catch {}
+
           await doSearch(qf, "camera");
           return;
         }
