@@ -37,9 +37,6 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
   // In that case, skip barcode detection on the next pick to avoid an endless loop.
   const forceVisionNextRef = useRef(false);
 
-  // Barcode unresolved flow: remember last scanned barcode so the next photo can teach the system.
-  const pendingBarcodeRef = useRef("");
-
   // Dil değişiminde placeholder reset
   useEffect(() => {
     const rerender = () => setTick((x) => x + 1);
@@ -158,6 +155,8 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
 
     const backend = API_BASE || "";
 
+    const allowPaidFallback = (import.meta.env.VITE_FAE_ALLOW_PAID_FALLBACK || "0") === "1";
+
     const buildItems = (product) => {
       const offers = [...(product?.offersTrusted || []), ...(product?.offersOther || [])];
       return offers
@@ -178,9 +177,10 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
         .filter((x) => typeof x.price === "number" && Number.isFinite(x.price) && x.price > 0);
     };
 
-    const postLookup = async () => {
-      // ✅ Free-only: Barkod çağrısı (paid fallback yok)
-      const url = `${backend}/api/product-info/product?force=1&diag=0&paid=0`;
+    const postLookup = async (allowPaid) => {
+      // ✅ (1) Barkod çağrısı FORCE=1
+      const strictFreeQ = allowPaid ? "" : "&strictFree=1&purgeWeak=1";
+      const url = `${backend}/api/product-info/product?force=1&diag=0&paid=${allowPaid ? 1 : 0}${strictFreeQ}`;
 
       const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
       const to = controller ? setTimeout(() => controller.abort(), 9000) : null;
@@ -188,8 +188,8 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
       const resp = await fetch(url, {
         signal: controller ? controller.signal : undefined,
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ qr, locale, allowPaid: false }),
+        headers: { "Content-Type": "application/json", "x-fae-allow-serp-lens": "1" },
+        body: JSON.stringify({ qr, locale, allowPaid: !!allowPaid }),
       });
 
       if (to) clearTimeout(to);
@@ -201,12 +201,17 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     setBusy(t("ai.analyzing", { defaultValue: "Analiz yapılıyor…" }));
 
     try {
-      // 1) Free-only
-      let { resp, json } = await postLookup();
+      // 1) Free-first
+      let { resp, json } = await postLookup(false);
       let product = json?.product || {};
       let items = buildItems(product);
 
-      // ❌ Paid fallback kaldırıldı (kredi yakma yok)
+      // 2) Paid fallback (only if empty)
+      if (allowPaidFallback && (!resp?.ok || json?.ok === false || !items.length)) {
+        ({ resp, json } = await postLookup(true));
+        product = json?.product || product;
+        items = buildItems(product);
+      }
 
       if (!items.length) {
         // NO-JUNK POLICY:
@@ -246,10 +251,6 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
         try {
           forceVisionNextRef.current = true;
         } catch {}
-          try {
-            pendingBarcodeRef.current = qr;
-          } catch {}
-
 
         openCamera();
 
@@ -391,24 +392,6 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
   // 🔥 Camera Vision Search
   function openCamera() {
     fileRef.current?.click();
-  }
-
-  async function learnBarcodeHint(barcode, query) {
-    try {
-      const b = String(barcode || "").trim();
-      const q = String(query || "").trim();
-      if (!b || !/^\d{8,18}$/.test(b)) return;
-      if (!q || /^\d{8,18}$/.test(q) || q.length < 3) return;
-
-      const backend = API_BASE || "";
-      await fetch(`${backend}/api/product-info/product?learn=1&diag=0`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ qr: b, hintQuery: q, locale: i18n?.language || "tr" }),
-      });
-    } catch {
-      // ignore
-    }
   }
 
   // ============================================================
@@ -604,32 +587,6 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
 
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-          // Hafif ön işleme: gri ton + kontrast + basit eşikleme
-          // (OpenCV.js yok; bu minimum maliyetli iyileştirme)
-          try {
-            const im = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const d = im.data;
-            let sum = 0;
-            const n = (d.length / 4) | 0;
-            for (let i = 0; i < d.length; i += 4) {
-              const g = (d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114) | 0;
-              sum += g;
-              d[i] = d[i + 1] = d[i + 2] = g;
-            }
-            const mean = sum / Math.max(1, n);
-            const contrast = 1.55;
-            const thr = Math.max(40, Math.min(215, mean - 8));
-            for (let i = 0; i < d.length; i += 4) {
-              let v = d[i];
-              v = (v - 128) * contrast + 128;
-              v = v > thr ? 255 : 0;
-              d[i] = d[i + 1] = d[i + 2] = v;
-            }
-            ctx.putImageData(im, 0, 0);
-          } catch {
-            // ignore
-          }
-
           const lang = String(locale || "tr").startsWith("tr") ? "tur+eng" : "eng";
           const res = await Tesseract.recognize(canvas, lang, { logger: () => {} });
           const raw = String(res?.data?.text || "");
@@ -655,10 +612,10 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     const td = await tryTextDetector();
     if (td) return td;
 
-    // ✅ OCR timeout (ücretsiz ama bekletmesin): 3.5s
+    // ✅ (4) OCR timeout 16s
     const out = await Promise.race([
       tryTesseract(),
-      new Promise((resolve) => setTimeout(() => resolve(""), 3500)),
+      new Promise((resolve) => setTimeout(() => resolve(""), 16000)),
     ]);
 
     return cleanCandidate(out);
@@ -728,14 +685,6 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
       if (text) {
         setValue(text);
         kickedSearch = true;
-        try {
-          const pb = String(pendingBarcodeRef.current || "").trim();
-          if (pb) {
-            pendingBarcodeRef.current = "";
-            await learnBarcodeHint(pb, text);
-          }
-        } catch {}
-
         await doSearch(text, "camera");
         return;
       }
@@ -753,9 +702,7 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
 
       const backend = API_BASE || "";
 
-      // ✅ Free-only vision: backend /api/vision/free (Tesseract + optional key varsa Vision)
-      // ❌ /api/vision (SerpApi Lens) çağrısı KALDIRILDI — ücretli kredi yakmayacağız.
-      let freeVisionHandled = false;
+    const allowPaidFallback = (import.meta.env.VITE_FAE_ALLOW_PAID_FALLBACK || "0") === "1";
 
       try {
         const rf = await fetch(`${backend}/api/vision/free?diag=0`, {
@@ -773,7 +720,6 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
 
         if (bcF) {
           kickedSearch = true;
-          freeVisionHandled = true;
           await doBarcodeLookup(bcF);
           return;
         }
@@ -787,43 +733,74 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
           );
           setCalm(t("search.voiceDone", { defaultValue: "Tamam — arıyorum." }), 600);
           kickedSearch = true;
-          freeVisionHandled = true;
-          try {
-            const pb = String(pendingBarcodeRef.current || "").trim();
-            if (pb) {
-              pendingBarcodeRef.current = "";
-              await learnBarcodeHint(pb, qf);
-            }
-          } catch {}
-
           await doSearch(qf, "camera");
           return;
         }
-
-        // Free vision döndü ama net query yok
-        freeVisionHandled = true;
       } catch {
-        // ignore
+        // ignore; paid fallback below
       }
 
-      if (freeVisionHandled) {
+      const r = await fetch(`${backend}/api/vision?diag=0&allowSerpLens=1`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-fae-allow-serp-lens": "1" },
+        body: JSON.stringify({ imageBase64: b64, locale: i18n?.language || "tr", allowSerpLens: true }),
+      });
+
+      const j = await r.json().catch(() => null);
+      const finalQuery = String(j?.query || "").trim();
+
+      const barcodeCandidate = String(j?.barcode || (Array.isArray(j?.barcodes) ? j.barcodes[0] : "") || j?.qr || "").trim();
+      const bcGuess = extractBarcodeLike(barcodeCandidate || j?.rawText || j?.query || "");
+      const bc = isLikelyBarcode(bcGuess) ? bcGuess.replace(/\s+/g, "") : null;
+
+      if (bc) {
+        kickedSearch = true;
+        await doBarcodeLookup(bc);
+        return;
+      }
+
+      if (String(j?.error || "") === "NO_MATCH") {
         flashMsg(
           t("search.imageNoMatch", {
-            defaultValue:
-              "Görselden net bir ürün çıkaramadım. Barkodu/ön yüz yazısını daha yakından, ışıkta ve düz çekmeyi dene.",
+            defaultValue: "Görselden net bir ürün çıkaramadım. Daha yakından/ışıkta veya ön yüz fotoğrafıyla tekrar dene.",
           }),
           2800,
           "muted"
         );
-        // status'ı biz kapatıyoruz → finally tekrar kapatmasın
-        kickedSearch = true;
         setLoading(false);
         clearStatus(STATUS_SRC);
         return;
       }
 
-      // Free vision bile çalışmadıysa
-      throw new Error("FREE_VISION_FAILED");
+      if (String(j?.error || "") === "VISION_DISABLED") {
+        flashMsg(
+          t("cameraVisionDisabled", {
+            defaultValue:
+              "Kamera ile arama hattı hazır ama görsel tanıma kapalı görünüyor. Şimdilik metinle arayın; API anahtarı gelince kamera otomatik çalışır.",
+          }),
+          3500,
+          "danger"
+        );
+        setLoading(false);
+        clearStatus(STATUS_SRC);
+        return;
+      }
+
+      if (!r.ok || j?.ok === false || !finalQuery) {
+        const msg = j?.error || `VISION_FAILED_HTTP_${r.status}`;
+        throw new Error(msg);
+      }
+
+      setValue(finalQuery);
+      flashMsg(
+        t("search.imageDetected", { defaultValue: "Görüntüden anladığım: {{query}}", query: finalQuery }),
+        900,
+        "muted"
+      );
+
+      setCalm(t("search.voiceDone", { defaultValue: "Tamam — arıyorum." }), 600);
+      kickedSearch = true;
+      await doSearch(finalQuery, "camera");
     } catch (err) {
       // ✅ (5) her hataya “vision disabled” basma
       console.error("Vision error:", err);
