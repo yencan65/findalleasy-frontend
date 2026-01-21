@@ -110,8 +110,7 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     } catch {}
   };
 
-  const doBarcodeLookup = async (qrRaw, opts = {}) => {
-    const hintQuery = String(opts?.hintQuery || "").trim();
+  const doBarcodeLookup = async (qrRaw) => {
     const qr = String(qrRaw || "").trim();
     if (!qr) return;
 
@@ -156,7 +155,20 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
 
     const backend = API_BASE || "";
 
-    const allowPaidFallback = (import.meta.env.VITE_FAE_ALLOW_PAID_FALLBACK || "0") === "1";
+    // Paid sources are ONLY a last resort.
+    // If env is not set, enable on prod domains so QR/Kamera never feel "dead".
+    const allowPaidFallback = (() => {
+      const v = String(import.meta.env.VITE_FAE_ALLOW_PAID_FALLBACK ?? "").trim();
+      if (v === "1") return true;
+      if (v === "0") return false;
+      try {
+        const h = String(window?.location?.hostname || "").toLowerCase();
+        if (h.endsWith("findalleasy.com") || h.endsWith("tikbul.com") || h.endsWith("mizrak.com")) return true;
+      } catch {
+        // ignore
+      }
+      return false;
+    })();
 
     const buildItems = (product) => {
       const offers = [...(product?.offersTrusted || []), ...(product?.offersOther || [])];
@@ -178,42 +190,66 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
         .filter((x) => typeof x.price === "number" && Number.isFinite(x.price) && x.price > 0);
     };
 
-    const postLookup = async (allowPaid) => {
-      // ✅ FREE FIRST:
-      // - strictFree=1: never triggers paid network calls
-      // - backend may reuse an existing paid cache entry (0 cost now) unless strictFree=2/hard is used
-      // - DO NOT force cache on the free-first call
-      const qp = new URLSearchParams();
-      qp.set("diag", "0");
+    // When nothing can be priced/resolved, keep the UX alive with merchant search links.
+    const saveFallbackLinksForQuery = (product, q) => {
+      try {
+        const links = Array.isArray(product?.searchLinks) ? product.searchLinks : [];
+        if (!links.length || !q) {
+          localStorage.removeItem("faeFallbackLinks");
+          return;
+        }
 
-      if (allowPaid) {
-        qp.set("paid", "1");
-        qp.set("force", "1");
-      } else {
-        qp.set("strictFree", "1");
-        qp.set("purgeWeak", "1");
+        const img = product?.image || "";
+        const items = links.map((sl, idx) => {
+          const merchant = String(sl?.merchant || "").trim();
+          const url = String(sl?.url || "").trim();
+          return {
+            title: `${merchant ? merchant.toUpperCase() : "MARKET"} - ${q}`,
+            merchant: merchant || "market",
+            url,
+            image: img,
+            provider: "link",
+            providerKey: `link_${merchant || idx}`,
+            providerFamily: "link",
+            currency: "TRY",
+            price: null,
+            finalPrice: null,
+            rank: Math.max(1, 60 - idx),
+            confidence: "low",
+            isFallbackLink: true,
+          };
+        }).filter((x) => x.url);
+
+        if (!items.length) {
+          localStorage.removeItem("faeFallbackLinks");
+          return;
+        }
+
+        localStorage.setItem("faeFallbackLinks", JSON.stringify({ q, items }));
+      } catch {
+        // ignore
       }
+    };
 
-      const url = `${backend}/api/product-info/product?${qp.toString()}`;
+    const postLookup = async (allowPaid) => {
+      // NOTE: force=1 barkod tarafında gereksiz yere "boş" döndürüp UX'i öldürüyor.
+      // Cache/hint kullanmak ücretsiz ve daha stabil.
+      const strictFreeQ = allowPaid ? "" : "&strictFree=hard&purgeWeak=1";
+      const url = `${backend}/api/product-info/product?diag=0&paid=${allowPaid ? 1 : 0}&preferAffiliate=1&paidLastResort=1${strictFreeQ}`;
 
       const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-      const to = controller ? setTimeout(() => controller.abort(), allowPaid ? 12000 : 10000) : null;
+      const to = controller ? setTimeout(() => controller.abort(), 9000) : null;
 
-      const r = await fetch(url, {
+      const resp = await fetch(url, {
+        signal: controller ? controller.signal : undefined,
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          qr,
-          locale: localeForApi,
-          hintQuery: hintQuery || "",
-          allowPaid: !!allowPaid,
-        }),
-        signal: controller?.signal,
+        headers: { "Content-Type": "application/json", "x-fae-allow-serp-lens": "1" },
+        body: JSON.stringify({ qr, locale, allowPaid: !!allowPaid }),
       });
 
       if (to) clearTimeout(to);
-      const data = await r.json().catch(() => null);
-      return data;
+      const json = await resp.json().catch(() => null);
+      return { resp, json };
     };
 
     setLoading(true);
@@ -251,6 +287,9 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
           try {
             setValue(suggested);
           } catch {}
+
+          // Keep merchant search links as a safety net in case unified search returns empty.
+          saveFallbackLinksForQuery(product, suggested);
 
           // ✅ (2) category override ile gönder
           await doSearch(suggested, "barcode-hint", { categoryHint: suggestedCategory });
@@ -688,14 +727,7 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
         const codes = await detectBarcodesFromFile(f);
         if (codes?.length) {
           kickedSearch = true;
-          let hint = "";
-          try {
-            hint = await Promise.race([
-              detectTextFromFile(f),
-              new Promise((r) => setTimeout(() => r(""), 2200)),
-            ]);
-          } catch {}
-          await doBarcodeLookup(codes[0], { hintQuery: hint });
+          await doBarcodeLookup(codes[0]);
           return;
         }
       }
@@ -728,7 +760,19 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
 
       const backend = API_BASE || "";
 
-    const allowPaidFallback = (import.meta.env.VITE_FAE_ALLOW_PAID_FALLBACK || "0") === "1";
+      // Paid sources are ONLY a last resort.
+      // If env is not set, enable on prod domains so QR/Kamera never feel "dead".
+      const allowPaidFallback = (() => {
+        const v = String(import.meta.env.VITE_FAE_ALLOW_PAID_FALLBACK ?? "").trim();
+        if (v === "1") return true;
+        if (v === "0") return false;
+        try {
+          const h = String(window.location.hostname || "").toLowerCase();
+          return h.endsWith("findalleasy.com") || h.endsWith("tikbul.com") || h.includes("mizrak");
+        } catch {
+          return false;
+        }
+      })();
 
       try {
         const rf = await fetch(`${backend}/api/vision/free?diag=0`, {
