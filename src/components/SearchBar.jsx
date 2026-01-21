@@ -110,7 +110,8 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     } catch {}
   };
 
-  const doBarcodeLookup = async (qrRaw) => {
+  const doBarcodeLookup = async (qrRaw, opts = {}) => {
+    const hintQuery = String(opts?.hintQuery || "").trim();
     const qr = String(qrRaw || "").trim();
     if (!qr) return;
 
@@ -178,23 +179,41 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     };
 
     const postLookup = async (allowPaid) => {
-      // ✅ (1) Barkod çağrısı FORCE=1
-      const strictFreeQ = allowPaid ? "" : "&strictFree=1&purgeWeak=1";
-      const url = `${backend}/api/product-info/product?force=1&diag=0&paid=${allowPaid ? 1 : 0}${strictFreeQ}`;
+      // ✅ FREE FIRST:
+      // - strictFree=1: never triggers paid network calls
+      // - backend may reuse an existing paid cache entry (0 cost now) unless strictFree=2/hard is used
+      // - DO NOT force cache on the free-first call
+      const qp = new URLSearchParams();
+      qp.set("diag", "0");
+
+      if (allowPaid) {
+        qp.set("paid", "1");
+        qp.set("force", "1");
+      } else {
+        qp.set("strictFree", "1");
+        qp.set("purgeWeak", "1");
+      }
+
+      const url = `${backend}/api/product-info/product?${qp.toString()}`;
 
       const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-      const to = controller ? setTimeout(() => controller.abort(), 9000) : null;
+      const to = controller ? setTimeout(() => controller.abort(), allowPaid ? 12000 : 10000) : null;
 
-      const resp = await fetch(url, {
-        signal: controller ? controller.signal : undefined,
+      const r = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-fae-allow-serp-lens": "1" },
-        body: JSON.stringify({ qr, locale, allowPaid: !!allowPaid }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          qr,
+          locale: localeForApi,
+          hintQuery: hintQuery || "",
+          allowPaid: !!allowPaid,
+        }),
+        signal: controller?.signal,
       });
 
       if (to) clearTimeout(to);
-      const json = await resp.json().catch(() => null);
-      return { resp, json };
+      const data = await r.json().catch(() => null);
+      return data;
     };
 
     setLoading(true);
@@ -669,7 +688,14 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
         const codes = await detectBarcodesFromFile(f);
         if (codes?.length) {
           kickedSearch = true;
-          await doBarcodeLookup(codes[0]);
+          let hint = "";
+          try {
+            hint = await Promise.race([
+              detectTextFromFile(f),
+              new Promise((r) => setTimeout(() => r(""), 2200)),
+            ]);
+          } catch {}
+          await doBarcodeLookup(codes[0], { hintQuery: hint });
           return;
         }
       }
