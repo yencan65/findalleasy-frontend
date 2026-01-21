@@ -897,6 +897,31 @@ export default function Vitrin() {
           } catch {}
         }
 
+        // ✅ If unified search returns empty, keep UX alive: show fallback merchant search links
+        // saved by SearchBar (QR/Barcode flows). Only for the exact same query.
+        if (!bestArr.length && !othersArr.length) {
+          try {
+            const raw = window.localStorage.getItem("faeFallbackLinks");
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              const fq = String(parsed?.q || "").trim().toLowerCase();
+              const cq = String(body.query || "").trim().toLowerCase();
+              const items = Array.isArray(parsed?.items) ? parsed.items : [];
+              if (items.length && fq && cq && fq === cq) {
+                bestArr = ensureArray(items);
+              }
+            }
+          } catch {}
+        }
+
+        // Clear fallback links only when REAL results exist (not our own fallback cards).
+        if (bestArr.length || othersArr.length) {
+          try {
+            const hasReal = [...(bestArr || []), ...(othersArr || [])].some((it) => !it?.isFallbackLink);
+            if (hasReal) window.localStorage.removeItem("faeFallbackLinks");
+          } catch {}
+        }
+
         try {
           const fallbackItems = ensureArray(src.items || src.results);
         const allItems = [...bestArr, ...fallbackItems].filter(Boolean);
