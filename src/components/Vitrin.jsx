@@ -935,8 +935,6 @@ export default function Vitrin() {
           } catch {}
         }
 
-<<<<<<< HEAD
-=======
         // If there's still nothing, build generic marketplace search links from the query
         // (so the user is never stuck with an empty screen).
         if (!bestArr.length && !othersArr.length) {
@@ -981,7 +979,6 @@ export default function Vitrin() {
           } catch {}
         }
 
->>>>>>> 91cc573 (fix: camera+barcode fast timeouts + paid fallback opt-in + no-empty vitrin)
         // Clear fallback links only when REAL results exist (not our own fallback cards).
         if (bestArr.length || othersArr.length) {
           try {
