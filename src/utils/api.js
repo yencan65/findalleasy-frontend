@@ -50,15 +50,24 @@ export function withTimeout(promise, ms = 15000) {
 export async function apiJson(path, { method = "GET", headers = {}, body, timeoutMs = 15000 } = {}) {
   const base = API_BASE || "";
   const url = `${base}${path.startsWith("/") ? path : `/${path}`}`;
-  const h = { "Content-Type": "application/json", ...headers };
+  const m = String(method || "GET").toUpperCase();
+  const h = { ...headers };
+  // "Accept" is a simple header and helps some proxies behave.
+  if (!Object.prototype.hasOwnProperty.call(h, "Accept")) h.Accept = "application/json";
+  // Avoid forcing JSON Content-Type on GET/HEAD (triggers unnecessary CORS preflight on some hosts)
+  // Only attach JSON Content-Type when we actually send a JSON body.
+  const hasBody = body !== undefined && m !== "GET" && m !== "HEAD";
+  if (hasBody && !Object.prototype.hasOwnProperty.call(h, "Content-Type")) {
+    h["Content-Type"] = "application/json";
+  }
 
   const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
   const signal = controller?.signal;
 
   const res = await withTimeout(fetch(url, {
-    method,
+    method: m,
     headers: h,
-    body: body === undefined ? undefined : JSON.stringify(body ?? {}),
+    body: hasBody ? JSON.stringify(body ?? {}) : undefined,
     signal
   }), timeoutMs);
   const text = await res.text();
