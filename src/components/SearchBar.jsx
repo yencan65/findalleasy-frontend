@@ -156,24 +156,11 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     const backend = API_BASE || "";
 
     // Paid sources are ONLY a last resort.
-    // If env is not set, enable on prod domains so QR/Kamera never feel "dead".
+    // Paid sources (Serp/Lens) burn credits -> explicit opt-in only (VITE_FAE_ALLOW_PAID_FALLBACK=1).
     const allowPaidFallback = (() => {
-<<<<<<< HEAD
       // Paid sources (Serp/Lens) burn credits -> explicit opt-in only
       const v = String(import.meta.env.VITE_FAE_ALLOW_PAID_FALLBACK ?? "").trim();
       return v === "1";
-=======
-      const v = String(import.meta.env.VITE_FAE_ALLOW_PAID_FALLBACK ?? "").trim();
-      if (v === "1") return true;
-      if (v === "0") return false;
-      try {
-        const h = String(window?.location?.hostname || "").toLowerCase();
-        if (h.endsWith("findalleasy.com") || h.endsWith("tikbul.com") || h.endsWith("mizrak.com")) return true;
-      } catch {
-        // ignore
-      }
-      return false;
->>>>>>> 319a0f1 (chore: sync frontend)
     })();
 
     const buildItems = (product) => {
@@ -676,7 +663,6 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     const td = await tryTextDetector();
     if (td) return td;
 
-<<<<<<< HEAD
     // Local Tesseract OCR is expensive on weak devices.
     // Default: OFF. Enable only if you really want client-side OCR.
     const LOCAL_OCR_ENABLED = (() => {
@@ -697,12 +683,6 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     const out = await Promise.race([
       tryTesseract(),
       new Promise((resolve) => setTimeout(() => resolve(""), OCR_TIMEOUT_MS)),
-=======
-    // ✅ (4) OCR timeout 16s
-    const out = await Promise.race([
-      tryTesseract(),
-      new Promise((resolve) => setTimeout(() => resolve(""), 16000)),
->>>>>>> 319a0f1 (chore: sync frontend)
     ]);
 
     return cleanCandidate(out);
@@ -790,7 +770,7 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
       const backend = API_BASE || "";
 
       // Paid sources are ONLY a last resort.
-      // If env is not set, enable on prod domains so QR/Kamera never feel "dead".
+      // Paid sources (Serp/Lens) burn credits -> explicit opt-in only (VITE_FAE_ALLOW_PAID_FALLBACK=1).
       const allowPaidFallback = (() => {
         const v = String(import.meta.env.VITE_FAE_ALLOW_PAID_FALLBACK ?? "").trim();
         if (v === "1") return true;
@@ -804,7 +784,6 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
       })();
 
       try {
-<<<<<<< HEAD
         let rf = null;
         const apiKey = (import.meta?.env?.VITE_API_KEY && String(import.meta.env.VITE_API_KEY).trim()) || "";
         const freeController = typeof AbortController !== "undefined" ? new AbortController() : null;
@@ -828,13 +807,6 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
         } finally {
           if (freeTO) clearTimeout(freeTO);
         }
-=======
-        const rf = await fetch(`${backend}/api/vision/free?diag=0`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-fae-use-free-vision": "1" },
-          body: JSON.stringify({ imageBase64: b64, locale: i18n?.language || "tr" }),
-        });
->>>>>>> 319a0f1 (chore: sync frontend)
 
         const jf = await rf.json().catch(() => null);
         const qf = String(jf?.query || "").trim();
@@ -865,7 +837,6 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
         // ignore; paid fallback below
       }
 
-<<<<<<< HEAD
       const apiKey = (import.meta?.env?.VITE_API_KEY && String(import.meta.env.VITE_API_KEY).trim()) || "";
       const visionController = typeof AbortController !== "undefined" ? new AbortController() : null;
       const visionTimeoutMs = (() => {
@@ -893,12 +864,6 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
         signal: visionController?.signal,
       }).finally(() => {
         if (visionTO) clearTimeout(visionTO);
-=======
-      const r = await fetch(`${backend}/api/vision?diag=0&allowSerpLens=1`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-fae-allow-serp-lens": "1" },
-        body: JSON.stringify({ imageBase64: b64, locale: i18n?.language || "tr", allowSerpLens: true }),
->>>>>>> 319a0f1 (chore: sync frontend)
       });
 
       const j = await r.json().catch(() => null);
