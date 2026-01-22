@@ -155,6 +155,21 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
 
     const backend = API_BASE || "";
 
+    // Paid sources are ONLY a last resort.
+    // If env is not set, enable on prod domains so QR/Kamera never feel "dead".
+    const allowPaidFallback = (() => {
+      const v = String(import.meta.env.VITE_FAE_ALLOW_PAID_FALLBACK ?? "").trim();
+      if (v === "1") return true;
+      if (v === "0") return false;
+      try {
+        const h = String(window?.location?.hostname || "").toLowerCase();
+        if (h.endsWith("findalleasy.com") || h.endsWith("tikbul.com") || h.endsWith("mizrak.com")) return true;
+      } catch {
+        // ignore
+      }
+      return false;
+    })();
+
     const buildItems = (product) => {
       const offers = [...(product?.offersTrusted || []), ...(product?.offersOther || [])];
       return offers
@@ -175,9 +190,52 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
         .filter((x) => typeof x.price === "number" && Number.isFinite(x.price) && x.price > 0);
     };
 
-    const postLookup = async () => {
-      // ✅ Free-only: Barkod çağrısı (paid fallback yok)
-      const url = `${backend}/api/product-info/product?force=1&diag=0&paid=0`;
+    // When nothing can be priced/resolved, keep the UX alive with merchant search links.
+    const saveFallbackLinksForQuery = (product, q) => {
+      try {
+        const links = Array.isArray(product?.searchLinks) ? product.searchLinks : [];
+        if (!links.length || !q) {
+          localStorage.removeItem("faeFallbackLinks");
+          return;
+        }
+
+        const img = product?.image || "";
+        const items = links.map((sl, idx) => {
+          const merchant = String(sl?.merchant || "").trim();
+          const url = String(sl?.url || "").trim();
+          return {
+            title: `${merchant ? merchant.toUpperCase() : "MARKET"} - ${q}`,
+            merchant: merchant || "market",
+            url,
+            image: img,
+            provider: "link",
+            providerKey: `link_${merchant || idx}`,
+            providerFamily: "link",
+            currency: "TRY",
+            price: null,
+            finalPrice: null,
+            rank: Math.max(1, 60 - idx),
+            confidence: "low",
+            isFallbackLink: true,
+          };
+        }).filter((x) => x.url);
+
+        if (!items.length) {
+          localStorage.removeItem("faeFallbackLinks");
+          return;
+        }
+
+        localStorage.setItem("faeFallbackLinks", JSON.stringify({ q, items }));
+      } catch {
+        // ignore
+      }
+    };
+
+    const postLookup = async (allowPaid) => {
+      // NOTE: force=1 barkod tarafında gereksiz yere "boş" döndürüp UX'i öldürüyor.
+      // Cache/hint kullanmak ücretsiz ve daha stabil.
+      const strictFreeQ = allowPaid ? "" : "&strictFree=hard&purgeWeak=1";
+      const url = `${backend}/api/product-info/product?diag=0&paid=${allowPaid ? 1 : 0}&preferAffiliate=1&paidLastResort=1${strictFreeQ}`;
 
       const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
       const to = controller ? setTimeout(() => controller.abort(), 9000) : null;
@@ -185,8 +243,8 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
       const resp = await fetch(url, {
         signal: controller ? controller.signal : undefined,
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ qr, locale, allowPaid: false }),
+        headers: { "Content-Type": "application/json", "x-fae-allow-serp-lens": "1" },
+        body: JSON.stringify({ qr, locale, allowPaid: !!allowPaid }),
       });
 
       if (to) clearTimeout(to);
@@ -198,12 +256,17 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     setBusy(t("ai.analyzing", { defaultValue: "Analiz yapılıyor…" }));
 
     try {
-      // 1) Free-only
-      let { resp, json } = await postLookup();
+      // 1) Free-first
+      let { resp, json } = await postLookup(false);
       let product = json?.product || {};
       let items = buildItems(product);
 
-      // ❌ Paid fallback kaldırıldı (kredi yakma yok)
+      // 2) Paid fallback (only if empty)
+      if (allowPaidFallback && (!resp?.ok || json?.ok === false || !items.length)) {
+        ({ resp, json } = await postLookup(true));
+        product = json?.product || product;
+        items = buildItems(product);
+      }
 
       if (!items.length) {
         // NO-JUNK POLICY:
@@ -224,6 +287,9 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
           try {
             setValue(suggested);
           } catch {}
+
+          // Keep merchant search links as a safety net in case unified search returns empty.
+          saveFallbackLinksForQuery(product, suggested);
 
           // ✅ (2) category override ile gönder
           await doSearch(suggested, "barcode-hint", { categoryHint: suggestedCategory });
@@ -579,32 +645,6 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
 
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-          // Hafif ön işleme: gri ton + kontrast + basit eşikleme
-          // (OpenCV.js yok; bu minimum maliyetli iyileştirme)
-          try {
-            const im = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const d = im.data;
-            let sum = 0;
-            const n = (d.length / 4) | 0;
-            for (let i = 0; i < d.length; i += 4) {
-              const g = (d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114) | 0;
-              sum += g;
-              d[i] = d[i + 1] = d[i + 2] = g;
-            }
-            const mean = sum / Math.max(1, n);
-            const contrast = 1.55;
-            const thr = Math.max(40, Math.min(215, mean - 8));
-            for (let i = 0; i < d.length; i += 4) {
-              let v = d[i];
-              v = (v - 128) * contrast + 128;
-              v = v > thr ? 255 : 0;
-              d[i] = d[i + 1] = d[i + 2] = v;
-            }
-            ctx.putImageData(im, 0, 0);
-          } catch {
-            // ignore
-          }
-
           const lang = String(locale || "tr").startsWith("tr") ? "tur+eng" : "eng";
           const res = await Tesseract.recognize(canvas, lang, { logger: () => {} });
           const raw = String(res?.data?.text || "");
@@ -630,10 +670,10 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     const td = await tryTextDetector();
     if (td) return td;
 
-    // ✅ OCR timeout (ücretsiz ama bekletmesin): 3.5s
+    // ✅ (4) OCR timeout 16s
     const out = await Promise.race([
       tryTesseract(),
-      new Promise((resolve) => setTimeout(() => resolve(""), 3500)),
+      new Promise((resolve) => setTimeout(() => resolve(""), 16000)),
     ]);
 
     return cleanCandidate(out);
@@ -720,15 +760,24 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
 
       const backend = API_BASE || "";
 
-      // ✅ Free-only vision: backend /api/vision/free (Tesseract + optional key varsa Vision)
-      // ❌ /api/vision (SerpApi Lens) çağrısı KALDIRILDI — ücretli kredi yakmayacağız.
-      let freeVisionHandled = false;
+      // Paid sources are ONLY a last resort.
+      // If env is not set, enable on prod domains so QR/Kamera never feel "dead".
+      const allowPaidFallback = (() => {
+        const v = String(import.meta.env.VITE_FAE_ALLOW_PAID_FALLBACK ?? "").trim();
+        if (v === "1") return true;
+        if (v === "0") return false;
+        try {
+          const h = String(window.location.hostname || "").toLowerCase();
+          return h.endsWith("findalleasy.com") || h.endsWith("tikbul.com") || h.includes("mizrak");
+        } catch {
+          return false;
+        }
+      })();
 
       try {
-        // Keep headers minimal to avoid CORS allowlist issues on some deployments.
         const rf = await fetch(`${backend}/api/vision/free?diag=0`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "x-fae-use-free-vision": "1" },
           body: JSON.stringify({ imageBase64: b64, locale: i18n?.language || "tr" }),
         });
 
@@ -741,7 +790,6 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
 
         if (bcF) {
           kickedSearch = true;
-          freeVisionHandled = true;
           await doBarcodeLookup(bcF);
           return;
         }
@@ -755,35 +803,74 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
           );
           setCalm(t("search.voiceDone", { defaultValue: "Tamam — arıyorum." }), 600);
           kickedSearch = true;
-          freeVisionHandled = true;
           await doSearch(qf, "camera");
           return;
         }
-
-        // Free vision döndü ama net query yok
-        freeVisionHandled = true;
       } catch {
-        // ignore
+        // ignore; paid fallback below
       }
 
-      if (freeVisionHandled) {
+      const r = await fetch(`${backend}/api/vision?diag=0&allowSerpLens=1`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-fae-allow-serp-lens": "1" },
+        body: JSON.stringify({ imageBase64: b64, locale: i18n?.language || "tr", allowSerpLens: true }),
+      });
+
+      const j = await r.json().catch(() => null);
+      const finalQuery = String(j?.query || "").trim();
+
+      const barcodeCandidate = String(j?.barcode || (Array.isArray(j?.barcodes) ? j.barcodes[0] : "") || j?.qr || "").trim();
+      const bcGuess = extractBarcodeLike(barcodeCandidate || j?.rawText || j?.query || "");
+      const bc = isLikelyBarcode(bcGuess) ? bcGuess.replace(/\s+/g, "") : null;
+
+      if (bc) {
+        kickedSearch = true;
+        await doBarcodeLookup(bc);
+        return;
+      }
+
+      if (String(j?.error || "") === "NO_MATCH") {
         flashMsg(
           t("search.imageNoMatch", {
-            defaultValue:
-              "Görselden net bir ürün çıkaramadım. Barkodu/ön yüz yazısını daha yakından, ışıkta ve düz çekmeyi dene.",
+            defaultValue: "Görselden net bir ürün çıkaramadım. Daha yakından/ışıkta veya ön yüz fotoğrafıyla tekrar dene.",
           }),
           2800,
           "muted"
         );
-        // status'ı biz kapatıyoruz → finally tekrar kapatmasın
-        kickedSearch = true;
         setLoading(false);
         clearStatus(STATUS_SRC);
         return;
       }
 
-      // Free vision bile çalışmadıysa
-      throw new Error("FREE_VISION_FAILED");
+      if (String(j?.error || "") === "VISION_DISABLED") {
+        flashMsg(
+          t("cameraVisionDisabled", {
+            defaultValue:
+              "Kamera ile arama hattı hazır ama görsel tanıma kapalı görünüyor. Şimdilik metinle arayın; API anahtarı gelince kamera otomatik çalışır.",
+          }),
+          3500,
+          "danger"
+        );
+        setLoading(false);
+        clearStatus(STATUS_SRC);
+        return;
+      }
+
+      if (!r.ok || j?.ok === false || !finalQuery) {
+        const msg = j?.error || `VISION_FAILED_HTTP_${r.status}`;
+        throw new Error(msg);
+      }
+
+      setValue(finalQuery);
+      flashMsg(
+        t("search.imageDetected", { defaultValue: "Görüntüden anladığım: {{query}}", query: finalQuery }),
+        900,
+        "muted"
+      );
+
+      setCalm(t("search.voiceDone", { defaultValue: "Tamam — arıyorum." }), 600);
+      kickedSearch = true;
+      await doSearch(finalQuery, "camera");
     } catch (err) {
       // ✅ (5) her hataya “vision disabled” basma
       console.error("Vision error:", err);
