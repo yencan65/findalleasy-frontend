@@ -60,14 +60,16 @@ function getPersona(locale) {
     return {
       name: "Sono",
       tone: "Samimi, net, lafı dolandırmayan.",
-      hello: "Merhaba, Sono AI. İstersen hemen senin yerine vitrine bakmaya başlayabilirim.",
+      hello:
+        "Merhaba, Sono AI. İstersen hemen senin yerine vitrine bakmaya başlayabilirim.",
     };
   }
   if (locale.startsWith("fr")) {
     return {
       name: "Sono",
       tone: "Calme, précise, efficace.",
-      hello: "Bonjour, je suis Sono AI. Dites-moi ce que vous cherchez, je fouille pour vous.",
+      hello:
+        "Bonjour, je suis Sono AI. Dites-moi ce que vous cherchez, je fouille pour vous.",
     };
   }
   if (locale.startsWith("ru")) {
@@ -109,87 +111,272 @@ function detectIntent(text, locale = "tr") {
     : "tr";
 
   const wordCount = low.split(/\s+/).filter(Boolean).length;
+
   // Evidence-first overrides: market data / weather / news / travel etc are "info", not shopping
   const isWeatherish = /(hava durumu|weather|météo|погода|طقس)/i.test(low);
   const isNewsish = /(haber|news|actualité|новост|أخبار)/i.test(low);
-  const isTravelish = /(gezi|rota|travel|itin(é|e)raire|путешеств|سفر)/i.test(low);
+  const isTravelish = /(gezi|rota|travel|itin(é|e)raire|путешеств|سفر)/i.test(
+    low
+  );
   const isRecipeish = /(tarif|recipe|recette|рецепт|وصفة)/i.test(low);
   const isPoiish = /(yakın(ımda)?|nearby|à proximité|рядом|بالقرب)/i.test(low);
 
   // FX / commodities (gold/silver) — treated as info (market data), unless user explicitly wants to buy
-  const isFxish = /(d[öo]viz|kur|usd|eur|gbp|try|exchange rate|taux|курс|سعر الصرف)/i.test(low);
+  const isFxish =
+    /(d[öo]viz|kur|usd|eur|gbp|try|exchange rate|taux|курс|سعر الصرف)/i.test(
+      low
+    );
   const isMetalish =
-    /(gram\s*alt(ı|i)n|alt(ı|i)n|g[uü]m[uü]ş|gold|silver|xau|xag|platin|platinum|palladyum|palladium|xpt|xpd)/i.test(low);
+    /(gram\s*alt(ı|i)n|alt(ı|i)n|g[uü]m[uü]ş|gold|silver|xau|xag|platin|platinum|palladyum|palladium|xpt|xpd)/i.test(
+      low
+    );
 
   const wantsToBuy =
-    /(sat(ı|i)n\s*al|sipariş|nereden\s*al|link|buy|purchase|order|where\s*to\s*buy|acheter|où\s*acheter|купить|где\s*купить|اشتر|شراء|من\s*أين)/i.test(low) ||
-    /(hepsiburada|trendyol|n11|amazon|akakçe|cimri|epey|booking|expedia)/i.test(low);
+    /(sat(ı|i)n\s*al|sipariş|nereden\s*al|link|buy|purchase|order|where\s*to\s*buy|acheter|où\s*acheter|купить|где\s*купить|اشتر|شراء|من\s*أين)/i.test(
+      low
+    ) ||
+    /(hepsiburada|trendyol|n11|amazon|akakçe|cimri|epey|booking|expedia)/i.test(
+      low
+    );
 
-  if (isWeatherish || isNewsish || isTravelish || isRecipeish || isPoiish) return "info";
+  if (isWeatherish || isNewsish || isTravelish || isRecipeish || isPoiish)
+    return "info";
   if ((isFxish || isMetalish) && !wantsToBuy) return "info";
 
   const hasNumber = /\d/.test(low);
-  const hasCurrency = /(₺|tl|lira|\$|usd|€|eur|руб|₽|د\.?إ|ر\.?س|ج\.?م)/i.test(raw);
+  const hasCurrency = /(₺|tl|lira|\$|usd|€|eur|руб|₽|د\.?إ|ر\.?س|ج\.?م)/i.test(
+    raw
+  );
   const hasQuestionMark = /[?؟]/.test(raw);
 
   const includesAny = (items) =>
-    items.some((x) => (x instanceof RegExp ? x.test(low) : low.includes(String(x))));
+    items.some((x) =>
+      x instanceof RegExp ? x.test(low) : low.includes(String(x))
+    );
 
   // Strong product/service search signals (credits)
   const productSignals = {
     tr: [
-      "fiyat", "en ucuz", "ucuz", "indirim", "kampanya", "satın", "satın al", "al", "nereden al",
-      "bilet", "uçuş", "otel", "rezervasyon", "kirala", "kira", "sigorta", "teklif",
-      "site", "link", "bul", "ara", "listele", "karşılaştır"
+      "fiyat",
+      "en ucuz",
+      "ucuz",
+      "indirim",
+      "kampanya",
+      "satın",
+      "satın al",
+      "al",
+      "nereden al",
+      "bilet",
+      "uçuş",
+      "otel",
+      "rezervasyon",
+      "kirala",
+      "kira",
+      "sigorta",
+      "teklif",
+      "site",
+      "link",
+      "bul",
+      "ara",
+      "listele",
+      "karşılaştır",
     ],
     en: [
-      "price", "cheapest", "discount", "deal", "buy", "purchase", "order", "where to buy",
-      "ticket", "flight", "hotel", "booking", "rent", "rental", "insurance", "quote",
-      "search", "find", "look up", "show", "list", "compare"
+      "price",
+      "cheapest",
+      "discount",
+      "deal",
+      "buy",
+      "purchase",
+      "order",
+      "where to buy",
+      "ticket",
+      "flight",
+      "hotel",
+      "booking",
+      "rent",
+      "rental",
+      "insurance",
+      "quote",
+      "search",
+      "find",
+      "look up",
+      "show",
+      "list",
+      "compare",
     ],
     fr: [
-      "prix", "moins cher", "promo", "promotion", "acheter", "où acheter",
-      "billet", "vol", "hôtel", "réservation", "location", "assurance", "devis",
-      "chercher", "trouver", "rechercher", "montrer", "liste", "comparer"
+      "prix",
+      "moins cher",
+      "promo",
+      "promotion",
+      "acheter",
+      "où acheter",
+      "billet",
+      "vol",
+      "hôtel",
+      "réservation",
+      "location",
+      "assurance",
+      "devis",
+      "chercher",
+      "trouver",
+      "rechercher",
+      "montrer",
+      "liste",
+      "comparer",
     ],
     ru: [
-      "цена", "дешевле", "скидка", "акция", "купить", "где купить",
-      "билет", "рейс", "отель", "бронь", "аренда", "страховка", "расчет",
-      "найди", "поиск", "поищи", "покажи", "список", "сравни"
+      "цена",
+      "дешевле",
+      "скидка",
+      "акция",
+      "купить",
+      "где купить",
+      "билет",
+      "рейс",
+      "отель",
+      "бронь",
+      "аренда",
+      "страховка",
+      "расчет",
+      "найди",
+      "поиск",
+      "поищи",
+      "покажи",
+      "список",
+      "сравни",
     ],
     ar: [
-      "سعر", "الأرخص", "خصم", "عرض", "اشتر", "شراء", "من أين أشتري",
-      "تذكرة", "رحلة", "فندق", "حجز", "استئجار", "تأمين", "عرض سعر",
-      "ابحث", "بحث", "اعثر", "أرني", "قائمة", "قارن"
+      "سعر",
+      "الأرخص",
+      "خصم",
+      "عرض",
+      "اشتر",
+      "شراء",
+      "من أين أشتري",
+      "تذكرة",
+      "رحلة",
+      "فندق",
+      "حجز",
+      "استئجار",
+      "تأمين",
+      "عرض سعر",
+      "ابحث",
+      "بحث",
+      "اعثر",
+      "أرني",
+      "قائمة",
+      "قارن",
     ],
   };
 
   // Info / chat signals (no credits)
   const infoSignals = {
     tr: [
-      "nedir", "ne demek", "bu ne", "açıkla", "anlat", "bilgi ver", "bilgi verir misin",
-      "nasıl", "neden", "kim", "kimdir", "ne zaman", "nerede", "nasıl gidilir", "nasıl bulunur",
-      "hakkında", "hakkinda", "tarihi", "gezilecek", "öner", "öneri"
+      "nedir",
+      "ne demek",
+      "bu ne",
+      "açıkla",
+      "anlat",
+      "bilgi ver",
+      "bilgi verir misin",
+      "nasıl",
+      "neden",
+      "kim",
+      "kimdir",
+      "ne zaman",
+      "nerede",
+      "nasıl gidilir",
+      "nasıl bulunur",
+      "hakkında",
+      "hakkinda",
+      "tarihi",
+      "gezilecek",
+      "öner",
+      "öneri",
     ],
     en: [
-      "what is", "what's", "who", "who is", "where", "when", "why", "how", "how to",
-      "explain", "tell me about", "information", "info", "guide", "history",
-      "how do i get", "how to get", "places to visit", "things to do"
+      "what is",
+      "what's",
+      "who",
+      "who is",
+      "where",
+      "when",
+      "why",
+      "how",
+      "how to",
+      "explain",
+      "tell me about",
+      "information",
+      "info",
+      "guide",
+      "history",
+      "how do i get",
+      "how to get",
+      "places to visit",
+      "things to do",
     ],
     fr: [
-      "c'est quoi", "qu'est-ce", "quoi", "qui", "où", "quand", "pourquoi", "comment",
-      "explique", "dis-moi", "parle-moi de", "informations", "guide", "histoire",
-      "comment aller", "comment trouver", "à visiter", "que faire"
+      "c'est quoi",
+      "qu'est-ce",
+      "quoi",
+      "qui",
+      "où",
+      "quand",
+      "pourquoi",
+      "comment",
+      "explique",
+      "dis-moi",
+      "parle-moi de",
+      "informations",
+      "guide",
+      "histoire",
+      "comment aller",
+      "comment trouver",
+      "à visiter",
+      "que faire",
     ],
     ru: [
-      "что", "что такое", "кто", "кто такой", "где", "когда", "почему", "зачем", "как",
-      "объясни", "расскажи", "информация", "история", "гид",
-      "как добраться", "как найти", "что посмотреть", "куда сходить"
+      "что",
+      "что такое",
+      "кто",
+      "кто такой",
+      "где",
+      "когда",
+      "почему",
+      "зачем",
+      "как",
+      "объясни",
+      "расскажи",
+      "информация",
+      "история",
+      "гид",
+      "как добраться",
+      "как найти",
+      "что посмотреть",
+      "куда сходить",
     ],
     ar: [
-      "ما", "ماذا", "من", "أين", "متى", "لماذا", "كيف", "كم", "أي",
-      "اشرح", "عرّف", "عرفني", "معلومات", "حدثني عن", "دليل", "تاريخ",
-      "كيف أذهب", "كيف أصل", "كيف أجد"
+      "ما",
+      "ماذا",
+      "من",
+      "أين",
+      "متى",
+      "لماذا",
+      "كيف",
+      "كم",
+      "أي",
+      "اشرح",
+      "عرّف",
+      "عرفني",
+      "معلومات",
+      "حدثني عن",
+      "دليل",
+      "تاريخ",
+      "كيف أذهب",
+      "كيف أصل",
+      "كيف أجد",
     ],
   };
 
@@ -326,7 +513,6 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
     };
 
     warmVoices();
-    // Some browsers populate voices async
     const handler = () => warmVoices();
 
     try {
@@ -356,13 +542,12 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
           stream.getTracks().forEach((t) => t.stop());
         } catch {}
       } catch {
-        // ignore (permission denied / unavailable)
+        // ignore
       }
     })();
   }, [open]);
 
   // --- TEMİZLİK (CLEANUP) ---
-  // Action engine sadece 1 kere çalışacak
   useEffect(() => {
     if (!window.__SONO_ACTION_INITED__) {
       window.__SONO_ACTION_INITED__ = true;
@@ -370,7 +555,6 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
     }
   }, []);
 
-  // Cleanup ise tamamen ayrı olmalı
   useEffect(() => {
     return () => {
       if (abortControllerRef.current) {
@@ -389,13 +573,12 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
     if (typeof window === "undefined") return;
 
     let last = 0;
-
     const onUnified = (e) => {
       const q = e.detail?.query;
       if (!q) return;
 
       const now = Date.now();
-      if (now - last < 300) return; // 300ms içinde gelen tekrar sinyallerini yok say
+      if (now - last < 300) return;
       last = now;
     };
 
@@ -412,7 +595,7 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
       if (!last || !last.ts) return;
 
       const now = Date.now();
-      if (now - last.ts > 25000) return; // bayat
+      if (now - last.ts > 25000) return;
 
       const status = String(e?.detail?.status || "").toLowerCase();
       let msg = "";
@@ -433,24 +616,17 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
         return;
       }
 
-      // yazılı mesaj
       setMessages((m) => [...m, { from: "ai", text: msg }]);
 
-      // App zaten konuştuysa çakışmayı önle
       try {
         const lastSpokenAt = Number(window.__FAE_LAST_VITRIN_SPOKEN_AT || 0);
         if (!lastSpokenAt || Date.now() - lastSpokenAt > 1200) {
           speak(msg);
         }
-      } catch {
-        // ignore
-      }
+      } catch {}
 
-      // busy kapat
       flashMsg("", 450);
       setSearching(false);
-
-      // reset
       lastAssistantSearchRef.current = { ts: 0, query: "" };
     };
 
@@ -465,7 +641,7 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
     }
   }, [messages, thinking, open]);
 
-  // ALTIN HALO + MİKROFON NEFESİ + KONUŞMA DALGALARI (CSS)
+  // CSS
   useEffect(() => {
     if (typeof document === "undefined") return;
 
@@ -515,7 +691,6 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
 
       /* KONUMLANDIRMA */
       .sono-adjusted-position {
-        /* Bubble footer'ın üstünde kalsın (mobil safe-area dahil) */
         bottom: calc(env(safe-area-inset-bottom, 0px) + 2.25rem) !important;
         right: 1.25rem !important;
       }
@@ -559,28 +734,17 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
         100% { box-shadow: 0 0 8px rgba(212, 175, 55, 0.4); }
       }
 
-      /* [YENİ] ÖZEL SCROLLBAR ve OVERSCROLL FIX */
-      .custom-scrollbar {
-         overscroll-behavior: contain;
-      }
+      /* SCROLLBAR */
+      .custom-scrollbar { overscroll-behavior: contain; }
       .custom-scrollbar::-webkit-scrollbar { width: 5px; }
       .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); border-radius: 4px; }
       .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.5); border-radius: 4px; }
       .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(212,175,55,0.8); }
 
-      /* S12: Yüz modları (duygu simülasyonu) */
-      .sono-face-idle {
-        transform: scale(1);
-        filter: drop-shadow(0 0 4px rgba(212,175,55,0.4));
-      }
-      .sono-face-thinking {
-        transform: translateY(-1px) scale(1.02);
-        filter: drop-shadow(0 0 8px rgba(212,175,55,0.7));
-      }
-      .sono-face-listening {
-        transform: translateY(-1px) scale(1.06);
-        filter: drop-shadow(0 0 10px rgba(212,175,55,0.9));
-      }
+      /* Yüz modları */
+      .sono-face-idle { transform: scale(1); filter: drop-shadow(0 0 4px rgba(212,175,55,0.4)); }
+      .sono-face-thinking { transform: translateY(-1px) scale(1.02); filter: drop-shadow(0 0 8px rgba(212,175,55,0.7)); }
+      .sono-face-listening { transform: translateY(-1px) scale(1.06); filter: drop-shadow(0 0 10px rgba(212,175,55,0.9)); }
     `;
     document.head.appendChild(s);
   }, []);
@@ -639,45 +803,24 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
 
       u.lang = lang;
 
-      // 🎙️ Voice seçimi (bazı tarayıcılarda ilk TTS gecikmesini azaltır)
       try {
         const voices = synth.getVoices?.() || [];
         const lang2 = String(lang).toLowerCase();
         const short2 = lang2.slice(0, 2);
         const v =
           voices.find((x) => String(x?.lang || "").toLowerCase() === lang2) ||
-          voices.find((x) =>
-            String(x?.lang || "").toLowerCase().startsWith(lang2)
-          ) ||
-          voices.find((x) =>
-            String(x?.lang || "").toLowerCase().startsWith(short2)
-          );
+          voices.find((x) => String(x?.lang || "").toLowerCase().startsWith(lang2)) ||
+          voices.find((x) => String(x?.lang || "").toLowerCase().startsWith(short2));
         if (v) u.voice = v;
-      } catch {
-        // ignore
-      }
+      } catch {}
 
-      // Bazı tarayıcılarda synth "paused" kalabiliyor
       try {
         synth.cancel();
         synth.resume?.();
-      } catch {
-        // ignore
-      }
+      } catch {}
 
       synth.speak(u);
-
-      u.onend = () => {
-        const micBtn = document.querySelector(".sono-mic-glow");
-        if (micBtn) {
-          micBtn.classList.remove("sono-mic-breath");
-          void micBtn.offsetWidth;
-          micBtn.classList.add("sono-mic-breath");
-        }
-      };
-    } catch {
-      // sessiz fail
-    }
+    } catch {}
   }
 
   // SESLİ KOMUT (STT)
@@ -689,9 +832,14 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
     const now = Date.now();
     if (now - (micTapGuardRef.current || 0) < 700) return;
     micTapGuardRef.current = now;
+
     const m = String(sonoMode || "").toLowerCase();
     if (!m) {
-      flashMsg(t("ai.chooseModeToast", { defaultValue: "Devam etmek için mod seç." }), 1400, "muted");
+      flashMsg(
+        t("ai.chooseModeToast", { defaultValue: "Devam etmek için mod seç." }),
+        1400,
+        "muted"
+      );
       return;
     }
     captureOnce();
@@ -712,8 +860,8 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
 
     setListening(true);
     flashMsg(t("ai.listening", { defaultValue: "Dinleniyorum…" }), 0);
-    const rec = new Rec();
 
+    const rec = new Rec();
     rec.lang =
       locale.startsWith("tr")
         ? "tr-TR"
@@ -725,7 +873,6 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
         ? "ar-SA"
         : "en-US";
 
-    // ✅ interim+debounce: daha hızlı yakala
     rec.interimResults = true;
     rec.continuous = true;
 
@@ -760,10 +907,6 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
           if (finals.trim()) finalText = (finalText + " " + finals).trim();
           const merged = (finalText || interim || "").trim();
 
-          // ✅ Canlı yazım: kullanıcı konuşurken anında input'a yaz
-          try {
-            if (inputRef.current) inputRef.current.value = merged;
-          } catch {}
           try {
             setInputValue(merged);
           } catch {}
@@ -771,14 +914,11 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
             setVoiceLive(merged);
           } catch {}
 
-          // kullanıcı duraklayınca yakala
           clearTimeout(idle);
           idle = setTimeout(() => {
             finish(merged);
           }, 550);
-        } catch {
-          // ignore
-        }
+        } catch {}
       };
 
       rec.onerror = () => {
@@ -802,29 +942,25 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
 
     const clean = transcript.trim();
     if (clean) {
-      // ✅ Sesli komut: asla otomatik arama yapma. Önce kullanıcıya onay sor.
       setPendingVoice(clean);
-      try {
-        if (inputRef.current) inputRef.current.value = clean;
-      } catch {}
-      try {
-        setInputValue(clean);
-      } catch {}
-      const toastKey = String(sonoMode || "").toLowerCase() === "chat"
-        ? "ai.voiceConfirmToastChat"
-        : "ai.voiceConfirmToast";
+      setInputValue(clean);
+
+      const toastKey =
+        String(sonoMode || "").toLowerCase() === "chat"
+          ? "ai.voiceConfirmToastChat"
+          : "ai.voiceConfirmToast";
 
       flashMsg(
         t(toastKey, {
-          defaultValue: String(sonoMode || "").toLowerCase() === "chat"
-            ? "Duydum — göndermem için onay ver."
-            : "Duydum — aramam için onay ver.",
+          defaultValue:
+            String(sonoMode || "").toLowerCase() === "chat"
+              ? "Duydum — göndermem için onay ver."
+              : "Duydum — aramam için onay ver.",
         }),
         1600,
         "muted"
       );
     } else {
-      // boş çıktı: kullanıcının "ne oldu?" demesin
       flashMsg(t("ai.noSpeech", { defaultValue: "Ses algılanamadı." }), 1400);
     }
   }
@@ -833,7 +969,6 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
   async function processQuery(text) {
     const low = text.toLowerCase();
 
-    // 1) Teşekkür Algılama
     const thanksWords = [
       "teşekkür",
       "tesekkur",
@@ -868,13 +1003,12 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
       return;
     }
 
-    // 2) Mode + Intent & Context
     const mode = String(sonoMode || "").toLowerCase();
 
-    // ✅ Mode seçilmeden devam etme (profesyonel UX)
     if (!mode) {
       const msg = t("ai.chooseModeFirst", {
-        defaultValue: "Önce bir mod seç: Ürün/Hizmet Ara veya Soru Sor/Bilgi Al.",
+        defaultValue:
+          "Önce bir mod seç: Ürün/Hizmet Ara veya Soru Sor/Bilgi Al.",
       });
       setMessages((m) => [...m, { from: "ai", text: msg }]);
       speak(msg);
@@ -888,17 +1022,18 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
 
     const inferred = detectIntent(text, locale);
 
-    // ✅ Chat modunda da niyeti anla: ürün/hizmet aramasıysa otomatik Search moduna geçir
     let effectiveMode = mode;
     if (mode === "chat" && inferred === "product_search") {
       effectiveMode = "search";
       setSonoMode("search");
       try {
-        if (typeof window !== "undefined") localStorage.setItem("sono_mode", "search");
+        if (typeof window !== "undefined")
+          localStorage.setItem("sono_mode", "search");
       } catch {}
       flashMsg(
         t("ai.autoSwitchedToSearch", {
-          defaultValue: "Bu sorgu ürün/hizmet araması gibi — Ürün/Hizmet Ara moduna geçtim.",
+          defaultValue:
+            "Bu sorgu ürün/hizmet araması gibi — Ürün/Hizmet Ara moduna geçtim.",
         }),
         1400,
         "muted"
@@ -906,24 +1041,17 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
     }
 
     const intent = effectiveMode === "search" ? "product_search" : inferred;
-
     contextMemory.add(text);
 
-    // Intent bazlı davranış
     if (intent === "product_search") {
-      // ✅ Ürün/hizmet araması: /api/ai ÇAĞIRMA (kredi yakma). Sadece vitrine arama tetikle.
       setSearching(true);
       lastAssistantSearchRef.current = { ts: Date.now(), query: text };
 
-      // Kullanıcı sorgusunu + arama durumunu sohbet içine yaz
       setMessages((m) => {
         const updated = [
           ...m,
           { from: "user", text },
-          {
-            from: "ai",
-            text: t("ai.searching", { defaultValue: "Arıyorum…" }),
-          },
+          { from: "ai", text: t("ai.searching", { defaultValue: "Arıyorum…" }) },
         ];
         queueMicrotask(() => {
           messagesRef.current = updated;
@@ -941,7 +1069,6 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
         } else {
           pushQueryToVitrine(text, "ai");
         }
-        // Sonuç mesajı (hazır / yok / hata) fae.vitrine.results event'inden gelecek.
       } catch (err) {
         console.warn("AI product_search trigger fail:", err?.message || err);
         flashMsg(
@@ -962,38 +1089,16 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
         lastAssistantSearchRef.current = { ts: 0, query: "" };
       }
       return;
-    } else if (intent === "action") {
-      // S12: aksiyon niyeti için event fırlatıyoruz (ileride başka yerde yakalanabilir)
-      try {
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(
-            new CustomEvent("fie:action", {
-              detail: {
-                raw: text,
-                locale,
-                context: contextMemory.getContext(),
-              },
-            })
-          );
-        }
-      } catch (e) {
-        console.warn("fie:action event error:", e);
-      }
     }
 
-    // 3) Kullanıcı mesajını ekle + history senkron
     setMessages((m) => {
       const updated = [...m, { from: "user", text }];
-
-      // 🔥 Yeni: SENKRON KORUMA — StrictMode çift render bug fix
       queueMicrotask(() => {
         messagesRef.current = updated;
       });
-
       return updated;
     });
 
-    // 4) Hassas veri filtresi
     const sensitive = [
       "şifre",
       "tc",
@@ -1007,16 +1112,10 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
     const silent = sensitive.some((k) => low.includes(k));
 
     if (!silent) {
-      speak(
-        t("ai.prepping", {
-          defaultValue: "Yanıt hazırlıyorum...",
-        })
-      );
+      speak(t("ai.prepping", { defaultValue: "Yanıt hazırlıyorum..." }));
     }
 
     const analyzingText = t("ai.analyzing", { defaultValue: "Analiz ediliyor..." });
-
-    // Unique id per request to avoid removing / overwriting wrong placeholders
     const reqId = ++requestIdRef.current;
 
     pulseHalo();
@@ -1024,22 +1123,16 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
     flashMsg(analyzingText, 0);
     setMessages((m) => [...m, { from: "ai", text: analyzingText, rid: reqId }]);
 
-    // 5) Önceki istek abort
     if (abortControllerRef.current) abortControllerRef.current.abort();
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
     try {
-      // 8) Backend Chat / AI API Çağrısı
       const backend = API_BASE || "";
-
-      // Kullanıcı + AI geçmişi: backend'e güvenli formatta gönderilir
-      const safeHistory = messagesRef.current
-        .slice(-6)
-        .map((m) => ({
-          role: m.from === "user" ? "user" : "assistant",
-          content: m.text,
-        }));
+      const safeHistory = messagesRef.current.slice(-6).map((m) => ({
+        role: m.from === "user" ? "user" : "assistant",
+        content: m.text,
+      }));
 
       const res = await fetch(`${backend}/api/ai`, {
         method: "POST",
@@ -1057,34 +1150,31 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
       });
 
       const j = await res.json();
-
-      // Stale response guard
       if (reqId !== requestIdRef.current) return;
-      if (j?.cards) {
-        try {
-          if (typeof window !== "undefined") {
-            window.dispatchEvent(
-              new CustomEvent("fie:vitrin", {
-                detail: { cards: j.cards || [], model: j.provider || "ai" },
-              })
-            );
-          }
-        } catch (e) {
-          console.warn("fie:vitrin dispatch error:", e);
-        }
-      }
 
       setMessages((prev) => {
         const arr = Array.isArray(prev) ? [...prev] : [];
-        // Only remove this request's placeholder
-        const idx = arr.findLastIndex?.((x) => x && x.from === "ai" && x.rid === reqId) ?? -1;
+        const idx =
+          arr.findLastIndex?.((x) => x && x.from === "ai" && x.rid === reqId) ??
+          -1;
         if (idx >= 0) arr.splice(idx, 1);
+
         const sources = Array.isArray(j?.sources) ? j.sources.slice(0, 5) : [];
-        const trustScore = (typeof j?.trustScore === 'number' ? j.trustScore : (typeof j?.meta?.trustScore === 'number' ? j.meta.trustScore : null));
+        const trustScore =
+          typeof j?.trustScore === "number"
+            ? j.trustScore
+            : typeof j?.meta?.trustScore === "number"
+            ? j.meta.trustScore
+            : null;
+
         arr.push({
           from: "ai",
-          text: j?.answer || t("ai.noAnswer", { defaultValue: "Şu an cevap alamadım." }),
-          suggestions: Array.isArray(j?.suggestions) ? j.suggestions.slice(0, 4) : [],
+          text:
+            j?.answer ||
+            t("ai.noAnswer", { defaultValue: "Şu an cevap alamadım." }),
+          suggestions: Array.isArray(j?.suggestions)
+            ? j.suggestions.slice(0, 4)
+            : [],
           sources,
           trustScore,
           rid: reqId,
@@ -1092,18 +1182,16 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
         return arr;
       });
 
-      if (!silent) {
-        speak(
-          t("ai.chatReady", { defaultValue: "Cevap hazır." })
-        );
-      }
+      if (!silent) speak(t("ai.chatReady", { defaultValue: "Cevap hazır." }));
     } catch (error) {
       if (error.name !== "AbortError") {
         setMessages((m) => [
           ...m,
           {
             from: "ai",
-            text: t("ai.error", { defaultValue: "Bir hata oluştu, tekrar deneyiniz." }),
+            text: t("ai.error", {
+              defaultValue: "Bir hata oluştu, tekrar deneyiniz.",
+            }),
           },
         ]);
       }
@@ -1116,52 +1204,34 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
     }
   }
 
-  // FORM HANDLER (MOBİL İÇİN ENTER DESTEĞİ)
   async function handleFormSubmit(e) {
     e.preventDefault();
-    if (!inputRef.current) return;
-
-    const val = (inputRef.current?.value ?? inputValue);
-    const text = String(val || "").trim();
-
+    const text = String(inputValue || "").trim();
     if (!text) return;
     setPendingVoice(null);
-    inputRef.current.value = "";
     setInputValue("");
     await processQuery(text);
   }
 
-  // Eski kullanım için handler (gerekirse)
-  async function handleSend(txt) {
-    const text = String(txt || "").trim();
-    if (!text) return;
-    if (inputRef.current) inputRef.current.value = "";
-    setInputValue("");
-    await processQuery(text);
-  }
-
-  // ✅ Konuşmayı sıfırla (mod değişince temiz sayfa)
   function resetConversation(initialAiText) {
-    const msg = String(initialAiText || '').trim();
+    const msg = String(initialAiText || "").trim();
 
     try {
       if (abortControllerRef.current) abortControllerRef.current.abort();
     } catch {}
     abortControllerRef.current = null;
 
-    // state temizliği
     setThinking(false);
     setSearching(false);
     setListening(false);
     setPendingVoice(null);
-    setVoiceLive('');
+    setVoiceLive("");
 
-    // context temizliği
     try {
       contextMemory.history = [];
     } catch {}
 
-    const arr = [{ from: 'ai', text: msg || (persona?.hello || '') }];
+    const arr = [{ from: "ai", text: msg || persona?.hello || "" }];
     setMessages(arr);
     queueMicrotask(() => {
       messagesRef.current = arr;
@@ -1170,47 +1240,45 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
     if (msg) speak(msg);
   }
 
-  // ✅ Mode seçimi helper
   function setMode(next) {
-    const m = String(next || '').toLowerCase();
-    if (m !== 'search' && m !== 'chat') return;
+    const m = String(next || "").toLowerCase();
+    if (m !== "search" && m !== "chat") return;
 
     setSonoMode(m);
     try {
-      if (typeof window !== 'undefined') localStorage.setItem('sono_mode', m);
+      if (typeof window !== "undefined") localStorage.setItem("sono_mode", m);
     } catch {}
 
-    // Kullanıcıya kısa onay mesajı
     const msg =
-      m === 'search'
-        ? t('ai.modeSetSearch', { defaultValue: 'Tamam — ürün/hizmet arama modundayım. Ne arıyoruz?' })
-        : t('ai.modeSetChat', { defaultValue: 'Tamam — bilgi modu aktif. Sor bakalım.' });
+      m === "search"
+        ? t("ai.modeSetSearch", {
+            defaultValue: "Tamam — ürün/hizmet arama modundayım. Ne arıyoruz?",
+          })
+        : t("ai.modeSetChat", {
+            defaultValue: "Tamam — bilgi modu aktif. Sor bakalım.",
+          });
 
-    // ✅ Mod değişince: konuşmayı tamamen temizle
     resetConversation(msg);
   }
 
   function resetMode() {
-    setSonoMode('');
+    setSonoMode("");
     try {
-      if (typeof window !== 'undefined') localStorage.removeItem('sono_mode');
+      if (typeof window !== "undefined") localStorage.removeItem("sono_mode");
     } catch {}
 
-    const msg = t('ai.modeReset', { defaultValue: 'Mod seçimini sıfırladım.' });
+    const msg = t("ai.modeReset", { defaultValue: "Mod seçimini sıfırladım." });
     resetConversation(msg);
-    flashMsg(msg, 1200, 'muted');
+    flashMsg(msg, 1200, "muted");
   }
 
-  // Açıldığında ilk selamlama + persona
   const greetNow = () => {
     const modeNow = String(sonoMode || "").toLowerCase();
-    const greet =
-      t("ai.hello", {
-        defaultValue: persona.hello,
-      }) || persona.hello;
+    const greet = t("ai.hello", { defaultValue: persona.hello }) || persona.hello;
 
     const choose = t("ai.helloChoose", {
-      defaultValue: "Merhaba, ben Sono. Ne yapmak istersin? Ürün/Hizmet Ara veya Soru Sor / Bilgi Al.",
+      defaultValue:
+        "Merhaba, ben Sono. Ne yapmak istersin? Ürün/Hizmet Ara veya Soru Sor / Bilgi Al.",
     });
 
     const intro = !modeNow ? choose : greet;
@@ -1228,7 +1296,6 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
 
   const isRTL = locale.startsWith("ar");
 
-  // RENDER
   return (
     <div
       ref={wrapRef}
@@ -1237,7 +1304,7 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
       aria-live="polite"
       dir={isRTL ? "rtl" : "ltr"}
     >
-      {/* YÜZ + HALO + DALGALAR */}
+      {/* YÜZ + HALO */}
       <div className="relative grid place-items-center">
         <div
           ref={haloRef}
@@ -1257,7 +1324,7 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
                 greetedRef.current = true;
                 greetNow();
               }
-              setTimeout(() => inputRef.current?.focus(), 60);
+              setTimeout(() => inputRef.current?.focus?.(), 60);
             } else {
               greetedRef.current = false;
               setTimeout(() => setMessages([]), 100);
@@ -1281,19 +1348,25 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
         <div
           className="mt-2 bg-black/85 text-white border border-[#d4af37]/50 
           rounded-2xl shadow-2xl backdrop-blur-md p-3
-          w-[86vw] max-w-[320px] sm:max-w-[340px] md:max-w-[360px]
+          w-[78vw] max-w-[290px] sm:max-w-[310px] md:max-w-[330px]
           flex flex-col
-          max-h-[36vh] sm:max-h-[44vh] md:max-h-[50vh] lg:max-h-[55vh]
+          max-h-[32vh] sm:max-h-[40vh] md:max-h-[45vh] lg:max-h-[50vh]
           overflow-hidden"
         >
-          {/* ✅ Mode chooser / active mode badge */}
+          {/* Mode chooser / active mode badge */}
           {!sonoMode ? (
             <div className="mb-2 p-2 rounded-xl border border-[#d4af37]/30 bg-black/40">
               <div className="text-xs text-white/80">
-                {t("ai.chooseModeTitle", { defaultValue: "Mod seç: Ürün/Hizmet Ara veya Soru Sor/Bilgi Al" })}
+                {t("ai.chooseModeTitle", {
+                  defaultValue:
+                    "Mod seç: Ürün/Hizmet Ara veya Soru Sor/Bilgi Al",
+                })}
               </div>
               <div className="text-[11px] text-white/60 mt-1">
-                {t("ai.chooseModeSubtitle", { defaultValue: "Seçtiğin moda göre Sono ya vitrine arama yapar ya da bilgi verir." })}
+                {t("ai.chooseModeSubtitle", {
+                  defaultValue:
+                    "Seçtiğin moda göre Sono ya vitrine arama yapar ya da bilgi verir.",
+                })}
               </div>
               <div className="mt-2 flex items-center gap-2">
                 <button
@@ -1316,8 +1389,12 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
             <div className="mb-2 flex items-center justify-between gap-2">
               <div className="text-[11px] px-2 py-1 rounded-full border border-[#d4af37]/30 text-white/80 bg-black/40">
                 {String(sonoMode).toLowerCase() === "search"
-                  ? t("ai.modeActiveSearch", { defaultValue: "Mod: Ürün/Hizmet Arama" })
-                  : t("ai.modeActiveChat", { defaultValue: "Mod: Bilgi / Sohbet" })}
+                  ? t("ai.modeActiveSearch", {
+                      defaultValue: "Mod: Ürün/Hizmet Arama",
+                    })
+                  : t("ai.modeActiveChat", {
+                      defaultValue: "Mod: Bilgi / Sohbet",
+                    })}
               </div>
               <button
                 type="button"
@@ -1329,7 +1406,8 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
             </div>
           )}
 
-          <div className="mt-2 flex-1 min-h-[120px] overflow-y-auto pr-1 space-y-2 custom-scrollbar">
+          {/* Mesajlar */}
+          <div className="mt-2 flex-1 min-h-[110px] overflow-y-auto pr-1 space-y-2 custom-scrollbar">
             {messages.map((m, i) => (
               <div key={i} className="space-y-1">
                 <p
@@ -1346,7 +1424,102 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
             <div ref={messagesEndRef} />
           </div>
 
-          <form onSubmit={handleFormSubmit} className="flex items-center gap-2">
+          {/* ✅ Sesli komut onayı (otomatik arama YOK) */}
+          {pendingVoice ? (
+            <div className="mt-2 p-2 rounded-xl border border-[#d4af37]/30 bg-black/40">
+              <div className="text-xs text-white/70">
+                {t("ai.voiceHeardPrefix", {
+                  defaultValue: "Sesli komuttan anladığım:",
+                })}{" "}
+                <span className="text-[#d4af37] font-semibold">
+                  {String(pendingVoice || "").trim()}
+                </span>
+              </div>
+              <div className="text-xs text-white/60 mt-1">
+                {t(
+                  String(sonoMode || "").toLowerCase() === "chat"
+                    ? "ai.voiceConfirmQuestionChat"
+                    : "ai.voiceConfirmQuestion",
+                  {
+                    defaultValue:
+                      String(sonoMode || "").toLowerCase() === "chat"
+                        ? "Bunu göndereyim mi?"
+                        : "Bunu mu arayayım?",
+                  }
+                )}
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <button
+                  type="button"
+                  className="px-3 py-1 rounded-lg bg-[#d4af37] text-black text-xs font-semibold"
+                  onClick={async () => {
+                    const q = String(pendingVoice || "").trim();
+                    if (!q) return;
+                    setPendingVoice(null);
+                    setInputValue("");
+                    await processQuery(q);
+                  }}
+                >
+                  {String(sonoMode || "").toLowerCase() === "chat"
+                    ? t("ai.send", { defaultValue: "Gönder" })
+                    : t("search.confirmSearch", { defaultValue: "Ara" })}
+                </button>
+                <button
+                  type="button"
+                  className="px-3 py-1 rounded-lg border border-[#d4af37]/50 text-[#d4af37] text-xs"
+                  onClick={() => {
+                    setPendingVoice(null);
+                    setTimeout(() => {
+                      try {
+                        inputRef.current?.focus?.();
+                      } catch {}
+                    }, 0);
+                  }}
+                >
+                  {t("search.editQuery", { defaultValue: "Düzenle" })}
+                </button>
+                <button
+                  type="button"
+                  className="px-3 py-1 rounded-lg border border-white/20 text-white/70 text-xs"
+                  onClick={() => {
+                    setPendingVoice(null);
+                    setInputValue("");
+                    flashMsg(t("search.cancel", { defaultValue: "İptal" }), 900, "muted");
+                  }}
+                >
+                  {t("search.cancel", { defaultValue: "İptal" })}
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {/* INPUT */}
+          <form onSubmit={handleFormSubmit} className="mt-2 flex items-center gap-2">
+            {/* 🎙️ Mikrofon geri geldi */}
+            <button
+              type="button"
+              onPointerDown={handleMicPointerDown}
+              onClick={(e) => {
+                try {
+                  e.preventDefault?.();
+                  e.stopPropagation?.();
+                } catch {}
+              }}
+              disabled={!sonoMode}
+              className={`sono-mic-glow sono-mic-hover-gold relative grid place-items-center
+                w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-[#d4af37]/70 transition
+                ${!sonoMode ? "opacity-40 cursor-not-allowed" : ""}
+                ${listening ? "sono-mic-listening" : "hover:bg-[#d4af37]/10"}`}
+              title={t("ai.listen", { defaultValue: "Dinle" })}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" className="text-[#d4af37]">
+                <path
+                  fill="currentColor"
+                  d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2Z"
+                />
+              </svg>
+            </button>
+
             <input
               ref={inputRef}
               type="text"
@@ -1355,9 +1528,13 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
               disabled={!sonoMode}
               enterKeyHint="send"
               autoComplete="off"
-              placeholder={!sonoMode ? t("ai.chooseModePlaceholder", { defaultValue: "Önce mod seç…" }) : (String(sonoMode).toLowerCase() === "search"
-                ? t("ai.placeholderSearch", { defaultValue: "Ürün veya hizmet ara…" })
-                : t("ai.placeholderChat", { defaultValue: "Soru sor / bilgi al…" }))}
+              placeholder={
+                !sonoMode
+                  ? t("ai.chooseModePlaceholder", { defaultValue: "Önce mod seç…" })
+                  : String(sonoMode).toLowerCase() === "search"
+                  ? t("ai.placeholderSearch", { defaultValue: "Ürün veya hizmet ara…" })
+                  : t("ai.placeholderChat", { defaultValue: "Soru sor / bilgi al…" })
+              }
               className="flex-grow bg-transparent outline-none border border-[#d4af37]/40 rounded-xl 
               px-2 py-2 text-white text-sm"
             />
@@ -1368,7 +1545,6 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
                 onClick={() => {
                   setInputValue("");
                   try {
-                    if (inputRef.current) inputRef.current.value = "";
                     inputRef.current?.focus?.();
                   } catch {}
                 }}
@@ -1384,16 +1560,15 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
             <button
               type="submit"
               disabled={!sonoMode}
-              className="grid place-items-center w-9 h-9 rounded-full border border-[#d4af37]/70 
+              className="grid place-items-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-[#d4af37]/70 
               hover:bg-[#d4af37]/10 transition"
-              title={String(sonoMode || "").toLowerCase() === "search" ? t("search.search", { defaultValue: "Ara" }) : t("ai.send", { defaultValue: "Gönder" })}
+              title={
+                String(sonoMode || "").toLowerCase() === "search"
+                  ? t("search.search", { defaultValue: "Ara" })
+                  : t("ai.send", { defaultValue: "Gönder" })
+              }
             >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                className="text-[#d4af37]"
-              >
+              <svg width="18" height="18" viewBox="0 0 24 24" className="text-[#d4af37]">
                 <path
                   fill="currentColor"
                   d="M3.4 20.4L21 12L3.4 3.6L3 10l11 2l-11 2z"
