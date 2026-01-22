@@ -1294,8 +1294,7 @@ useEffect(() => {
       {/* CHAT PENCERESİ */}
       {open && (
         <div
-          className="mt-2 bg-black/85 text-white border border-[#d4af37]/50 
-          rounded-2xl shadow-2xl backdrop-blur-md p-3 w-[calc(100vw-32px)] max-w-[380px] md:w-[340px] md:max-w-[340px]"
+          className="mt-2 bg-black/85 border border-[#6a5600]/45 rounded-2xl p-3 shadow-[0_10px_30px_rgba(0,0,0,0.45)] backdrop-blur w-[92vw] max-w-[360px] md:max-w-[340px] flex flex-col max-h-[52vh] sm:max-h-[56vh] md:max-h-[70vh] lg:max-h-[76vh]"
         >
           {/* ✅ Mode chooser / active mode badge */}
           {!sonoMode ? (
@@ -1355,7 +1354,7 @@ useEffect(() => {
             </div>
           ) : null}
 
-<div className="mt-2 flex-1 min-h-[120px] overflow-y-auto pr-1 space-y-2 custom-scrollbar">
+<div className="mt-2 flex-1 min-h-0 min-h-[120px] overflow-y-auto pr-1 space-y-2 custom-scrollbar">
             {messages.map((m, i) => (
               <div key={i} className="space-y-1">
                 <p
