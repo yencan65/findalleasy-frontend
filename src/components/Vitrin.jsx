@@ -826,13 +826,34 @@ export default function Vitrin() {
 
       const BASE = getBackendBase();
 
-      const headers = buildHeaders({});
+      const paidAllowed = String(import.meta.env.VITE_FAE_ALLOW_PAID_FALLBACK ?? "").trim() === "1";
+      const headers = buildHeaders(paidAllowed ? {} : { "x-fae-skip-paid": "1" });
 
-      const r = await fetch(`${BASE}/api/vitrin/dynamic`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(body),
-      });
+      const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+      const timeoutMs = (() => {
+        const n = Number(import.meta.env.VITE_FAE_VITRIN_FETCH_TIMEOUT_MS || 9500);
+        return Number.isFinite(n) ? Math.max(2500, Math.min(20000, n)) : 9500;
+      })();
+      const to = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+
+      let r;
+      try {
+        r = await fetch(`${BASE}/api/vitrin/dynamic`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(body),
+          signal: controller?.signal,
+        });
+      } catch (err) {
+        const msg = err?.name === "AbortError" ? "TIMEOUT" : String(err?.message || err);
+        setBest([]);
+        setSmart([]);
+        setOthers([]);
+        dispatchVitrineResults("error", { error: msg, httpStatus: 0, timeoutMs });
+        return;
+      } finally {
+        if (to) clearTimeout(to);
+      }
 
       const j = await r.json().catch(() => ({}));
 
@@ -914,6 +935,53 @@ export default function Vitrin() {
           } catch {}
         }
 
+<<<<<<< HEAD
+=======
+        // If there's still nothing, build generic marketplace search links from the query
+        // (so the user is never stuck with an empty screen).
+        if (!bestArr.length && !othersArr.length) {
+          try {
+            const q0 = String(body.query || "").trim();
+            if (q0) {
+              const enc = encodeURIComponent(q0);
+              const links = [
+                { merchant: "hepsiburada", url: `https://www.hepsiburada.com/ara?q=${enc}` },
+                { merchant: "trendyol", url: `https://www.trendyol.com/sr?q=${enc}` },
+                { merchant: "n11", url: `https://www.n11.com/arama?q=${enc}` },
+                { merchant: "akakce", url: `https://www.akakce.com/arama/?q=${enc}` },
+                { merchant: "cimri", url: `https://www.cimri.com/arama?q=${enc}` },
+                { merchant: "amazon", url: `https://www.amazon.com.tr/s?k=${enc}` },
+                { merchant: "google", url: `https://www.google.com/search?q=${enc}` },
+              ];
+
+              const items = links
+                .map((sl, idx) => ({
+                  title: `${String(sl.merchant || "MARKET").toUpperCase()} - ${q0}`,
+                  merchant: sl.merchant,
+                  url: sl.url,
+                  provider: "link",
+                  providerKey: `link_${sl.merchant || idx}`,
+                  providerFamily: "link",
+                  currency: "TRY",
+                  price: null,
+                  finalPrice: null,
+                  rank: Math.max(1, 60 - idx),
+                  confidence: "low",
+                  isFallbackLink: true,
+                }))
+                .filter((x) => x.url);
+
+              if (items.length) {
+                bestArr = ensureArray(items);
+                try {
+                  window.localStorage.setItem("faeFallbackLinks", JSON.stringify({ q: q0, items }));
+                } catch {}
+              }
+            }
+          } catch {}
+        }
+
+>>>>>>> 91cc573 (fix: camera+barcode fast timeouts + paid fallback opt-in + no-empty vitrin)
         // Clear fallback links only when REAL results exist (not our own fallback cards).
         if (bestArr.length || othersArr.length) {
           try {

@@ -158,6 +158,7 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     // Paid sources are ONLY a last resort.
     // If env is not set, enable on prod domains so QR/Kamera never feel "dead".
     const allowPaidFallback = (() => {
+<<<<<<< HEAD
       const v = String(import.meta.env.VITE_FAE_ALLOW_PAID_FALLBACK ?? "").trim();
       if (v === "1") return true;
       if (v === "0") return false;
@@ -168,6 +169,11 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
         // ignore
       }
       return false;
+=======
+      // Paid sources (Serp/Lens) burn credits -> explicit opt-in only
+      const v = String(import.meta.env.VITE_FAE_ALLOW_PAID_FALLBACK ?? "").trim();
+      return v === "1";
+>>>>>>> 91cc573 (fix: camera+barcode fast timeouts + paid fallback opt-in + no-empty vitrin)
     })();
 
     const buildItems = (product) => {
@@ -670,10 +676,33 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     const td = await tryTextDetector();
     if (td) return td;
 
+<<<<<<< HEAD
     // ✅ (4) OCR timeout 16s
     const out = await Promise.race([
       tryTesseract(),
       new Promise((resolve) => setTimeout(() => resolve(""), 16000)),
+=======
+    // Local Tesseract OCR is expensive on weak devices.
+    // Default: OFF. Enable only if you really want client-side OCR.
+    const LOCAL_OCR_ENABLED = (() => {
+      try {
+        const v = String(import.meta.env.VITE_FAE_ENABLE_LOCAL_OCR ?? "").trim();
+        return v === "1";
+      } catch {
+        return false;
+      }
+    })();
+    if (!LOCAL_OCR_ENABLED) return "";
+
+    const OCR_TIMEOUT_MS = (() => {
+      const n = Number(import.meta.env.VITE_FAE_LOCAL_OCR_TIMEOUT_MS || 4500);
+      return Number.isFinite(n) ? Math.max(1200, Math.min(16000, n)) : 4500;
+    })();
+
+    const out = await Promise.race([
+      tryTesseract(),
+      new Promise((resolve) => setTimeout(() => resolve(""), OCR_TIMEOUT_MS)),
+>>>>>>> 91cc573 (fix: camera+barcode fast timeouts + paid fallback opt-in + no-empty vitrin)
     ]);
 
     return cleanCandidate(out);
@@ -775,11 +804,37 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
       })();
 
       try {
+<<<<<<< HEAD
         const rf = await fetch(`${backend}/api/vision/free?diag=0`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-fae-use-free-vision": "1" },
           body: JSON.stringify({ imageBase64: b64, locale: i18n?.language || "tr" }),
         });
+=======
+        let rf = null;
+        const apiKey = (import.meta?.env?.VITE_API_KEY && String(import.meta.env.VITE_API_KEY).trim()) || "";
+        const freeController = typeof AbortController !== "undefined" ? new AbortController() : null;
+        const freeTimeoutMs = (() => {
+          const n = Number(import.meta.env.VITE_FAE_VISION_FREE_TIMEOUT_MS || 8500);
+          return Number.isFinite(n) ? Math.max(1500, Math.min(20000, n)) : 8500;
+        })();
+        const freeTO = freeController ? setTimeout(() => freeController.abort(), freeTimeoutMs) : null;
+
+        try {
+          rf = await fetch(`${backend}/api/vision/free?diag=0`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-fae-use-free-vision": "1",
+              ...(apiKey ? { "x-api-key": apiKey } : {}),
+            },
+            body: JSON.stringify({ imageBase64: b64, locale: i18n?.language || "tr" }),
+            signal: freeController?.signal,
+          });
+        } finally {
+          if (freeTO) clearTimeout(freeTO);
+        }
+>>>>>>> 91cc573 (fix: camera+barcode fast timeouts + paid fallback opt-in + no-empty vitrin)
 
         const jf = await rf.json().catch(() => null);
         const qf = String(jf?.query || "").trim();
@@ -810,10 +865,40 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
         // ignore; paid fallback below
       }
 
+<<<<<<< HEAD
       const r = await fetch(`${backend}/api/vision?diag=0&allowSerpLens=1`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-fae-allow-serp-lens": "1" },
         body: JSON.stringify({ imageBase64: b64, locale: i18n?.language || "tr", allowSerpLens: true }),
+=======
+      const apiKey = (import.meta?.env?.VITE_API_KEY && String(import.meta.env.VITE_API_KEY).trim()) || "";
+      const visionController = typeof AbortController !== "undefined" ? new AbortController() : null;
+      const visionTimeoutMs = (() => {
+        const n = Number(import.meta.env.VITE_FAE_VISION_TIMEOUT_MS || 9000);
+        return Number.isFinite(n) ? Math.max(1500, Math.min(20000, n)) : 9000;
+      })();
+      const visionTO = visionController ? setTimeout(() => visionController.abort(), visionTimeoutMs) : null;
+
+      const visionUrl = allowPaidFallback
+        ? `${backend}/api/vision?diag=0&allowSerpLens=1`
+        : `${backend}/api/vision?diag=0`;
+
+      const r = await fetch(visionUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(apiKey ? { "x-api-key": apiKey } : {}),
+          ...(allowPaidFallback ? { "x-fae-allow-serp-lens": "1" } : {}),
+        },
+        body: JSON.stringify({
+          imageBase64: b64,
+          locale: i18n?.language || "tr",
+          ...(allowPaidFallback ? { allowSerpLens: true } : {}),
+        }),
+        signal: visionController?.signal,
+      }).finally(() => {
+        if (visionTO) clearTimeout(visionTO);
+>>>>>>> 91cc573 (fix: camera+barcode fast timeouts + paid fallback opt-in + no-empty vitrin)
       });
 
       const j = await r.json().catch(() => null);
