@@ -286,7 +286,6 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
     return () => clearStatus(STATUS_SRC);
   }, [clearStatus]);
 
-
   const [messages, setMessages] = useState([]);
   const messagesRef = useRef([]);
   const greetedRef = useRef(false);
@@ -314,79 +313,76 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
     typeof window !== "undefined" ? window.speechSynthesis : null
   );
 
-// Warm up TTS voices early (first speak can be delayed on some browsers)
-useEffect(() => {
-  if (typeof window === "undefined") return;
-  const synth = window.speechSynthesis;
-  if (!synth || typeof synth.getVoices !== "function") return;
+  // Warm up TTS voices early (first speak can be delayed on some browsers)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const synth = window.speechSynthesis;
+    if (!synth || typeof synth.getVoices !== "function") return;
 
-  const warmVoices = () => {
-    try {
-      synth.getVoices();
-    } catch {}
-  };
-
-  warmVoices();
-  // Some browsers populate voices async
-  const handler = () => warmVoices();
-
-  try {
-    synth.addEventListener?.("voiceschanged", handler);
-  } catch {}
-
-  return () => {
-    try {
-      synth.removeEventListener?.("voiceschanged", handler);
-    } catch {}
-  };
-}, []);
-
-
-// Warm up microphone permission early (reduces first-tap delay)
-useEffect(() => {
-  if (!open) return;
-  if (micWarmedRef.current) return;
-  micWarmedRef.current = true;
-
-  (async () => {
-    try {
-      if (typeof navigator === "undefined") return;
-      const md = navigator.mediaDevices;
-      if (!md || typeof md.getUserMedia !== "function") return;
-      const stream = await md.getUserMedia({ audio: true });
+    const warmVoices = () => {
       try {
-        stream.getTracks().forEach((t) => t.stop());
+        synth.getVoices();
       } catch {}
-    } catch {
-      // ignore (permission denied / unavailable)
-    }
-  })();
-}, [open]);
+    };
+
+    warmVoices();
+    // Some browsers populate voices async
+    const handler = () => warmVoices();
+
+    try {
+      synth.addEventListener?.("voiceschanged", handler);
+    } catch {}
+
+    return () => {
+      try {
+        synth.removeEventListener?.("voiceschanged", handler);
+      } catch {}
+    };
+  }, []);
+
+  // Warm up microphone permission early (reduces first-tap delay)
+  useEffect(() => {
+    if (!open) return;
+    if (micWarmedRef.current) return;
+    micWarmedRef.current = true;
+
+    (async () => {
+      try {
+        if (typeof navigator === "undefined") return;
+        const md = navigator.mediaDevices;
+        if (!md || typeof md.getUserMedia !== "function") return;
+        const stream = await md.getUserMedia({ audio: true });
+        try {
+          stream.getTracks().forEach((t) => t.stop());
+        } catch {}
+      } catch {
+        // ignore (permission denied / unavailable)
+      }
+    })();
+  }, [open]);
 
   // --- TEMİZLİK (CLEANUP) ---
- // Action engine sadece 1 kere çalışacak
-useEffect(() => {
-  if (!window.__SONO_ACTION_INITED__) {
-	    window.__SONO_ACTION_INITED__ = true; 
-    initSonoActionEngine();
-  }
-}, []);
-
-
-// Cleanup ise tamamen ayrı olmalı
-useEffect(() => {
-  return () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
+  // Action engine sadece 1 kere çalışacak
+  useEffect(() => {
+    if (!window.__SONO_ACTION_INITED__) {
+      window.__SONO_ACTION_INITED__ = true;
+      initSonoActionEngine();
     }
-    if (recRef.current) {
-      try {
-        recRef.current.stop();
-      } catch {}
-    }
-  };
-}, []);
+  }, []);
 
+  // Cleanup ise tamamen ayrı olmalı
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      if (recRef.current) {
+        try {
+          recRef.current.stop();
+        } catch {}
+      }
+    };
+  }, []);
 
   // UnifiedSearch → AI mesajı (cooldown + spam koruma)
   useEffect(() => {
@@ -407,61 +403,60 @@ useEffect(() => {
     return () => window.removeEventListener("fae.vitrine.search", onUnified);
   }, []);
 
+  // Vitrin sonuçları: assistant başlattıysa hem yazılı hem (gerekirse) sesli bilgilendir
+  useEffect(() => {
+    if (typeof window === "undefined") return;
 
-// Vitrin sonuçları: assistant başlattıysa hem yazılı hem (gerekirse) sesli bilgilendir
-useEffect(() => {
-  if (typeof window === "undefined") return;
+    const onResults = (e) => {
+      const last = lastAssistantSearchRef.current;
+      if (!last || !last.ts) return;
 
-  const onResults = (e) => {
-    const last = lastAssistantSearchRef.current;
-    if (!last || !last.ts) return;
+      const now = Date.now();
+      if (now - last.ts > 25000) return; // bayat
 
-    const now = Date.now();
-    if (now - last.ts > 25000) return; // bayat
+      const status = String(e?.detail?.status || "").toLowerCase();
+      let msg = "";
 
-    const status = String(e?.detail?.status || "").toLowerCase();
-    let msg = "";
-
-    if (status === "success") {
-      msg = t("vitrine.resultsReady", {
-        defaultValue: "Sonuçlar vitrinde hazır. Teşekkürler.",
-      });
-    } else if (status === "empty") {
-      msg = t("vitrine.noResults", {
-        defaultValue: "Üzgünüm, sonuç bulunamadı. Başka bir şey deneyin.",
-      });
-    } else if (status === "error") {
-      msg = t("vitrine.resultsError", {
-        defaultValue: "Arama sırasında hata oluştu. Lütfen tekrar deneyin.",
-      });
-    } else {
-      return;
-    }
-
-    // yazılı mesaj
-    setMessages((m) => [...m, { from: "ai", text: msg }]);
-
-    // App zaten konuştuysa çakışmayı önle
-    try {
-      const lastSpokenAt = Number(window.__FAE_LAST_VITRIN_SPOKEN_AT || 0);
-      if (!lastSpokenAt || Date.now() - lastSpokenAt > 1200) {
-        speak(msg);
+      if (status === "success") {
+        msg = t("vitrine.resultsReady", {
+          defaultValue: "Sonuçlar vitrinde hazır. Teşekkürler.",
+        });
+      } else if (status === "empty") {
+        msg = t("vitrine.noResults", {
+          defaultValue: "Üzgünüm, sonuç bulunamadı. Başka bir şey deneyin.",
+        });
+      } else if (status === "error") {
+        msg = t("vitrine.resultsError", {
+          defaultValue: "Arama sırasında hata oluştu. Lütfen tekrar deneyin.",
+        });
+      } else {
+        return;
       }
-    } catch {
-      // ignore
-    }
 
-    // busy kapat
-    flashMsg("", 450);
-    setSearching(false);
+      // yazılı mesaj
+      setMessages((m) => [...m, { from: "ai", text: msg }]);
 
-    // reset
-    lastAssistantSearchRef.current = { ts: 0, query: "" };
-  };
+      // App zaten konuştuysa çakışmayı önle
+      try {
+        const lastSpokenAt = Number(window.__FAE_LAST_VITRIN_SPOKEN_AT || 0);
+        if (!lastSpokenAt || Date.now() - lastSpokenAt > 1200) {
+          speak(msg);
+        }
+      } catch {
+        // ignore
+      }
 
-  window.addEventListener("fae.vitrine.results", onResults);
-  return () => window.removeEventListener("fae.vitrine.results", onResults);
-}, [t, locale]);
+      // busy kapat
+      flashMsg("", 450);
+      setSearching(false);
+
+      // reset
+      lastAssistantSearchRef.current = { ts: 0, query: "" };
+    };
+
+    window.addEventListener("fae.vitrine.results", onResults);
+    return () => window.removeEventListener("fae.vitrine.results", onResults);
+  }, [t, locale]);
 
   // Mesaj geldiğinde otomatik aşağı kaydır
   useEffect(() => {
@@ -469,7 +464,6 @@ useEffect(() => {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, thinking, open]);
-
 
   // ALTIN HALO + MİKROFON NEFESİ + KONUŞMA DALGALARI (CSS)
   useEffect(() => {
@@ -527,13 +521,13 @@ useEffect(() => {
       }
       @media (max-width: 768px) {
         .sono-adjusted-position {
-          bottom: calc(env(safe-area-inset-bottom, 0px) + 5.75rem) !important;
+          bottom: calc(env(safe-area-inset-bottom, 0px) + 3.25rem) !important;
           right: 0.75rem !important;
         }
       }
       @media (max-width: 480px) {
         .sono-adjusted-position {
-          bottom: calc(env(safe-area-inset-bottom, 0px) + 6.25rem) !important;
+          bottom: calc(env(safe-area-inset-bottom, 0px) + 3.75rem) !important;
           right: 0.75rem !important;
         }
       }
@@ -590,15 +584,16 @@ useEffect(() => {
     `;
     document.head.appendChild(s);
   }, []);
-// Vitrin motoru tetiklendiğinde timestamp güncelle
-useEffect(() => {
-  const handler = () => {
-    window.__FAE_LAST_VITRIN_TS = Date.now();
-  };
 
-  window.addEventListener("fae.vitrine.search", handler);
-  return () => window.removeEventListener("fae.vitrine.search", handler);
-}, []);
+  // Vitrin motoru tetiklendiğinde timestamp güncelle
+  useEffect(() => {
+    const handler = () => {
+      window.__FAE_LAST_VITRIN_TS = Date.now();
+    };
+
+    window.addEventListener("fae.vitrine.search", handler);
+    return () => window.removeEventListener("fae.vitrine.search", handler);
+  }, []);
 
   // DIŞ TIKLAMA → KAPAT
   useEffect(() => {
@@ -685,23 +680,22 @@ useEffect(() => {
     }
   }
 
-
-// SESLİ KOMUT (STT)
-function handleMicPointerDown(e) {
-  try {
-    e.preventDefault?.();
-    e.stopPropagation?.();
-  } catch {}
-  const now = Date.now();
-  if (now - (micTapGuardRef.current || 0) < 700) return;
-  micTapGuardRef.current = now;
-  const m = String(sonoMode || "").toLowerCase();
-  if (!m) {
-    flashMsg(t("ai.chooseModeToast", { defaultValue: "Devam etmek için mod seç." }), 1400, "muted");
-    return;
+  // SESLİ KOMUT (STT)
+  function handleMicPointerDown(e) {
+    try {
+      e.preventDefault?.();
+      e.stopPropagation?.();
+    } catch {}
+    const now = Date.now();
+    if (now - (micTapGuardRef.current || 0) < 700) return;
+    micTapGuardRef.current = now;
+    const m = String(sonoMode || "").toLowerCase();
+    if (!m) {
+      flashMsg(t("ai.chooseModeToast", { defaultValue: "Devam etmek için mod seç." }), 1400, "muted");
+      return;
+    }
+    captureOnce();
   }
-  captureOnce();
-}
 
   async function captureOnce() {
     if (typeof window === "undefined") return;
@@ -982,7 +976,6 @@ function handleMicPointerDown(e) {
             })
           );
         }
-		
       } catch (e) {
         console.warn("fie:action event error:", e);
       }
@@ -1037,79 +1030,67 @@ function handleMicPointerDown(e) {
     abortControllerRef.current = controller;
 
     try {
-      // 6) Unified Search — Vitrin Beyni
-	  
-   
+      // 8) Backend Chat / AI API Çağrısı
+      const backend = API_BASE || "";
 
+      // Kullanıcı + AI geçmişi: backend'e güvenli formatta gönderilir
+      const safeHistory = messagesRef.current
+        .slice(-6)
+        .map((m) => ({
+          role: m.from === "user" ? "user" : "assistant",
+          content: m.text,
+        }));
 
-	  
-// Unified search çağrısından sonra vitrin tetiklenmiş mi kontrol e
+      const res = await fetch(`${backend}/api/ai`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({
+          message: text,
+          context: contextMemory.getContext(),
+          locale,
+          region: localStorage.getItem("region") || "TR",
+          city: typeof window !== "undefined" ? window.__FIE_CITY__ || "" : "",
+          history: safeHistory,
+          mode: "chat",
+        }),
+      });
 
-      // 7) onSuggest / onProductSearch override
-      // Not: onSuggest/onProductSearch sadece product_search için kullanılır (yukarıda return).
-      {
-        // 8) Backend Chat / AI API Çağrısı
-        const backend = API_BASE || "";
+      const j = await res.json();
 
-        // Kullanıcı + AI geçmişi: backend'e güvenli formatta gönderilir
-        const safeHistory = messagesRef.current
-          .slice(-6)
-          .map((m) => ({
-            role: m.from === "user" ? "user" : "assistant",
-            content: m.text,
-          }));
-
-        const res = await fetch(`${backend}/api/ai`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          signal: controller.signal,
-          body: JSON.stringify({
-            message: text,
-            context: contextMemory.getContext(),
-            locale,
-            region: localStorage.getItem("region") || "TR",
-            city: typeof window !== "undefined" ? window.__FIE_CITY__ || "" : "",
-            history: safeHistory,
-            mode: "chat",
-          }),
-        });
-
-        const j = await res.json();
-
-        // Stale response guard
-        if (reqId !== requestIdRef.current) return;
-        if (j?.cards) {
-          try {
-            if (typeof window !== "undefined") {
-              window.dispatchEvent(
-                new CustomEvent("fie:vitrin", {
-                  detail: { cards: j.cards || [], model: j.provider || "ai" },
-                })
-              );
-            }
-          } catch (e) {
-            console.warn("fie:vitrin dispatch error:", e);
+      // Stale response guard
+      if (reqId !== requestIdRef.current) return;
+      if (j?.cards) {
+        try {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(
+              new CustomEvent("fie:vitrin", {
+                detail: { cards: j.cards || [], model: j.provider || "ai" },
+              })
+            );
           }
+        } catch (e) {
+          console.warn("fie:vitrin dispatch error:", e);
         }
-
-        setMessages((prev) => {
-          const arr = Array.isArray(prev) ? [...prev] : [];
-          // Only remove this request's placeholder
-          const idx = arr.findLastIndex?.((x) => x && x.from === "ai" && x.rid === reqId) ?? -1;
-          if (idx >= 0) arr.splice(idx, 1);
-          const sources = Array.isArray(j?.sources) ? j.sources.slice(0, 5) : [];
-          const trustScore = (typeof j?.trustScore === 'number' ? j.trustScore : (typeof j?.meta?.trustScore === 'number' ? j.meta.trustScore : null));
-          arr.push({
-            from: "ai",
-            text: j?.answer || t("ai.noAnswer", { defaultValue: "Şu an cevap alamadım." }),
-            suggestions: Array.isArray(j?.suggestions) ? j.suggestions.slice(0, 4) : [],
-            sources,
-            trustScore,
-            rid: reqId,
-          });
-          return arr;
-        });
       }
+
+      setMessages((prev) => {
+        const arr = Array.isArray(prev) ? [...prev] : [];
+        // Only remove this request's placeholder
+        const idx = arr.findLastIndex?.((x) => x && x.from === "ai" && x.rid === reqId) ?? -1;
+        if (idx >= 0) arr.splice(idx, 1);
+        const sources = Array.isArray(j?.sources) ? j.sources.slice(0, 5) : [];
+        const trustScore = (typeof j?.trustScore === 'number' ? j.trustScore : (typeof j?.meta?.trustScore === 'number' ? j.meta.trustScore : null));
+        arr.push({
+          from: "ai",
+          text: j?.answer || t("ai.noAnswer", { defaultValue: "Şu an cevap alamadım." }),
+          suggestions: Array.isArray(j?.suggestions) ? j.suggestions.slice(0, 4) : [],
+          sources,
+          trustScore,
+          rid: reqId,
+        });
+        return arr;
+      });
 
       if (!silent) {
         speak(
@@ -1159,8 +1140,6 @@ function handleMicPointerDown(e) {
     await processQuery(text);
   }
 
-
-
   // ✅ Konuşmayı sıfırla (mod değişince temiz sayfa)
   function resetConversation(initialAiText) {
     const msg = String(initialAiText || '').trim();
@@ -1190,8 +1169,6 @@ function handleMicPointerDown(e) {
 
     if (msg) speak(msg);
   }
-  // ✅ Mode seçimi helper
-  
 
   // ✅ Mode seçimi helper
   function setMode(next) {
@@ -1224,43 +1201,32 @@ function handleMicPointerDown(e) {
     flashMsg(msg, 1200, 'muted');
   }
 
-
-
   // Açıldığında ilk selamlama + persona
-const greetNow = () => {
-  const modeNow = String(sonoMode || "").toLowerCase();
-  const greet =
-    t("ai.hello", {
-      defaultValue: persona.hello,
-    }) || persona.hello;
+  const greetNow = () => {
+    const modeNow = String(sonoMode || "").toLowerCase();
+    const greet =
+      t("ai.hello", {
+        defaultValue: persona.hello,
+      }) || persona.hello;
 
-  const choose = t("ai.helloChoose", {
-    defaultValue: "Merhaba, ben Sono. Ne yapmak istersin? Ürün/Hizmet Ara veya Soru Sor / Bilgi Al.",
-  });
+    const choose = t("ai.helloChoose", {
+      defaultValue: "Merhaba, ben Sono. Ne yapmak istersin? Ürün/Hizmet Ara veya Soru Sor / Bilgi Al.",
+    });
 
-  const intro = !modeNow ? choose : greet;
-  setMessages([{ from: "ai", text: intro }]);
-  speak(intro);
-};
+    const intro = !modeNow ? choose : greet;
+    setMessages([{ from: "ai", text: intro }]);
+    speak(intro);
+  };
 
-useEffect(() => {
-  if (open && messages.length === 0 && !greetedRef.current) {
-    greetedRef.current = true;
-    greetNow();
-  }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [open, i18n.language]);
+  useEffect(() => {
+    if (open && messages.length === 0 && !greetedRef.current) {
+      greetedRef.current = true;
+      greetNow();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, i18n.language]);
 
   const isRTL = locale.startsWith("ar");
-
-  // Yüz modu
-  const faceMode = listening ? "listening" : thinking ? "thinking" : "idle";
-  const faceClass =
-    faceMode === "listening"
-      ? "sono-face-listening"
-      : faceMode === "thinking"
-      ? "sono-face-thinking"
-      : "sono-face-idle";
 
   // RENDER
   return (
@@ -1273,19 +1239,11 @@ useEffect(() => {
     >
       {/* YÜZ + HALO + DALGALAR */}
       <div className="relative grid place-items-center">
-        {listening && (
-          <>
-            <div className="speech-wave-base speech-wave-1" />
-            <div className="speech-wave-base speech-wave-2" />
-            <div className="speech-wave-base speech-wave-3" />
-          </>
-        )}
-
         <div
           ref={haloRef}
           className="absolute w-[84px] h-[84px] rounded-full blur-md opacity-70 pointer-events-none"
         >
-          <span className={`sono-gold-halo ${listening ? "fast" : ""}`} />
+          <span className="sono-gold-halo" />
         </div>
 
         <button
@@ -1295,7 +1253,6 @@ useEffect(() => {
             pulseHalo();
 
             if (willOpen) {
-              // Speak immediately (avoid waiting for useEffect re-render)
               if (!greetedRef.current && messages.length === 0) {
                 greetedRef.current = true;
                 greetNow();
@@ -1314,7 +1271,7 @@ useEffect(() => {
             src="/sono-assets/sono-face.svg"
             alt="Sono AI"
             draggable={false}
-            className={`w-[38px] h-[38px] transition-all duration-500 ${faceClass}`}
+            className="w-[38px] h-[38px]"
           />
         </button>
       </div>
@@ -1323,7 +1280,11 @@ useEffect(() => {
       {open && (
         <div
           className="mt-2 bg-black/85 text-white border border-[#d4af37]/50 
-          rounded-2xl shadow-2xl backdrop-blur-md p-3 w-[calc(100vw-32px)] max-w-[380px] md:w-[340px] md:max-w-[340px] flex flex-col max-h-[55vh] overflow-hidden"
+          rounded-2xl shadow-2xl backdrop-blur-md p-3
+          w-[86vw] max-w-[320px] sm:max-w-[340px] md:max-w-[360px]
+          flex flex-col
+          max-h-[36vh] sm:max-h-[44vh] md:max-h-[50vh] lg:max-h-[55vh]
+          overflow-hidden"
         >
           {/* ✅ Mode chooser / active mode badge */}
           {!sonoMode ? (
@@ -1368,7 +1329,7 @@ useEffect(() => {
             </div>
           )}
 
-          <div className="mt-2 flex-1 min-h-[160px] overflow-y-auto pr-1 space-y-2 custom-scrollbar">
+          <div className="mt-2 flex-1 min-h-[120px] overflow-y-auto pr-1 space-y-2 custom-scrollbar">
             {messages.map((m, i) => (
               <div key={i} className="space-y-1">
                 <p
@@ -1380,156 +1341,12 @@ useEffect(() => {
                 >
                   {m.text}
                 </p>
-
-                {m.from !== "user" && Array.isArray(m.suggestions) && m.suggestions.length > 0 ? (
-                  <div className={`flex flex-wrap gap-1 ${isRTL ? "justify-end" : "justify-start"}`}>
-                    {m.suggestions.map((s, k) => (
-                      <button
-                        key={`${i}-${k}`}
-                        type="button"
-                        className="px-2 py-1 text-[11px] rounded-full border border-[#d4af37]/40 text-[#d4af37] hover:bg-[#d4af37]/10 transition"
-                        onClick={async () => {
-                          const q = String(s || "").trim();
-                          if (!q) return;
-                          try {
-                            if (inputRef.current) inputRef.current.value = q;
-                          } catch {}
-                          try {
-                            setInputValue(q);
-                          } catch {}
-                          await processQuery(q);
-                        }}
-                      >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                 ) : null}
-
-                {m.from !== "user" && typeof m.trustScore === 'number' ? (
-                  <div className="text-[11px] text-white/50 mt-1">
-                    {t('ai.confidence', { defaultValue: 'Güven' })}: {Math.round(m.trustScore)}/100
-                    {m.trustScore < 55 ? (
-                      <span className="text-white/60"> — {t('ai.lowConfidence', { defaultValue: 'Eminlik düşük' })}</span>
-                    ) : null}
-                  </div>
-                ) : null}
-
-                {m.from !== "user" && Array.isArray(m.sources) && m.sources.length > 0 ? (
-                  <div className="mt-1">
-                    <div className="text-[11px] text-white/50 mb-1">
-                      {t("ai.sources", { defaultValue: "Kaynaklar" })}
-                    </div>
-                    <div className={`flex flex-col gap-1 ${isRTL ? "items-end" : "items-start"}`}>
-                      {m.sources.slice(0, 5).map((src, k) => {
-                        const title = typeof src === "string" ? src : (src?.title || src?.url || "");
-                        const url = typeof src === "string" ? src : (src?.url || "");
-                        if (!url) return null;
-                        return (
-                          <a
-                            key={`${k}`}
-                            href={url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-[11px] underline text-white/70 hover:text-white break-words"
-                          >
-                            {title || url}
-                          </a>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : null}
               </div>
             ))}
             <div ref={messagesEndRef} />
           </div>
 
-          {/* ✅ Sesli komut onayı (otomatik arama YOK) */}
-          {pendingVoice ? (
-            <div className="mb-2 p-2 rounded-xl border border-[#d4af37]/30 bg-black/40">
-              <div className="text-xs text-white/70">
-                {t("ai.voiceHeardPrefix", { defaultValue: "Sesli komuttan anladığım:" })}{" "}
-                <span className="text-[#d4af37] font-semibold">{String(pendingVoice || "").trim()}</span>
-              </div>
-              <div className="text-xs text-white/60 mt-1">
-                {t(String(sonoMode || "").toLowerCase() === "chat" ? "ai.voiceConfirmQuestionChat" : "ai.voiceConfirmQuestion", { defaultValue: String(sonoMode || "").toLowerCase() === "chat" ? "Bunu göndereyim mi?" : "Bunu mu arayayım?" })}
-              </div>
-              <div className="mt-2 flex items-center gap-2">
-                <button
-                  type="button"
-                  className="px-3 py-1 rounded-lg bg-[#d4af37] text-black text-xs font-semibold"
-                  onClick={async () => {
-                    const q = String(pendingVoice || "").trim();
-                    if (!q) return;
-                    setPendingVoice(null);
-                    try { if (inputRef.current) inputRef.current.value = ""; } catch {}
-                    try { setInputValue(""); } catch {}
-                    await processQuery(q);
-                  }}
-                >
-                  {String(sonoMode || "").toLowerCase() === "chat" ? t("ai.send", { defaultValue: "Gönder" }) : t("search.confirmSearch", { defaultValue: "Ara" })}
-                </button>
-                <button
-                  type="button"
-                  className="px-3 py-1 rounded-lg border border-[#d4af37]/50 text-[#d4af37] text-xs"
-                  onClick={() => {
-                    // Düzenle: input'ta kalsın, focus ver
-                    setPendingVoice(null);
-                    setTimeout(() => {
-                      try { inputRef.current?.focus?.(); } catch {}
-                    }, 0);
-                  }}
-                >
-                  {t("search.editQuery", { defaultValue: "Düzenle" })}
-                </button>
-                <button
-                  type="button"
-                  className="px-3 py-1 rounded-lg border border-white/20 text-white/70 text-xs"
-                  onClick={() => {
-                    setPendingVoice(null);
-                    try { if (inputRef.current) inputRef.current.value = ""; } catch {}
-                    try { setInputValue(""); } catch {}
-                    flashMsg(t("search.cancel", { defaultValue: "İptal" }), 900, "muted");
-                  }}
-                >
-                  {t("search.cancel", { defaultValue: "İptal" })}
-                </button>
-              </div>
-            </div>
-          ) : null}
-
-          {/* INPUT ALANI - FORM YAPISI */}
           <form onSubmit={handleFormSubmit} className="flex items-center gap-2">
-            <button
-              type="button"
-              onPointerDown={handleMicPointerDown}
-              onClick={(e) => {
-                // prevent duplicate click after touch
-                try {
-                  e.preventDefault?.();
-                  e.stopPropagation?.();
-                } catch {}
-              }}
-              className={`sono-mic-glow sono-mic-hover-gold relative grid place-items-center w-9 h-9 rounded-full border 
-              border-[#d4af37]/70 transition ${
-                listening ? "sono-mic-listening" : "hover:bg-[#d4af37]/10"
-              }`}
-              title={t("ai.listen", { defaultValue: "Dinle" })}
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                className="text-[#d4af37]"
-              >
-                <path
-                  fill="currentColor"
-                  d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2Z"
-                />
-              </svg>
-            </button>
-
             <input
               ref={inputRef}
               type="text"
@@ -1563,7 +1380,6 @@ useEffect(() => {
                 ×
               </button>
             )}
-
 
             <button
               type="submit"
