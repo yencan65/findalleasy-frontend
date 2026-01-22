@@ -1138,7 +1138,7 @@ useEffect(() => {
   />
 )}
   {/* ◆ SONO AI – region bilgisi burada gidiyor */}
-     <div className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-[9999]">
+     <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[9999]">
   <AIAssistant
     onSuggest={async (text) => {
       const q = String(text || value || "").trim();
