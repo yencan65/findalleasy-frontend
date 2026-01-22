@@ -109,6 +109,25 @@ function detectIntent(text, locale = "tr") {
     : "tr";
 
   const wordCount = low.split(/\s+/).filter(Boolean).length;
+  // Evidence-first overrides: market data / weather / news / travel etc are "info", not shopping
+  const isWeatherish = /(hava durumu|weather|météo|погода|طقس)/i.test(low);
+  const isNewsish = /(haber|news|actualité|новост|أخبار)/i.test(low);
+  const isTravelish = /(gezi|rota|travel|itin(é|e)raire|путешеств|سفر)/i.test(low);
+  const isRecipeish = /(tarif|recipe|recette|рецепт|وصفة)/i.test(low);
+  const isPoiish = /(yakın(ımda)?|nearby|à proximité|рядом|بالقرب)/i.test(low);
+
+  // FX / commodities (gold/silver) — treated as info (market data), unless user explicitly wants to buy
+  const isFxish = /(d[öo]viz|kur|usd|eur|gbp|try|exchange rate|taux|курс|سعر الصرف)/i.test(low);
+  const isMetalish =
+    /(gram\s*alt(ı|i)n|alt(ı|i)n|g[uü]m[uü]ş|gold|silver|xau|xag|platin|platinum|palladyum|palladium|xpt|xpd)/i.test(low);
+
+  const wantsToBuy =
+    /(sat(ı|i)n\s*al|sipariş|nereden\s*al|link|buy|purchase|order|where\s*to\s*buy|acheter|où\s*acheter|купить|где\s*купить|اشتر|شراء|من\s*أين)/i.test(low) ||
+    /(hepsiburada|trendyol|n11|amazon|akakçe|cimri|epey|booking|expedia)/i.test(low);
+
+  if (isWeatherish || isNewsish || isTravelish || isRecipeish || isPoiish) return "info";
+  if ((isFxish || isMetalish) && !wantsToBuy) return "info";
+
   const hasNumber = /\d/.test(low);
   const hasCurrency = /(₺|tl|lira|\$|usd|€|eur|руб|₽|د\.?إ|ر\.?س|ج\.?م)/i.test(raw);
   const hasQuestionMark = /[?؟]/.test(raw);
@@ -208,6 +227,9 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
   const [thinking, setThinking] = useState(false);
   const [searching, setSearching] = useState(false);
   const [pendingVoice, setPendingVoice] = useState(null);
+
+  // ✅ Input value (for clear button + controlled UX)
+  const [inputValue, setInputValue] = useState("");
 
   // ✅ Sono Mode (search/chat) — kullanıcı seçer, localStorage’da saklanır
   const [sonoMode, setSonoMode] = useState(() => {
@@ -749,6 +771,9 @@ function handleMicPointerDown(e) {
             if (inputRef.current) inputRef.current.value = merged;
           } catch {}
           try {
+            setInputValue(merged);
+          } catch {}
+          try {
             setVoiceLive(merged);
           } catch {}
 
@@ -787,6 +812,9 @@ function handleMicPointerDown(e) {
       setPendingVoice(clean);
       try {
         if (inputRef.current) inputRef.current.value = clean;
+      } catch {}
+      try {
+        setInputValue(clean);
       } catch {}
       const toastKey = String(sonoMode || "").toLowerCase() === "chat"
         ? "ai.voiceConfirmToastChat"
@@ -864,12 +892,26 @@ function handleMicPointerDown(e) {
       return;
     }
 
-    const intent =
-      mode === "search"
-        ? "product_search"
-        : mode === "chat"
-        ? "info"
-        : detectIntent(text, locale);
+    const inferred = detectIntent(text, locale);
+
+    // ✅ Chat modunda da niyeti anla: ürün/hizmet aramasıysa otomatik Search moduna geçir
+    let effectiveMode = mode;
+    if (mode === "chat" && inferred === "product_search") {
+      effectiveMode = "search";
+      setSonoMode("search");
+      try {
+        if (typeof window !== "undefined") localStorage.setItem("sono_mode", "search");
+      } catch {}
+      flashMsg(
+        t("ai.autoSwitchedToSearch", {
+          defaultValue: "Bu sorgu ürün/hizmet araması gibi — Ürün/Hizmet Ara moduna geçtim.",
+        }),
+        1400,
+        "muted"
+      );
+    }
+
+    const intent = effectiveMode === "search" ? "product_search" : inferred;
 
     contextMemory.add(text);
 
@@ -1098,12 +1140,13 @@ function handleMicPointerDown(e) {
     e.preventDefault();
     if (!inputRef.current) return;
 
-    const val = inputRef.current.value;
+    const val = (inputRef.current?.value ?? inputValue);
     const text = String(val || "").trim();
 
     if (!text) return;
     setPendingVoice(null);
     inputRef.current.value = "";
+    setInputValue("");
     await processQuery(text);
   }
 
@@ -1112,6 +1155,7 @@ function handleMicPointerDown(e) {
     const text = String(txt || "").trim();
     if (!text) return;
     if (inputRef.current) inputRef.current.value = "";
+    setInputValue("");
     await processQuery(text);
   }
 
@@ -1279,7 +1323,7 @@ useEffect(() => {
       {open && (
         <div
           className="mt-2 bg-black/85 text-white border border-[#d4af37]/50 
-          rounded-2xl shadow-2xl backdrop-blur-md p-3 w-[calc(100vw-32px)] max-w-[380px] md:w-[340px] md:max-w-[340px]"
+          rounded-2xl shadow-2xl backdrop-blur-md p-3 w-[calc(100vw-32px)] max-w-[380px] md:w-[340px] md:max-w-[340px] flex flex-col max-h-[55vh] overflow-hidden"
         >
           {/* ✅ Mode chooser / active mode badge */}
           {!sonoMode ? (
@@ -1324,7 +1368,7 @@ useEffect(() => {
             </div>
           )}
 
-          <div className="overflow-auto max-h-[220px] my-2 space-y-2 pr-1 custom-scrollbar">
+          <div className="mt-2 flex-1 min-h-[160px] overflow-y-auto pr-1 space-y-2 custom-scrollbar">
             {messages.map((m, i) => (
               <div key={i} className="space-y-1">
                 <p
@@ -1349,6 +1393,9 @@ useEffect(() => {
                           if (!q) return;
                           try {
                             if (inputRef.current) inputRef.current.value = q;
+                          } catch {}
+                          try {
+                            setInputValue(q);
                           } catch {}
                           await processQuery(q);
                         }}
@@ -1417,6 +1464,7 @@ useEffect(() => {
                     if (!q) return;
                     setPendingVoice(null);
                     try { if (inputRef.current) inputRef.current.value = ""; } catch {}
+                    try { setInputValue(""); } catch {}
                     await processQuery(q);
                   }}
                 >
@@ -1441,6 +1489,7 @@ useEffect(() => {
                   onClick={() => {
                     setPendingVoice(null);
                     try { if (inputRef.current) inputRef.current.value = ""; } catch {}
+                    try { setInputValue(""); } catch {}
                     flashMsg(t("search.cancel", { defaultValue: "İptal" }), 900, "muted");
                   }}
                 >
@@ -1484,6 +1533,8 @@ useEffect(() => {
             <input
               ref={inputRef}
               type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
               disabled={!sonoMode}
               enterKeyHint="send"
               autoComplete="off"
@@ -1493,6 +1544,26 @@ useEffect(() => {
               className="flex-grow bg-transparent outline-none border border-[#d4af37]/40 rounded-xl 
               px-2 py-2 text-white text-sm"
             />
+
+            {inputValue?.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setInputValue("");
+                  try {
+                    if (inputRef.current) inputRef.current.value = "";
+                    inputRef.current?.focus?.();
+                  } catch {}
+                }}
+                className="px-2 text-white/40 hover:text-white/80 transition"
+                aria-label={t("ai.clearInput", { defaultValue: "Temizle" })}
+                title={t("ai.clearInput", { defaultValue: "Temizle" })}
+                disabled={!sonoMode}
+              >
+                ×
+              </button>
+            )}
+
 
             <button
               type="submit"
