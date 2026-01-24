@@ -242,13 +242,18 @@ useEffect(() => {
     const vh = window.innerHeight || 800;
     const isMobile = vw < 768;
 
-    // Vitrin görünür kalsın: ekranda minimum alan bırak (px)
-    const keepVisible = isMobile ? 300 : 360;
-    const minH = isMobile ? 260 : 300;
-    const maxH = isMobile ? 480 : 520;
+    // ✅ Panel sabit olsun ve vitrin görünür kalsın:
+    // Önce "vitrin için bırakılacak alan"ı hesapla, sonra paneli %40 kısalt (×0.6)
+    const keepVisible = isMobile ? 320 : 380;
+    const base = Math.max(0, vh - keepVisible);
+    const scaled = Math.round(base * 0.6); // %40 kısalt
 
-    const h = Math.max(minH, Math.min(maxH, vh - keepVisible));
-    setPanelPx(Math.round(h));
+    // Minimum/maximum sınırlar (çok küçük/çok büyük olmasın)
+    const minH = isMobile ? 220 : 240;
+    const maxH = isMobile ? 360 : 380;
+
+    const h = Math.max(minH, Math.min(maxH, scaled));
+    setPanelPx(h);
   };
 
   calc();
