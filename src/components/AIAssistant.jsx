@@ -213,10 +213,6 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
   const [thinking, setThinking] = useState(false);
   const [searching, setSearching] = useState(false);
   const [pendingVoice, setPendingVoice] = useState(null);
-  const [draft, setDraft] = useState("");
-
-  // ✅ Chat panel yüksekliği: mesajlar arttıkça panel büyümesin, içeride scroll olsun.
-  const [panelPx, setPanelPx] = useState(380);
 
   // ✅ Sono Mode (search/chat) — kullanıcı seçer, localStorage’da saklanır
   const [sonoMode, setSonoMode] = useState(() => {
@@ -231,37 +227,8 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
   // ✅ Canlı ses yazımı (interim transcript)
   const [voiceLive, setVoiceLive] = useState("");
 
-
-// Chat açıkken panel yüksekliğini ekrana göre sabitle (vitrini kapatmasın)
-useEffect(() => {
-  if (typeof window === "undefined") return;
-  if (!open) return;
-
-  const calc = () => {
-    const vw = window.innerWidth || 1024;
-    const vh = window.innerHeight || 800;
-    const isMobile = vw < 768;
-
-    // ✅ Panel sabit olsun ve vitrin görünür kalsın:
-    // Önce "vitrin için bırakılacak alan"ı hesapla, sonra paneli %40 kısalt (×0.6)
-    const keepVisible = isMobile ? 320 : 380;
-    const base = Math.max(0, vh - keepVisible);
-    const scaled = Math.round(base * 0.6); // %40 kısalt
-
-    // Minimum/maximum sınırlar (çok küçük/çok büyük olmasın)
-    const minH = isMobile ? 220 : 240;
-    const maxH = isMobile ? 360 : 380;
-
-    const h = Math.max(minH, Math.min(maxH, scaled));
-    setPanelPx(h);
-  };
-
-  calc();
-  window.addEventListener("resize", calc);
-  return () => window.removeEventListener("resize", calc);
-}, [open]);
-
-
+  // ✅ Chat input metni (X ile tek hamlede temizleme için)
+  const [draft, setDraft] = useState("");
 
   // Global status bus: tüm async işler tek standart bildirim diliyle konuşsun
   const { setStatus, clearStatus } = useStatusBus();
@@ -326,7 +293,7 @@ useEffect(() => {
   const requestIdRef = useRef(0);
 
   // Otomatik Scroll için Ref
-  const messagesEndRef = useRef(null);
+  const messagesBoxRef = useRef(null);
 
   // Ses Sentezleyicisi
   const synthRef = useRef(
@@ -482,14 +449,13 @@ useEffect(() => {
   return () => window.removeEventListener("fae.vitrine.results", onResults);
 }, [t, locale]);
 
-  // Mesaj geldiğinde otomatik aşağı kaydır
+  // Mesaj geldiğinde panel içi otomatik aşağı kaydır (sayfayı kaydırma yok)
   useEffect(() => {
-    if (open && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages, thinking, open]);
-
-
+    if (!open) return;
+    const box = messagesBoxRef.current;
+    if (!box) return;
+    box.scrollTop = box.scrollHeight;
+  }, [messages, thinking, searching, open]);
   // ALTIN HALO + MİKROFON NEFESİ + KONUŞMA DALGALARI (CSS)
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -617,22 +583,6 @@ useEffect(() => {
         100% { transform: scale(1.28); opacity: 0; }
       }
       .animate-ping-once { animation: sono-ping-once .9s ease-out 1; }
-
-      /* Chatbox aÃ§Ä±kken iÃ§erik vitrin kartlarÄ±nÄ±n altÄ±nda kalmasÄ±n */
-      :root {
-        --fae-sono-reserve-bottom: 0px;
-        --fae-sono-reserve-right: 0px;
-      }
-      body.fae-sono-open #root {
-        padding-bottom: var(--fae-sono-reserve-bottom) !important;
-        padding-right: var(--fae-sono-reserve-right) !important;
-        transition: padding 160ms ease;
-      }
-      @media (max-width: 768px) {
-        body.fae-sono-open #root {
-          padding-right: 0px !important;
-        }
-      }
 `;
     document.head.appendChild(s);
   }, []);
@@ -661,67 +611,6 @@ useEffect(() => {
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, []);
-
-  // Chat aÃ§Ä±kken vitrin kartlarÄ± chat paneli altÄ±nda kalmasÄ±n: dinamik rezerv alan
-  useEffect(() => {
-    if (typeof document === "undefined" || typeof window === "undefined") return;
-
-    const root = document.documentElement;
-    const setVars = (bottomPx = 0, rightPx = 0) => {
-      const b = Math.max(0, Math.round(Number(bottomPx) || 0));
-      const r = Math.max(0, Math.round(Number(rightPx) || 0));
-      try {
-        root.style.setProperty("--fae-sono-reserve-bottom", `${b}px`);
-        root.style.setProperty("--fae-sono-reserve-right", `${r}px`);
-      } catch {}
-    };
-
-    if (!open) {
-      try { document.body.classList.remove("fae-sono-open"); } catch {}
-      setVars(0, 0);
-      return;
-    }
-
-    try { document.body.classList.add("fae-sono-open"); } catch {}
-
-    let raf = 0;
-    const apply = () => {
-      try { cancelAnimationFrame(raf); } catch {}
-      raf = requestAnimationFrame(() => {
-        const el = wrapRef.current;
-        if (!el) return setVars(0, 0);
-
-        const rect = el.getBoundingClientRect();
-        const pad = 16;
-        const vw = window.innerWidth || 1024;
-        const isMobile = vw < 768;
-
-        // AÃ§Ä±k panelin kapladÄ±ÄŸÄ± alanÄ± rezerve et
-        const bottom = rect.height + pad;
-        const right = isMobile ? 0 : rect.width + pad;
-        setVars(bottom, right);
-      });
-    };
-
-    apply();
-    window.addEventListener("resize", apply);
-
-    let ro = null;
-    try {
-      if (typeof ResizeObserver !== "undefined") {
-        ro = new ResizeObserver(() => apply());
-        if (wrapRef.current) ro.observe(wrapRef.current);
-      }
-    } catch {}
-
-    return () => {
-      try { cancelAnimationFrame(raf); } catch {}
-      try { window.removeEventListener("resize", apply); } catch {}
-      try { ro && ro.disconnect(); } catch {}
-      try { document.body.classList.remove("fae-sono-open"); } catch {}
-      setVars(0, 0);
-    };
-  }, [open]);
 
   const pulseHalo = () => {
     if (!haloRef.current) return;
@@ -876,9 +765,7 @@ function handleMicPointerDown(e) {
           // ✅ Canlı yazım: kullanıcı konuşurken anında input'a yaz
           try {
             setDraft(merged);
-          } catch {}
-          try {
-            if (inputRef.current) inputRef.current.value = merged;
+          if (inputRef.current) inputRef.current.focus();
           } catch {}
           try {
             setVoiceLive(merged);
@@ -919,7 +806,7 @@ function handleMicPointerDown(e) {
       setPendingVoice(clean);
       try {
         setDraft(clean);
-        if (inputRef.current) inputRef.current.value = clean;
+        try { inputRef.current?.focus?.(); } catch {}
       } catch {}
       const toastKey = String(sonoMode || "").toLowerCase() === "chat"
         ? "ai.voiceConfirmToastChat"
@@ -1169,19 +1056,6 @@ function handleMicPointerDown(e) {
 
         // Stale response guard
         if (reqId !== requestIdRef.current) return;
-        if (j?.cards) {
-          try {
-            if (typeof window !== "undefined") {
-              window.dispatchEvent(
-                new CustomEvent("fie:vitrin", {
-                  detail: { cards: j.cards || [], model: j.provider || "ai" },
-                })
-              );
-            }
-          } catch (e) {
-            console.warn("fie:vitrin dispatch error:", e);
-          }
-        }
 
         setMessages((prev) => {
           const arr = Array.isArray(prev) ? [...prev] : [];
@@ -1230,22 +1104,18 @@ function handleMicPointerDown(e) {
   async function handleFormSubmit(e) {
     e.preventDefault();
     const text = String(draft || "").trim();
-
     if (!text) return;
     setPendingVoice(null);
     setDraft("");
-    try {
-      if (inputRef.current) inputRef.current.value = "";
-    } catch {}
     await processQuery(text);
   }
+
 
   // Eski kullanım için handler (gerekirse)
   async function handleSend(txt) {
     const text = String(txt || "").trim();
     if (!text) return;
     setDraft("");
-    try { if (inputRef.current) inputRef.current.value = ""; } catch {}
     await processQuery(text);
   }
 
@@ -1356,8 +1226,7 @@ useEffect(() => {
   return (
     <div
       ref={wrapRef}
-      className="fixed sono-adjusted-position z-[999]"
-      style={{ contain: "layout paint" }}
+      className="fixed sono-adjusted-position z-[999] relative"
       aria-live="polite"
       dir={isRTL ? "rtl" : "ltr"}
     >
@@ -1412,10 +1281,7 @@ useEffect(() => {
       {/* CHAT PENCERESİ */}
       {open && (
         <div
-          className="mt-2 bg-black/85 text-white border border-[#d4af37]/50 
-          rounded-2xl shadow-2xl backdrop-blur-md p-3 w-[calc(100vw-32px)] max-w-[380px] md:w-[340px] md:max-w-[340px]
-          flex flex-col overflow-hidden"
-          style={{ height: panelPx, maxHeight: panelPx }}
+          className="absolute right-0 bottom-[72px] bg-black/85 text-white border border-[#d4af37]/50 rounded-2xl shadow-2xl backdrop-blur-md p-3 w-[360px] max-w-[calc(100vw-24px)] md:w-[380px] h-[clamp(240px,42vh,360px)] flex flex-col overflow-hidden"
         >
           {/* ✅ Mode chooser / active mode badge */}
           {!sonoMode ? (
@@ -1475,7 +1341,7 @@ useEffect(() => {
             </div>
           ) : null}
 
-<div className="mt-2 flex-1 min-h-0 overflow-y-auto pr-1 space-y-2 custom-scrollbar">
+<div ref={messagesBoxRef} className="mt-2 flex-1 min-h-0 overflow-y-auto overscroll-contain pr-1 space-y-2 custom-scrollbar">
             {messages.map((m, i) => (
               <div key={i} className="space-y-1">
                 <p
@@ -1488,7 +1354,7 @@ useEffect(() => {
                   {m.text}
                 </p>
 
-                {m.from !== "user" && Array.isArray(m.suggestions) && m.suggestions.length > 0 && (typeof m.trustScore !== "number" || m.trustScore >= 55) ? (
+                {m.from !== "user" && Array.isArray(m.suggestions) && m.suggestions.length > 0 ? (
                   <div className={`flex flex-wrap gap-1 ${isRTL ? "justify-end" : "justify-start"}`}>
                     {m.suggestions.map((s, k) => (
                       <button
@@ -1500,7 +1366,7 @@ useEffect(() => {
                           if (!q) return;
                           try {
                             setDraft(q);
-                            if (inputRef.current) inputRef.current.value = q;
+                            try { inputRef.current?.focus?.(); } catch {}
                           } catch {}
                           await processQuery(q);
                         }}
@@ -1547,7 +1413,7 @@ useEffect(() => {
                 ) : null}
               </div>
             ))}
-            <div ref={messagesEndRef} />
+            
           </div>
 
           {/* ✅ Sesli komut onayı (otomatik arama YOK) */}
@@ -1568,8 +1434,7 @@ useEffect(() => {
                     const q = String(pendingVoice || "").trim();
                     if (!q) return;
                     setPendingVoice(null);
-                    setDraft("");
-                    try { if (inputRef.current) inputRef.current.value = ""; } catch {}
+                    try { setDraft(""); } catch {}
                     await processQuery(q);
                   }}
                 >
@@ -1593,8 +1458,7 @@ useEffect(() => {
                   className="px-3 py-1 rounded-lg border border-white/20 text-white/70 text-xs"
                   onClick={() => {
                     setPendingVoice(null);
-                    setDraft("");
-                    try { if (inputRef.current) inputRef.current.value = ""; } catch {}
+                    try { setDraft(""); } catch {}
                     flashMsg(t("search.cancel", { defaultValue: "İptal" }), 900, "muted");
                   }}
                 >
@@ -1638,29 +1502,28 @@ useEffect(() => {
             <div className="relative flex-grow">
               <input
                 ref={inputRef}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
                 type="text"
                 disabled={!sonoMode}
                 enterKeyHint="send"
                 autoComplete="off"
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
                 placeholder={!sonoMode ? t("ai.chooseModePlaceholder", { defaultValue: "Önce mod seç…" }) : (String(sonoMode).toLowerCase() === "search"
                   ? t("ai.placeholderSearch", { defaultValue: "Ürün veya hizmet ara…" })
                   : t("ai.placeholderChat", { defaultValue: "Soru sor / bilgi al…" }))}
-                className="w-full bg-transparent outline-none border border-[#d4af37]/40 rounded-xl px-2 py-2 pr-8 text-white text-sm"
+                className="w-full bg-transparent outline-none border border-[#d4af37]/40 rounded-xl px-2 py-2 pr-9 text-white text-sm"
               />
-
-              {sonoMode && String(draft || "").length > 0 ? (
+              {draft ? (
                 <button
                   type="button"
-                  aria-label="clear"
-                  title={t("ai.clearInput", { defaultValue: "Sil" })}
                   onClick={() => {
                     setDraft("");
-                    try { if (inputRef.current) inputRef.current.value = ""; } catch {}
-                    try { inputRef.current?.focus?.(); } catch {}
+                    try {
+                      inputRef.current?.focus?.();
+                    } catch {}
                   }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 grid place-items-center w-6 h-6 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-white/60 hover:text-white"
+                  title={t("common.clear", { defaultValue: "Temizle" })}
                 >
                   ×
                 </button>
