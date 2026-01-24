@@ -215,6 +215,9 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
   const [pendingVoice, setPendingVoice] = useState(null);
   const [draft, setDraft] = useState("");
 
+  // ✅ Chat panel yüksekliği: mesajlar arttıkça panel büyümesin, içeride scroll olsun.
+  const [panelPx, setPanelPx] = useState(380);
+
   // ✅ Sono Mode (search/chat) — kullanıcı seçer, localStorage’da saklanır
   const [sonoMode, setSonoMode] = useState(() => {
     if (typeof window === "undefined") return "";
@@ -227,6 +230,33 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
 
   // ✅ Canlı ses yazımı (interim transcript)
   const [voiceLive, setVoiceLive] = useState("");
+
+
+// Chat açıkken panel yüksekliğini ekrana göre sabitle (vitrini kapatmasın)
+useEffect(() => {
+  if (typeof window === "undefined") return;
+  if (!open) return;
+
+  const calc = () => {
+    const vw = window.innerWidth || 1024;
+    const vh = window.innerHeight || 800;
+    const isMobile = vw < 768;
+
+    // Vitrin görünür kalsın: ekranda minimum alan bırak (px)
+    const keepVisible = isMobile ? 300 : 360;
+    const minH = isMobile ? 260 : 300;
+    const maxH = isMobile ? 480 : 520;
+
+    const h = Math.max(minH, Math.min(maxH, vh - keepVisible));
+    setPanelPx(Math.round(h));
+  };
+
+  calc();
+  window.addEventListener("resize", calc);
+  return () => window.removeEventListener("resize", calc);
+}, [open]);
+
+
 
   // Global status bus: tüm async işler tek standart bildirim diliyle konuşsun
   const { setStatus, clearStatus } = useStatusBus();
@@ -1379,7 +1409,8 @@ useEffect(() => {
         <div
           className="mt-2 bg-black/85 text-white border border-[#d4af37]/50 
           rounded-2xl shadow-2xl backdrop-blur-md p-3 w-[calc(100vw-32px)] max-w-[380px] md:w-[340px] md:max-w-[340px]
-          flex flex-col max-h-[70vh]"
+          flex flex-col overflow-hidden"
+          style={{ height: panelPx, maxHeight: panelPx }}
         >
           {/* ✅ Mode chooser / active mode badge */}
           {!sonoMode ? (
