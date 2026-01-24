@@ -213,6 +213,7 @@ export default function AIAssistant({ onSuggest, onProductSearch }) {
   const [thinking, setThinking] = useState(false);
   const [searching, setSearching] = useState(false);
   const [pendingVoice, setPendingVoice] = useState(null);
+  const [draft, setDraft] = useState("");
 
   // ✅ Sono Mode (search/chat) — kullanıcı seçer, localStorage’da saklanır
   const [sonoMode, setSonoMode] = useState(() => {
@@ -581,6 +582,22 @@ useEffect(() => {
         100% { transform: scale(1.28); opacity: 0; }
       }
       .animate-ping-once { animation: sono-ping-once .9s ease-out 1; }
+
+      /* Chatbox aÃ§Ä±kken iÃ§erik vitrin kartlarÄ±nÄ±n altÄ±nda kalmasÄ±n */
+      :root {
+        --fae-sono-reserve-bottom: 0px;
+        --fae-sono-reserve-right: 0px;
+      }
+      body.fae-sono-open #root {
+        padding-bottom: var(--fae-sono-reserve-bottom) !important;
+        padding-right: var(--fae-sono-reserve-right) !important;
+        transition: padding 160ms ease;
+      }
+      @media (max-width: 768px) {
+        body.fae-sono-open #root {
+          padding-right: 0px !important;
+        }
+      }
 `;
     document.head.appendChild(s);
   }, []);
@@ -609,6 +626,67 @@ useEffect(() => {
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, []);
+
+  // Chat aÃ§Ä±kken vitrin kartlarÄ± chat paneli altÄ±nda kalmasÄ±n: dinamik rezerv alan
+  useEffect(() => {
+    if (typeof document === "undefined" || typeof window === "undefined") return;
+
+    const root = document.documentElement;
+    const setVars = (bottomPx = 0, rightPx = 0) => {
+      const b = Math.max(0, Math.round(Number(bottomPx) || 0));
+      const r = Math.max(0, Math.round(Number(rightPx) || 0));
+      try {
+        root.style.setProperty("--fae-sono-reserve-bottom", `${b}px`);
+        root.style.setProperty("--fae-sono-reserve-right", `${r}px`);
+      } catch {}
+    };
+
+    if (!open) {
+      try { document.body.classList.remove("fae-sono-open"); } catch {}
+      setVars(0, 0);
+      return;
+    }
+
+    try { document.body.classList.add("fae-sono-open"); } catch {}
+
+    let raf = 0;
+    const apply = () => {
+      try { cancelAnimationFrame(raf); } catch {}
+      raf = requestAnimationFrame(() => {
+        const el = wrapRef.current;
+        if (!el) return setVars(0, 0);
+
+        const rect = el.getBoundingClientRect();
+        const pad = 16;
+        const vw = window.innerWidth || 1024;
+        const isMobile = vw < 768;
+
+        // AÃ§Ä±k panelin kapladÄ±ÄŸÄ± alanÄ± rezerve et
+        const bottom = rect.height + pad;
+        const right = isMobile ? 0 : rect.width + pad;
+        setVars(bottom, right);
+      });
+    };
+
+    apply();
+    window.addEventListener("resize", apply);
+
+    let ro = null;
+    try {
+      if (typeof ResizeObserver !== "undefined") {
+        ro = new ResizeObserver(() => apply());
+        if (wrapRef.current) ro.observe(wrapRef.current);
+      }
+    } catch {}
+
+    return () => {
+      try { cancelAnimationFrame(raf); } catch {}
+      try { window.removeEventListener("resize", apply); } catch {}
+      try { ro && ro.disconnect(); } catch {}
+      try { document.body.classList.remove("fae-sono-open"); } catch {}
+      setVars(0, 0);
+    };
+  }, [open]);
 
   const pulseHalo = () => {
     if (!haloRef.current) return;
@@ -762,6 +840,9 @@ function handleMicPointerDown(e) {
 
           // ✅ Canlı yazım: kullanıcı konuşurken anında input'a yaz
           try {
+            setDraft(merged);
+          } catch {}
+          try {
             if (inputRef.current) inputRef.current.value = merged;
           } catch {}
           try {
@@ -802,6 +883,7 @@ function handleMicPointerDown(e) {
       // ✅ Sesli komut: asla otomatik arama yapma. Önce kullanıcıya onay sor.
       setPendingVoice(clean);
       try {
+        setDraft(clean);
         if (inputRef.current) inputRef.current.value = clean;
       } catch {}
       const toastKey = String(sonoMode || "").toLowerCase() === "chat"
@@ -1112,14 +1194,14 @@ function handleMicPointerDown(e) {
   // FORM HANDLER (MOBİL İÇİN ENTER DESTEĞİ)
   async function handleFormSubmit(e) {
     e.preventDefault();
-    if (!inputRef.current) return;
-
-    const val = inputRef.current.value;
-    const text = String(val || "").trim();
+    const text = String(draft || "").trim();
 
     if (!text) return;
     setPendingVoice(null);
-    inputRef.current.value = "";
+    setDraft("");
+    try {
+      if (inputRef.current) inputRef.current.value = "";
+    } catch {}
     await processQuery(text);
   }
 
@@ -1127,7 +1209,8 @@ function handleMicPointerDown(e) {
   async function handleSend(txt) {
     const text = String(txt || "").trim();
     if (!text) return;
-    if (inputRef.current) inputRef.current.value = "";
+    setDraft("");
+    try { if (inputRef.current) inputRef.current.value = ""; } catch {}
     await processQuery(text);
   }
 
@@ -1294,7 +1377,9 @@ useEffect(() => {
       {/* CHAT PENCERESİ */}
       {open && (
         <div
-          className="mt-2 bg-black/85 border border-[#6a5600]/45 rounded-2xl p-3 shadow-[0_10px_30px_rgba(0,0,0,0.45)] backdrop-blur w-[92vw] max-w-[360px] md:max-w-[340px] flex flex-col max-h-[52vh] sm:max-h-[56vh] md:max-h-[70vh] lg:max-h-[76vh]"
+          className="mt-2 bg-black/85 text-white border border-[#d4af37]/50 
+          rounded-2xl shadow-2xl backdrop-blur-md p-3 w-[calc(100vw-32px)] max-w-[380px] md:w-[340px] md:max-w-[340px]
+          flex flex-col max-h-[70vh]"
         >
           {/* ✅ Mode chooser / active mode badge */}
           {!sonoMode ? (
@@ -1354,7 +1439,7 @@ useEffect(() => {
             </div>
           ) : null}
 
-<div className="mt-2 flex-1 min-h-0 min-h-[120px] overflow-y-auto pr-1 space-y-2 custom-scrollbar">
+<div className="mt-2 flex-1 min-h-0 overflow-y-auto pr-1 space-y-2 custom-scrollbar">
             {messages.map((m, i) => (
               <div key={i} className="space-y-1">
                 <p
@@ -1367,7 +1452,7 @@ useEffect(() => {
                   {m.text}
                 </p>
 
-                {m.from !== "user" && Array.isArray(m.suggestions) && m.suggestions.length > 0 ? (
+                {m.from !== "user" && Array.isArray(m.suggestions) && m.suggestions.length > 0 && (typeof m.trustScore !== "number" || m.trustScore >= 55) ? (
                   <div className={`flex flex-wrap gap-1 ${isRTL ? "justify-end" : "justify-start"}`}>
                     {m.suggestions.map((s, k) => (
                       <button
@@ -1378,6 +1463,7 @@ useEffect(() => {
                           const q = String(s || "").trim();
                           if (!q) return;
                           try {
+                            setDraft(q);
                             if (inputRef.current) inputRef.current.value = q;
                           } catch {}
                           await processQuery(q);
@@ -1446,6 +1532,7 @@ useEffect(() => {
                     const q = String(pendingVoice || "").trim();
                     if (!q) return;
                     setPendingVoice(null);
+                    setDraft("");
                     try { if (inputRef.current) inputRef.current.value = ""; } catch {}
                     await processQuery(q);
                   }}
@@ -1470,6 +1557,7 @@ useEffect(() => {
                   className="px-3 py-1 rounded-lg border border-white/20 text-white/70 text-xs"
                   onClick={() => {
                     setPendingVoice(null);
+                    setDraft("");
                     try { if (inputRef.current) inputRef.current.value = ""; } catch {}
                     flashMsg(t("search.cancel", { defaultValue: "İptal" }), 900, "muted");
                   }}
@@ -1511,18 +1599,37 @@ useEffect(() => {
               </svg>
             </button>
 
-            <input
-              ref={inputRef}
-              type="text"
-              disabled={!sonoMode}
-              enterKeyHint="send"
-              autoComplete="off"
-              placeholder={!sonoMode ? t("ai.chooseModePlaceholder", { defaultValue: "Önce mod seç…" }) : (String(sonoMode).toLowerCase() === "search"
-                ? t("ai.placeholderSearch", { defaultValue: "Ürün veya hizmet ara…" })
-                : t("ai.placeholderChat", { defaultValue: "Soru sor / bilgi al…" }))}
-              className="flex-grow bg-transparent outline-none border border-[#d4af37]/40 rounded-xl 
-              px-2 py-2 text-white text-sm"
-            />
+            <div className="relative flex-grow">
+              <input
+                ref={inputRef}
+                type="text"
+                disabled={!sonoMode}
+                enterKeyHint="send"
+                autoComplete="off"
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder={!sonoMode ? t("ai.chooseModePlaceholder", { defaultValue: "Önce mod seç…" }) : (String(sonoMode).toLowerCase() === "search"
+                  ? t("ai.placeholderSearch", { defaultValue: "Ürün veya hizmet ara…" })
+                  : t("ai.placeholderChat", { defaultValue: "Soru sor / bilgi al…" }))}
+                className="w-full bg-transparent outline-none border border-[#d4af37]/40 rounded-xl px-2 py-2 pr-8 text-white text-sm"
+              />
+
+              {sonoMode && String(draft || "").length > 0 ? (
+                <button
+                  type="button"
+                  aria-label="clear"
+                  title={t("ai.clearInput", { defaultValue: "Sil" })}
+                  onClick={() => {
+                    setDraft("");
+                    try { if (inputRef.current) inputRef.current.value = ""; } catch {}
+                    try { inputRef.current?.focus?.(); } catch {}
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 grid place-items-center w-6 h-6 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition"
+                >
+                  ×
+                </button>
+              ) : null}
+            </div>
 
             <button
               type="submit"
