@@ -1281,7 +1281,7 @@ useEffect(() => {
       {/* CHAT PENCERESİ */}
       {open && (
         <div
-          className="absolute right-0 bottom-[72px] bg-black/85 text-white border border-[#d4af37]/50 rounded-2xl shadow-2xl backdrop-blur-md p-3 w-[360px] max-w-[calc(100vw-24px)] md:w-[380px] h-[clamp(240px,42vh,360px)] flex flex-col overflow-hidden"
+          className="absolute right-0 bottom-[72px] md:right-[72px] md:bottom-0 bg-black/85 text-white border border-[#d4af37]/50 rounded-2xl shadow-2xl backdrop-blur-md p-3 w-[360px] max-w-[calc(100vw-24px)] md:w-[380px] h-[clamp(240px,42vh,360px)] flex flex-col overflow-hidden"
         >
           {/* ✅ Mode chooser / active mode badge */}
           {!sonoMode ? (
