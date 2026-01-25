@@ -620,7 +620,7 @@ useEffect(() => {
 
       /* Chatbox aÃ§Ä±kken iÃ§erik vitrin kartlarÄ±nÄ±n altÄ±nda kalmasÄ±n */
       :root {
-        --fae-sono-reserve-bottom: 0px;
+        --fae-sono-reserve-bottom: 5vh /* patched: mobile offset */px;
         --fae-sono-reserve-right: 0px;
       }
       body.fae-sono-open #root {
