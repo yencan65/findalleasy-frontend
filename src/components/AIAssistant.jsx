@@ -250,7 +250,7 @@ useEffect(() => {
 
     // Minimum/maximum sınırlar (çok küçük/çok büyük olmasın)
     const minH = isMobile ? 220 : 240;
-    const maxH = isMobile ? 360 : 380;
+    const maxH = isMobile ? 360 : 420;
 
     const h = Math.max(minH, Math.min(maxH, scaled));
     setPanelPx(h);
@@ -625,13 +625,8 @@ useEffect(() => {
       }
       body.fae-sono-open #root {
         padding-bottom: var(--fae-sono-reserve-bottom) !important;
-        padding-right: var(--fae-sono-reserve-right) !important;
-        transition: padding 160ms ease;
-      }
-      @media (max-width: 768px) {
-        body.fae-sono-open #root {
-          padding-right: 0px !important;
-        }
+        padding-right: 0px !important;
+        transition: padding-bottom 160ms ease;
       }
 `;
     document.head.appendChild(s);
@@ -676,7 +671,11 @@ useEffect(() => {
       } catch {}
     };
 
-    if (!open) {
+    const vw0 = window.innerWidth || 1024;
+    const isMobile0 = vw0 < 768;
+    const shouldReserve = open || isMobile0;
+
+    if (!shouldReserve) {
       try { document.body.classList.remove("fae-sono-open"); } catch {}
       setVars(0, 0);
       return;
@@ -696,9 +695,9 @@ useEffect(() => {
         const vw = window.innerWidth || 1024;
         const isMobile = vw < 768;
 
-        // AÃ§Ä±k panelin kapladÄ±ÄŸÄ± alanÄ± rezerve et
-        const bottom = rect.height + pad;
-        const right = isMobile ? 0 : rect.width + pad;
+        // Açık panelin kapladığı alanı rezerve et (mobilde alt boşluk; desktop/tablet shift yok)
+        const bottom = isMobile ? (rect.height + pad) : 0;
+        const right = 0;
         setVars(bottom, right);
       });
     };
@@ -1352,7 +1351,13 @@ useEffect(() => {
       ? "sono-face-thinking"
       : "sono-face-idle";
 
-  // RENDER
+  
+const isFailish = (t) => {
+  const s = String(t || "");
+  return /yanıt üretemedi|erişimim yok|cevap üretemedim|geçici|temporary|failed to answer|i failed to answer|bir hata oluştu/i.test(s);
+};
+
+// RENDER
   return (
     <div
       ref={wrapRef}
@@ -1488,7 +1493,7 @@ useEffect(() => {
                   {m.text}
                 </p>
 
-                {m.from !== "user" && Array.isArray(m.suggestions) && m.suggestions.length > 0 && (typeof m.trustScore !== "number" || m.trustScore >= 55) ? (
+                {m.from !== "user" && !isFailish(m.text) && Array.isArray(m.suggestions) && m.suggestions.length > 0 && (typeof m.trustScore !== "number" || m.trustScore >= 55) ? (
                   <div className={`flex flex-wrap gap-1 ${isRTL ? "justify-end" : "justify-start"}`}>
                     {m.suggestions.map((s, k) => (
                       <button
