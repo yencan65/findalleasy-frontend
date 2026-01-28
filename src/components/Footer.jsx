@@ -14,9 +14,16 @@ export default function Footer({ fixed = false }) {
   }, []);
 
   return (
-    <footer className={`py-2 sm:py-3 px-3 w-full border-t border-[#d4af37]/20 ${fixed ? "fixed bottom-0 left-0 z-[60] bg-[#3b3b3b]/88 backdrop-blur-xl shadow-[0_-10px_34px_rgba(0,0,0,0.24)]" : ""}`}>
-      <hr className="footer-line" />
-      <div className="phi-gap text-[11px] md:text-sm" />
+    <footer
+      className={`
+        py-2 sm:py-3 px-3 w-full
+        bg-[rgba(10,9,28,0.62)] backdrop-blur-2xl
+        border-t border-[rgba(122,92,255,0.18)]
+        shadow-[0_-10px_34px_rgba(0,0,0,0.28)]
+        ${fixed ? "fixed bottom-0 left-0 z-[60]" : ""}
+      `}
+    >
+      <div className="h-1" />
       {/* ✅ Info + Legal links (reviewers want these) */}
       <nav className="mt-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs">
         <a
