@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useRef } from "react";
 
-// Decorative calm neural-web strip (used on mobile above/below vitrin).
-// Same stability logic as full background: pause on hidden, dt clamp, no trails, capped links.
+// A small, calm neural-web canvas used as a decorative strip (mobile vitrin top/bottom).
+// - Deterministic motion (no random flicker)
+// - dt clamped (prevents "lightning" after tab stutters)
+// - Clears every frame (no trail accumulation)
 
 function clamp(n, a, b) {
   return Math.max(a, Math.min(b, n));
@@ -15,62 +17,31 @@ function prefersReducedMotion() {
   }
 }
 
-function hexToRgb(hex) {
-  const h = String(hex || "").replace("#", "").trim();
-  if (h.length === 3) {
-    const r = parseInt(h[0] + h[0], 16);
-    const g = parseInt(h[1] + h[1], 16);
-    const b = parseInt(h[2] + h[2], 16);
-    return { r, g, b };
-  }
-  if (h.length === 6) {
-    const r = parseInt(h.slice(0, 2), 16);
-    const g = parseInt(h.slice(2, 4), 16);
-    const b = parseInt(h.slice(4, 6), 16);
-    return { r, g, b };
-  }
-  return { r: 122, g: 92, b: 255 };
-}
-
-function insertNearest(arr, item, maxLen) {
-  let k = arr.length;
-  while (k > 0 && arr[k - 1].d2 > item.d2) k--;
-  arr.splice(k, 0, item);
-  if (arr.length > maxLen) arr.length = maxLen;
-}
-
 export default function NeuralStrip({ className = "", tint = "#7A5CFF" }) {
   const canvasRef = useRef(null);
   const rafRef = useRef(0);
-  const runningRef = useRef(false);
   const lastTRef = useRef(0);
   const nodesRef = useRef([]);
-  const rgb = useMemo(() => hexToRgb(tint), [tint]);
 
-  const cfg = useMemo(
-    () => ({
+  const base = useMemo(() => {
+    // Mobile can look "too busy" with strips; keep them calm.
+    // If strips ever show on tablet/desktop, allow a touch more presence.
+    return {
       maxDpr: 2,
-      density: 0.0010,
-      minNodes: 18,
-      maxNodes: 52,
-      linkDist: 150,
-      maxLinksPerNode: 3,
-
-      baseSpeed: 0.02,
-      drift: 0.010,
-      damp: 0.982,
-      maxV: 0.055,
-
-      repelDist: 22,
-      repelStrength: 0.016,
-
-      alpha: 0.16,
-      nodeAlpha: 0.22,
-      baseLine: 1.15,
-      nodeRadius: 1.25,
-    }),
-    []
-  );
+      // tuned for strip size (short height)
+      densityMobile: 0.00062,
+      densityDesk: 0.00078,
+      linkDistMobile: 120,
+      linkDistDesk: 140,
+      speed: 0.032,
+      lineBaseMobile: 0.9,
+      lineBaseDesk: 1.05,
+      alphaMobile: 0.11,
+      alphaDesk: 0.15,
+      nodeAlphaMobile: 0.18,
+      nodeAlphaDesk: 0.24,
+    };
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -80,12 +51,27 @@ export default function NeuralStrip({ className = "", tint = "#7A5CFF" }) {
     if (!ctx) return;
 
     const reduced = prefersReducedMotion();
-    const state = { w: 1, h: 1 };
 
-    const reseed = (w, h) => {
-      const count = clamp(Math.round(w * h * cfg.density), cfg.minNodes, cfg.maxNodes);
+    const resize = () => {
+      const parent = canvas.parentElement;
+      if (!parent) return;
+      const rect = parent.getBoundingClientRect();
+      const dpr = clamp(window.devicePixelRatio || 1, 1, base.maxDpr);
+      const w = Math.max(1, Math.floor(rect.width));
+      const h = Math.max(1, Math.floor(rect.height));
+      canvas.width = Math.floor(w * dpr);
+      canvas.height = Math.floor(h * dpr);
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const isMobile = w < 640;
+      const density = isMobile ? base.densityMobile : base.densityDesk;
+      // (Re)seed nodes according to area.
+      const count = clamp(Math.round(w * h * density), 14, isMobile ? 34 : 44);
       const nodes = [];
       for (let i = 0; i < count; i++) {
+        // deterministic-ish initial placement based on i
         const fx = (Math.sin(i * 12.9898) * 43758.5453) % 1;
         const fy = (Math.sin(i * 78.233) * 12345.6789) % 1;
         const x = (fx < 0 ? fx + 1 : fx) * w;
@@ -94,121 +80,71 @@ export default function NeuralStrip({ className = "", tint = "#7A5CFF" }) {
         nodes.push({
           x,
           y,
-          vx: Math.cos(a) * cfg.baseSpeed,
-          vy: Math.sin(a) * cfg.baseSpeed,
+          vx: Math.cos(a) * base.speed,
+          vy: Math.sin(a) * base.speed,
           phase: a,
         });
       }
       nodesRef.current = nodes;
     };
 
-    const resize = () => {
-      const parent = canvas.parentElement;
-      if (!parent) return;
-      const rect = parent.getBoundingClientRect();
-      const dpr = clamp(window.devicePixelRatio || 1, 1, cfg.maxDpr);
-      const w = Math.max(1, Math.floor(rect.width));
-      const h = Math.max(1, Math.floor(rect.height));
-      state.w = w;
-      state.h = h;
-
-      canvas.width = Math.floor(w * dpr);
-      canvas.height = Math.floor(h * dpr);
-      canvas.style.width = `${w}px`;
-      canvas.style.height = `${h}px`;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-      reseed(w, h);
-    };
-
-    const stop = () => {
-      runningRef.current = false;
-      if (rafRef.current) {
-        try {
-          cancelAnimationFrame(rafRef.current);
-        } catch {}
-        rafRef.current = 0;
+    const hexToRgb = (hex) => {
+      const h = String(hex || "").replace("#", "").trim();
+      if (h.length === 3) {
+        const r = parseInt(h[0] + h[0], 16);
+        const g = parseInt(h[1] + h[1], 16);
+        const b = parseInt(h[2] + h[2], 16);
+        return { r, g, b };
       }
+      if (h.length === 6) {
+        const r = parseInt(h.slice(0, 2), 16);
+        const g = parseInt(h.slice(2, 4), 16);
+        const b = parseInt(h.slice(4, 6), 16);
+        return { r, g, b };
+      }
+      return { r: 122, g: 92, b: 255 };
     };
-
-    const start = () => {
-      if (runningRef.current) return;
-      runningRef.current = true;
-      lastTRef.current = 0;
-      rafRef.current = requestAnimationFrame(tick);
-    };
+    const rgb = hexToRgb(tint);
 
     const tick = (t) => {
-      if (!runningRef.current) return;
-
-      const w = state.w || canvas.clientWidth || 1;
-      const h = state.h || canvas.clientHeight || 1;
-
-      const last = lastTRef.current || t;
-      const dtRaw = (t - last) / 1000;
-      const dt = clamp(dtRaw, 0, 1 / 30);
-      lastTRef.current = t;
-
-      ctx.clearRect(0, 0, w, h);
-
-      const nodes = nodesRef.current;
-      if (!nodes || !nodes.length) {
+      if (document.hidden) {
+        lastTRef.current = t;
         rafRef.current = requestAnimationFrame(tick);
         return;
       }
+      const w = canvas.clientWidth || 1;
+      const h = canvas.clientHeight || 1;
 
-      const drift = reduced ? cfg.drift * 0.5 : cfg.drift;
-      const damp = reduced ? 0.988 : cfg.damp;
-      const maxV = reduced ? cfg.maxV * 0.7 : cfg.maxV;
-      const repelStrength = reduced ? cfg.repelStrength * 0.6 : cfg.repelStrength;
+      const last = lastTRef.current || t;
+      const dtRaw = (t - last) / 1000;
+      // Clamp dt so background never "spikes" after lag/tab switch.
+      const dt = clamp(dtRaw, 0, 1 / 30);
+      lastTRef.current = t;
+
+      const nodes = nodesRef.current;
+
+      // Clear every frame to avoid trail accumulation ("lightning" effect).
+      ctx.clearRect(0, 0, w, h);
+
+      // Motion: very gentle drift + tiny wave to feel alive.
+      const drift = reduced ? 0.006 : 0.018;
+      const damp = reduced ? 0.985 : 0.975;
+      const maxV = reduced ? 0.045 : 0.075;
 
       for (let i = 0; i < nodes.length; i++) {
         const n = nodes[i];
-        const waveX = Math.sin(t * 0.00026 + n.phase) * drift;
-        const waveY = Math.cos(t * 0.00024 + n.phase * 1.3) * drift;
+        const waveX = Math.sin((t * 0.00035) + n.phase) * drift;
+        const waveY = Math.cos((t * 0.00032) + n.phase * 1.3) * drift;
+
         n.vx = (n.vx + waveX) * damp;
         n.vy = (n.vy + waveY) * damp;
         n.vx = clamp(n.vx, -maxV, maxV);
         n.vy = clamp(n.vy, -maxV, maxV);
-      }
 
-      const linkDist2 = cfg.linkDist * cfg.linkDist;
-      const repelDist2 = cfg.repelDist * cfg.repelDist;
-      const neighbors = Array.from({ length: nodes.length }, () => []);
+        n.x += n.vx * (dt * 60);
+        n.y += n.vy * (dt * 60);
 
-      for (let i = 0; i < nodes.length; i++) {
-        const a = nodes[i];
-        for (let j = i + 1; j < nodes.length; j++) {
-          const b = nodes[j];
-          const dx = a.x - b.x;
-          const dy = a.y - b.y;
-          const d2 = dx * dx + dy * dy;
-
-          if (d2 <= linkDist2) {
-            insertNearest(neighbors[i], { j, d2 }, cfg.maxLinksPerNode);
-            insertNearest(neighbors[j], { j: i, d2 }, cfg.maxLinksPerNode);
-          }
-
-          if (d2 > 0 && d2 < repelDist2) {
-            const d = Math.sqrt(d2);
-            const k = (cfg.repelDist - d) / cfg.repelDist;
-            const push = k * repelStrength;
-            const ux = dx / d;
-            const uy = dy / d;
-            a.vx += ux * push;
-            a.vy += uy * push;
-            b.vx -= ux * push;
-            b.vy -= uy * push;
-          }
-        }
-      }
-
-      const step = dt * 60;
-      for (let i = 0; i < nodes.length; i++) {
-        const n = nodes[i];
-        n.x += n.vx * step;
-        n.y += n.vy * step;
-
+        // bounce
         if (n.x < 0) {
           n.x = 0;
           n.vx *= -1;
@@ -225,18 +161,25 @@ export default function NeuralStrip({ className = "", tint = "#7A5CFF" }) {
         }
       }
 
+      const isMobile = w < 640;
+      // Draw links
+      const linkDist = isMobile ? base.linkDistMobile : base.linkDistDesk;
+      const alphaBase = isMobile ? base.alphaMobile : base.alphaDesk;
+      const lineBase = isMobile ? base.lineBaseMobile : base.lineBaseDesk;
+      const nodeAlpha = isMobile ? base.nodeAlphaMobile : base.nodeAlphaDesk;
       for (let i = 0; i < nodes.length; i++) {
         const a = nodes[i];
-        const list = neighbors[i];
-        for (let k = 0; k < list.length; k++) {
-          const j = list[k].j;
-          if (j <= i) continue;
+        for (let j = i + 1; j < nodes.length; j++) {
           const b = nodes[j];
-          const d = Math.sqrt(list[k].d2);
-          const strength = 1 - d / cfg.linkDist;
-          const alpha = cfg.alpha * strength;
+          const dx = a.x - b.x;
+          const dy = a.y - b.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 > linkDist * linkDist) continue;
+          const d = Math.sqrt(d2);
+          const k = 1 - d / linkDist;
+          const alpha = alphaBase * k;
           ctx.strokeStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},${alpha})`;
-          ctx.lineWidth = cfg.baseLine + strength * 1.1;
+          ctx.lineWidth = lineBase + k * (isMobile ? 0.9 : 1.1); // slightly less punch on mobile
           ctx.beginPath();
           ctx.moveTo(a.x, a.y);
           ctx.lineTo(b.x, b.y);
@@ -244,11 +187,12 @@ export default function NeuralStrip({ className = "", tint = "#7A5CFF" }) {
         }
       }
 
-      ctx.fillStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},${cfg.nodeAlpha})`;
+      // subtle nodes
+      ctx.fillStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},${nodeAlpha})`;
       for (let i = 0; i < nodes.length; i++) {
         const n = nodes[i];
         ctx.beginPath();
-        ctx.arc(n.x, n.y, cfg.nodeRadius, 0, Math.PI * 2);
+        ctx.arc(n.x, n.y, isMobile ? 1.1 : 1.25, 0, Math.PI * 2);
         ctx.fill();
       }
 
@@ -256,21 +200,25 @@ export default function NeuralStrip({ className = "", tint = "#7A5CFF" }) {
     };
 
     const onVis = () => {
-      if (document.hidden) stop();
-      else start();
+      // Reset timestamp so dt doesn't spike.
+      lastTRef.current = 0;
     };
 
     resize();
-    start();
+    lastTRef.current = 0;
+    rafRef.current = requestAnimationFrame(tick);
 
     window.addEventListener("resize", resize, { passive: true });
     document.addEventListener("visibilitychange", onVis);
+
     return () => {
       window.removeEventListener("resize", resize);
       document.removeEventListener("visibilitychange", onVis);
-      stop();
+      try {
+        cancelAnimationFrame(rafRef.current);
+      } catch {}
     };
-  }, [cfg, rgb]);
+  }, [base, tint]);
 
   return (
     <canvas
