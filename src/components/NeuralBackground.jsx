@@ -67,8 +67,9 @@ export default function NeuralBackground() {
         nodes.push({
           x: Math.random() * w,
           y: Math.random() * h,
-          vx: (Math.random() - 0.5) * (isSmall ? 0.18 : 0.25),
-          vy: (Math.random() - 0.5) * (isSmall ? 0.18 : 0.25),
+          // Slow drift only — premium feel (no jitter)
+          vx: (Math.random() - 0.5) * (isSmall ? 0.08 : 0.12),
+          vy: (Math.random() - 0.5) * (isSmall ? 0.08 : 0.12),
           r: isSmall ? 1.1 : 1.35,
         });
       }
@@ -116,7 +117,8 @@ export default function NeuralBackground() {
       ctx.fillRect(0, 0, w, h);
 
       // Update background nodes
-      const speed = w < 520 ? 0.55 : 0.8;
+      // Global speed control: keep it slow & easy on the eyes.
+      const speed = w < 520 ? 0.22 : 0.32;
       for (const n of st.nodes) {
         // Gentle drift + tiny pull toward midline between a and b
         const midx = (a.x + b.x) / 2;
@@ -138,7 +140,7 @@ export default function NeuralBackground() {
       }
 
       // Draw connections among nearby nodes
-      const maxDist = w < 520 ? 105 : 135;
+      const maxDist = w < 520 ? 95 : 120;
       for (let i = 0; i < st.nodes.length; i++) {
         const ni = st.nodes[i];
         for (let j = i + 1; j < st.nodes.length; j++) {
@@ -147,7 +149,7 @@ export default function NeuralBackground() {
           const dy = ni.y - nj.y;
           const d = Math.hypot(dx, dy);
           if (d < maxDist) {
-            const a1 = (1 - d / maxDist) * 0.10; // subtle
+            const a1 = (1 - d / maxDist) * 0.075; // extra subtle
             ctx.strokeStyle = `rgba(${palette.line},${a1})`;
             ctx.lineWidth = 0.7;
             ctx.beginPath();
@@ -168,7 +170,7 @@ export default function NeuralBackground() {
       const time = t * 0.001;
       const streamPts = [];
       for (const s of st.stream) {
-        const wiggle = Math.sin(time * 1.3 + s.ph) * (w < 520 ? 8 : 12) + s.wig * 0.25;
+        const wiggle = Math.sin(time * 0.65 + s.ph) * (w < 520 ? 6 : 9) + s.wig * 0.18;
         const x = a.x + sx * s.p + nx * wiggle;
         const y = a.y + sy * s.p + ny * wiggle;
         streamPts.push({ x, y });
@@ -178,7 +180,7 @@ export default function NeuralBackground() {
       for (let i = 0; i < streamPts.length - 1; i++) {
         const p1 = streamPts[i];
         const p2 = streamPts[i + 1];
-        const a2 = 0.22;
+        const a2 = 0.16;
         ctx.strokeStyle = `rgba(${palette.line2},${a2})`;
         ctx.lineWidth = w < 520 ? 0.9 : 1.0;
         ctx.beginPath();
@@ -239,7 +241,7 @@ export default function NeuralBackground() {
       style={{
         // keep it behind UI layers but visible through transparent/glass
         mixBlendMode: "screen",
-        opacity: 0.95,
+        opacity: 0.75,
       }}
     >
       <canvas ref={canvasRef} className="w-full h-full" />
