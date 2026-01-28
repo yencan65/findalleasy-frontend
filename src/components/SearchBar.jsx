@@ -968,7 +968,11 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
     <>
       <div key={"searchbar-" + tick} className="search-bar-wrapper flex justify-center w-full">
         <div
-          className="flex items-center bg-[rgba(255,255,255,0.16)] border border-black/35 rounded-full px-3 sm:px-4 py-2 
+          className="flex items-center
+                     bg-[rgba(10,9,28,0.52)]
+                     border border-[rgba(122,92,255,0.22)]
+                     shadow-[0_0_40px_rgba(122,92,255,0.18)]
+                     rounded-full px-3 sm:px-4 py-2
                      w-[520px] max-w-[92%] sm:w-[420px] md:w-[500px] lg:w-[520px]
                      transition-all duration-300 ease-in-out"
         >
@@ -984,18 +988,25 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
           <div className="relative flex-grow min-w-[120px]">
             <input
               key={"input-" + i18n.language}
+              id="search-input"
               value={value}
               onChange={(e) => setValue(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && doSearch()}
               placeholder={placeholders[index]}
-              className="w-full bg-transparent outline-none text-black placeholder:text-black/40 text-base px-3 pr-24 sm:pr-3 min-w-[120px]"
+              className="w-full bg-transparent outline-none
+                         text-[#f2f1ff] placeholder:text-[#cfc8ff]/55
+                         text-base px-3 pr-24 sm:pr-3 min-w-[120px]"
             />
 
             <button
               type="button"
               onClick={() => doSearch()}
               disabled={loading}
-              className="sm:hidden absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full border border-black/40 text-black/80 bg-transparent hover:bg-black/5 flex items-center justify-center shadow-sm transition disabled:opacity-60"
+              className="sm:hidden absolute right-2 top-1/2 -translate-y-1/2
+                         w-9 h-9 rounded-full
+                         border border-[rgba(122,92,255,0.28)]
+                         text-[#cfc8ff] bg-transparent hover:bg-white/5 hover:text-white
+                         flex items-center justify-center shadow-sm transition disabled:opacity-60"
               aria-label={t("search.search")}
             >
               <Search size={18} />
@@ -1005,7 +1016,7 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
           <button
             type="button"
             onClick={startMic}
-            className="ml-1 text-black/80 hover:text-black transition p-2 rounded-full"
+            className="ml-1 text-[#cfc8ff] hover:text-white transition p-2 rounded-full"
             aria-label={t("search.voice", { defaultValue: "Sesli arama" })}
           >
             <Mic className={`w-5 h-5 ${micListening ? "animate-pulse" : ""}`} />
@@ -1014,7 +1025,7 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
           <button
             type="button"
             onClick={openCamera}
-            className="text-black/80 hover:text-black transition p-2 rounded-full"
+            className="text-[#cfc8ff] hover:text-white transition p-2 rounded-full"
             aria-label={t("cameraSearch", { defaultValue: "Kamera ile ara" })}
           >
             <Camera className="w-5 h-5" />
@@ -1023,7 +1034,7 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
           <button
             type="button"
             onClick={() => setScannerOpen(true)}
-            className="text-black/80 hover:text-black transition p-2 rounded-full"
+            className="text-[#cfc8ff] hover:text-white transition p-2 rounded-full"
             aria-label={t("qrSearch", { defaultValue: "QR ile ara" })}
           >
             <QrCode className="w-5 h-5" />
@@ -1032,7 +1043,10 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
           <button
             onClick={() => doSearch()}
             disabled={loading}
-            className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full border border-black/40 text-black/80 bg-transparent hover:bg-black/5 hover:text-black transition disabled:opacity-60"
+            className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full
+                       border border-[rgba(122,92,255,0.28)]
+                       text-[#cfc8ff] bg-transparent hover:bg-white/5 hover:text-white
+                       transition disabled:opacity-60"
           >
             <Search size={18} />
           </button>
