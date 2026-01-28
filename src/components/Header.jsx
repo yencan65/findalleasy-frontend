@@ -203,7 +203,7 @@ export default function Header() {
   return (
     <header
       className="
-        w-full flex flex-row justify-between items-center flex-nowrap gap-2 sm:gap-3
+        w-full flex flex-row justify-between items-center flex-nowrap gap-2 sm:gap-3 relative z-10
         px-3 sm:px-6 py-3 sm:py-4 bg-[#3b3b3b]/92
         border-b border-[#d4af37]/20
         text-white font-sans backdrop-blur-xl
@@ -214,6 +214,7 @@ export default function Header() {
     >
       {/* LOGO */}
       <button
+        id="fae-logo"
         type="button"
         className="flex items-center flex-shrink-0 cursor-pointer select-none"
         onClick={() => window.dispatchEvent(new Event("fae.vitrine.refresh"))}
