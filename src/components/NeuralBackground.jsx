@@ -34,7 +34,8 @@ export default function NeuralBackground() {
       line: "122,92,255",     // #7A5CFF
       line2: "107,78,255",    // #6B4EFF
       glow: "160,140,255",
-      bg: "5,5,18",
+      // Match app background (slightly brighter) so the vignette doesn't darken the page too much.
+      bg: "10,9,32",
     };
   }, []);
 
@@ -118,13 +119,14 @@ export default function NeuralBackground() {
       // Very subtle vignette to blend the network
       const g = ctx.createRadialGradient(w * 0.55, h * 0.25, 40, w * 0.55, h * 0.25, Math.max(w, h) * 0.9);
       g.addColorStop(0, `rgba(${palette.bg},0.0)`);
-      g.addColorStop(1, `rgba(${palette.bg},0.22)`);
+      g.addColorStop(1, `rgba(${palette.bg},0.12)`);
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, w, h);
 
       // Update background nodes
       // Global speed control: keep it slow & easy on the eyes.
-      const speed = reduceMotion ? 0.06 : (w < 520 ? 0.14 : 0.18);
+      // Slower, calmer motion (no "hyper" background).
+      const speed = reduceMotion ? 0.04 : (w < 520 ? 0.10 : 0.12);
       for (const n of st.nodes) {
         // Gentle drift + tiny pull toward midline between a and b
         const midx = (a.x + b.x) / 2;
@@ -176,7 +178,7 @@ export default function NeuralBackground() {
       const time = t * 0.001;
       const streamPts = [];
       for (const s of st.stream) {
-        const wiggle = Math.sin(time * 0.65 + s.ph) * (w < 520 ? 6 : 9) + s.wig * 0.18;
+        const wiggle = Math.sin(time * 0.45 + s.ph) * (w < 520 ? 5 : 7) + s.wig * 0.14;
         const x = a.x + sx * s.p + nx * wiggle;
         const y = a.y + sy * s.p + ny * wiggle;
         streamPts.push({ x, y });
@@ -186,7 +188,7 @@ export default function NeuralBackground() {
       for (let i = 0; i < streamPts.length - 1; i++) {
         const p1 = streamPts[i];
         const p2 = streamPts[i + 1];
-        const a2 = 0.16;
+        const a2 = 0.12;
         ctx.strokeStyle = `rgba(${palette.line2},${a2})`;
         ctx.lineWidth = w < 520 ? 0.9 : 1.0;
         ctx.beginPath();
