@@ -1,307 +1,222 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 
-// Calm, page-wide neural web (purple) that stays stable over time.
-// Main goals:
-// - Always slow and "alive" without spikes.
-// - Never turns into "lightning" (no dt jumps, no trails, no overdraw bursts).
-// - Covers the whole page like a spider web.
-
-function clamp(n, a, b) {
-  return Math.max(a, Math.min(b, n));
-}
-
-function prefersReducedMotion() {
-  try {
-    return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  } catch {
-    return false;
-  }
-}
-
-function hexToRgb(hex) {
-  const h = String(hex || "").replace("#", "").trim();
-  if (h.length === 3) {
-    const r = parseInt(h[0] + h[0], 16);
-    const g = parseInt(h[1] + h[1], 16);
-    const b = parseInt(h[2] + h[2], 16);
-    return { r, g, b };
-  }
-  if (h.length === 6) {
-    const r = parseInt(h.slice(0, 2), 16);
-    const g = parseInt(h.slice(2, 4), 16);
-    const b = parseInt(h.slice(4, 6), 16);
-    return { r, g, b };
-  }
-  return { r: 122, g: 92, b: 255 };
-}
-
-function insertNearest(arr, item, maxLen) {
-  // arr items: { j, d2 }
-  if (!arr.length) {
-    arr.push(item);
-    return;
-  }
-  // Insert sorted by d2
-  let k = arr.length;
-  while (k > 0 && arr[k - 1].d2 > item.d2) k--;
-  arr.splice(k, 0, item);
-  if (arr.length > maxLen) arr.length = maxLen;
-}
-
-export default function NeuralBackground({ tint = "#7A5CFF", className = "", style }) {
+/**
+ * Calm, stable neural-web background.
+ *
+ * Fixes the common "screen disappeared" issue by ensuring:
+ *  - canvas is fixed + behind everything (zIndex: -1)
+ *  - pointerEvents: none
+ *  - no trail accumulation (full clear each frame)
+ *  - animation pauses when tab is hidden (no dt jump)
+ */
+export default function NeuralBackground({
+  className = "",
+  opacity = 0.55, // overall visibility (keep < 0.8)
+  color = "rgba(122, 92, 255, 1)", // purple
+}) {
   const canvasRef = useRef(null);
   const rafRef = useRef(0);
-  const runningRef = useRef(false);
   const lastTRef = useRef(0);
   const nodesRef = useRef([]);
-  const rgb = useMemo(() => hexToRgb(tint), [tint]);
-
-  const cfg = useMemo(
-    () => ({
-      maxDpr: 2,
-      density: 0.00028, // nodes per px^2
-      minNodes: 56,
-      maxNodes: 140,
-      linkDist: 200,
-      maxLinksPerNode: 4,
-
-      // Motion
-      baseSpeed: 0.02, // initial vx/vy
-      drift: 0.012, // wave amplitude
-      damp: 0.978,
-      maxV: 0.06,
-
-      // Anti-cluster
-      repelDist: 26,
-      repelStrength: 0.018,
-
-      // Look
-      alpha: 0.13,
-      nodeAlpha: 0.20,
-      baseLine: 1.10,
-      nodeRadius: 1.35,
-    }),
-    []
-  );
+  const runningRef = useRef(true);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
-    const ctx = canvas.getContext("2d", { alpha: true, desynchronized: true });
+    const ctx = canvas.getContext("2d", { alpha: true });
     if (!ctx) return;
 
-    const reduced = prefersReducedMotion();
-    const state = { w: 1, h: 1 };
+    const prefersReduced = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
 
-    const reseed = (w, h) => {
-      const count = clamp(Math.round(w * h * cfg.density), cfg.minNodes, cfg.maxNodes);
+    const rand = (a, b) => a + Math.random() * (b - a);
+
+    function resizeAndSeed() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = Math.max(1, window.innerWidth);
+      const h = Math.max(1, window.innerHeight);
+      canvas.width = Math.floor(w * dpr);
+      canvas.height = Math.floor(h * dpr);
+      canvas.style.width = w + "px";
+      canvas.style.height = h + "px";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      // Density based on area; cap to keep perf stable.
+      const area = w * h;
+      const base = Math.round(area / 26000);
+      const n = Math.max(60, Math.min(180, base));
+
       const nodes = [];
-      for (let i = 0; i < count; i++) {
-        // Deterministic-ish placement based on i (no runtime random = no flicker).
-        const fx = (Math.sin(i * 12.9898) * 43758.5453) % 1;
-        const fy = (Math.sin(i * 78.233) * 12345.6789) % 1;
-        const x = (fx < 0 ? fx + 1 : fx) * w;
-        const y = (fy < 0 ? fy + 1 : fy) * h;
-        const a = i * 0.55;
+      for (let i = 0; i < n; i++) {
         nodes.push({
-          x,
-          y,
-          vx: Math.cos(a) * cfg.baseSpeed,
-          vy: Math.sin(a) * cfg.baseSpeed,
-          phase: a,
+          x: rand(0, w),
+          y: rand(0, h),
+          vx: rand(-0.12, 0.12),
+          vy: rand(-0.12, 0.12),
         });
       }
       nodesRef.current = nodes;
-    };
+    }
 
-    const resize = () => {
-      const parent = canvas.parentElement;
-      if (!parent) return;
-      const rect = parent.getBoundingClientRect();
-      const dpr = clamp(window.devicePixelRatio || 1, 1, cfg.maxDpr);
-
-      const w = Math.max(1, Math.floor(rect.width));
-      const h = Math.max(1, Math.floor(rect.height));
-
-      state.w = w;
-      state.h = h;
-
-      canvas.width = Math.floor(w * dpr);
-      canvas.height = Math.floor(h * dpr);
-      canvas.style.width = `${w}px`;
-      canvas.style.height = `${h}px`;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-      reseed(w, h);
-    };
-
-    const stop = () => {
+    function stop() {
       runningRef.current = false;
-      if (rafRef.current) {
-        try {
-          cancelAnimationFrame(rafRef.current);
-        } catch {}
-        rafRef.current = 0;
-      }
-    };
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
+    }
 
-    const start = () => {
-      if (runningRef.current) return;
+    function start() {
       runningRef.current = true;
       lastTRef.current = 0;
       rafRef.current = requestAnimationFrame(tick);
-    };
+    }
 
-    const tick = (t) => {
+    function onVisibility() {
+      if (document.hidden) {
+        stop();
+      } else {
+        // Reset timestamps to avoid dt jump → "lightning"
+        lastTRef.current = 0;
+        start();
+      }
+    }
+
+    const maxDist = 170; // connection radius
+    const maxDist2 = maxDist * maxDist;
+    const maxLinksPerNode = 4; // prevents overdraw bursts
+
+    function tick(t) {
       if (!runningRef.current) return;
 
-      const w = state.w || canvas.clientWidth || 1;
-      const h = state.h || canvas.clientHeight || 1;
-
+      // dt in seconds; clamp to prevent speed spikes
       const last = lastTRef.current || t;
-      const dtRaw = (t - last) / 1000;
-      // Clamp dt so lag/tab switches never cause "aggressive" movement.
-      const dt = clamp(dtRaw, 0, 1 / 30);
+      let dt = (t - last) / 1000;
       lastTRef.current = t;
+      if (!Number.isFinite(dt) || dt <= 0) dt = 0.016;
+      dt = Math.min(dt, 0.033); // clamp ~30fps max step
 
-      // Full clear every frame (no trails, no lightning).
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+
+      // Full clear each frame (no trails)
       ctx.clearRect(0, 0, w, h);
 
       const nodes = nodesRef.current;
-      if (!nodes || !nodes.length) {
+      if (!nodes || nodes.length === 0) {
         rafRef.current = requestAnimationFrame(tick);
         return;
       }
 
-      // Tuning for reduced motion.
-      const drift = reduced ? cfg.drift * 0.5 : cfg.drift;
-      const damp = reduced ? 0.988 : cfg.damp;
-      const maxV = reduced ? cfg.maxV * 0.7 : cfg.maxV;
-      const repelStrength = reduced ? cfg.repelStrength * 0.6 : cfg.repelStrength;
+      // Slow, calm speed
+      const speed = prefersReduced ? 0.25 : 0.65;
 
-      // 1) Update velocities (gentle deterministic wave) + damp.
+      // Move + wrap + mild repulsion to avoid clustering
       for (let i = 0; i < nodes.length; i++) {
-        const n = nodes[i];
-        const waveX = Math.sin(t * 0.00022 + n.phase) * drift;
-        const waveY = Math.cos(t * 0.00020 + n.phase * 1.37) * drift;
-        n.vx = (n.vx + waveX) * damp;
-        n.vy = (n.vy + waveY) * damp;
-        n.vx = clamp(n.vx, -maxV, maxV);
-        n.vy = clamp(n.vy, -maxV, maxV);
+        const p = nodes[i];
+        p.x += p.vx * speed * (dt * 60);
+        p.y += p.vy * speed * (dt * 60);
+
+        // Wrap edges
+        if (p.x < -20) p.x = w + 20;
+        if (p.x > w + 20) p.x = -20;
+        if (p.y < -20) p.y = h + 20;
+        if (p.y > h + 20) p.y = -20;
       }
 
-      // 2) Pair pass: gentle repulsion + build neighbor lists with caps.
-      const linkDist2 = cfg.linkDist * cfg.linkDist;
-      const repelDist2 = cfg.repelDist * cfg.repelDist;
-      const neighbors = Array.from({ length: nodes.length }, () => []);
-
+      // Repulsion pass (cheap)
       for (let i = 0; i < nodes.length; i++) {
         const a = nodes[i];
         for (let j = i + 1; j < nodes.length; j++) {
           const b = nodes[j];
-          const dx = a.x - b.x;
-          const dy = a.y - b.y;
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
           const d2 = dx * dx + dy * dy;
-
-          if (d2 <= linkDist2) {
-            insertNearest(neighbors[i], { j, d2 }, cfg.maxLinksPerNode);
-            insertNearest(neighbors[j], { j: i, d2 }, cfg.maxLinksPerNode);
-          }
-
-          if (d2 > 0 && d2 < repelDist2) {
+          if (d2 > 0 && d2 < 55 * 55) {
             const d = Math.sqrt(d2);
-            const k = (cfg.repelDist - d) / cfg.repelDist;
-            const push = k * repelStrength;
+            const push = (55 - d) / 55;
             const ux = dx / d;
             const uy = dy / d;
-            a.vx += ux * push;
-            a.vy += uy * push;
-            b.vx -= ux * push;
-            b.vy -= uy * push;
+            a.x -= ux * push * 0.18;
+            a.y -= uy * push * 0.18;
+            b.x += ux * push * 0.18;
+            b.y += uy * push * 0.18;
           }
         }
       }
 
-      // 3) Integrate positions (scaled to a 60fps baseline).
-      const step = dt * 60;
-      for (let i = 0; i < nodes.length; i++) {
-        const n = nodes[i];
-        n.x += n.vx * step;
-        n.y += n.vy * step;
+      ctx.save();
+      ctx.globalAlpha = opacity;
+      ctx.lineWidth = 1.25; // thicker but still premium
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
 
-        // Soft bounce.
-        if (n.x < 0) {
-          n.x = 0;
-          n.vx *= -1;
-        } else if (n.x > w) {
-          n.x = w;
-          n.vx *= -1;
-        }
-        if (n.y < 0) {
-          n.y = 0;
-          n.vy *= -1;
-        } else if (n.y > h) {
-          n.y = h;
-          n.vy *= -1;
-        }
-      }
-
-      // 4) Draw links (capped per node to avoid "burst" brightness).
+      // Draw links with limit per node
       for (let i = 0; i < nodes.length; i++) {
         const a = nodes[i];
-        const list = neighbors[i];
-        for (let k = 0; k < list.length; k++) {
-          const j = list[k].j;
-          if (j <= i) continue; // avoid duplicate strokes
+        // Find nearest neighbors (simple partial selection)
+        let links = 0;
+        for (let j = 0; j < nodes.length; j++) {
+          if (i === j) continue;
           const b = nodes[j];
-          const d = Math.sqrt(list[k].d2);
-          const strength = 1 - d / cfg.linkDist;
-          const alpha = cfg.alpha * strength;
-          ctx.strokeStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},${alpha})`;
-          ctx.lineWidth = cfg.baseLine + strength * 1.25;
-          ctx.beginPath();
-          ctx.moveTo(a.x, a.y);
-          ctx.lineTo(b.x, b.y);
-          ctx.stroke();
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < maxDist2) {
+            // draw closer first by quick thresholding
+            const strength = 1 - d2 / maxDist2;
+            // keep very faint far links
+            const alpha = 0.06 + 0.22 * strength;
+            ctx.globalAlpha = opacity * alpha;
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.stroke();
+            links++;
+            if (links >= maxLinksPerNode) break;
+          }
         }
       }
 
-      // 5) Nodes (subtle, not sparkly).
-      ctx.fillStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},${cfg.nodeAlpha})`;
+      // Draw nodes (subtle)
+      ctx.globalAlpha = opacity * 0.35;
       for (let i = 0; i < nodes.length; i++) {
-        const n = nodes[i];
+        const p = nodes[i];
         ctx.beginPath();
-        ctx.arc(n.x, n.y, cfg.nodeRadius, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, 1.6, 0, Math.PI * 2);
         ctx.fill();
       }
 
+      ctx.restore();
+
       rafRef.current = requestAnimationFrame(tick);
-    };
+    }
 
-    const onVis = () => {
-      if (document.hidden) stop();
-      else start();
-    };
+    const onResize = () => resizeAndSeed();
 
-    resize();
+    resizeAndSeed();
     start();
 
-    window.addEventListener("resize", resize, { passive: true });
-    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("resize", onResize, { passive: true });
+    document.addEventListener("visibilitychange", onVisibility);
+
     return () => {
-      window.removeEventListener("resize", resize);
-      document.removeEventListener("visibilitychange", onVis);
       stop();
+      window.removeEventListener("resize", onResize);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [cfg, rgb]);
+  }, [opacity, color]);
 
   return (
     <canvas
       ref={canvasRef}
       aria-hidden="true"
-      className={`pointer-events-none select-none w-full h-full ${className}`}
-      style={{ display: "block", ...style }}
+      className={className}
+      style={{
+        position: "fixed",
+        inset: 0,
+        width: "100%",
+        height: "100%",
+        pointerEvents: "none",
+        zIndex: -1, // <-- critical: never covers UI
+      }}
     />
   );
 }
