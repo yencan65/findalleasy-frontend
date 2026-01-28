@@ -17,9 +17,9 @@ export default function Footer({ fixed = false }) {
     <footer
       className={`
         py-2 sm:py-3 px-3 w-full
-        bg-[rgba(10,9,28,0.62)] backdrop-blur-2xl
-        border-t border-[rgba(122,92,255,0.18)]
-        shadow-[0_-10px_34px_rgba(0,0,0,0.28)]
+        bg-[rgba(16,14,40,0.44)] backdrop-blur-2xl
+        border-t border-[rgba(122,92,255,0.20)]
+        shadow-[0_-10px_34px_rgba(0,0,0,0.22)]
         ${fixed ? "fixed bottom-0 left-0 z-[60]" : ""}
       `}
     >
