@@ -969,9 +969,9 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
       <div key={"searchbar-" + tick} className="search-bar-wrapper flex justify-center w-full">
         <div
           className="flex items-center
-                     bg-[rgba(10,9,28,0.52)]
-                     border border-[rgba(122,92,255,0.22)]
-                     shadow-[0_0_40px_rgba(122,92,255,0.18)]
+                     bg-[var(--field-surface)]
+                     border border-[rgba(212,175,55,0.55)]
+                     shadow-[0_0_18px_rgba(212,175,55,0.16)]
                      rounded-full px-3 sm:px-4 py-2
                      w-[520px] max-w-[92%] sm:w-[420px] md:w-[500px] lg:w-[520px]
                      transition-all duration-300 ease-in-out"
@@ -994,7 +994,7 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
               onKeyDown={(e) => e.key === "Enter" && doSearch()}
               placeholder={placeholders[index]}
               className="w-full bg-transparent outline-none
-                         text-[#f2f1ff] placeholder:text-[#cfc8ff]/55
+                         text-white/95 placeholder:text-white/45
                          text-base px-3 pr-24 sm:pr-3 min-w-[120px]"
             />
 
@@ -1004,8 +1004,8 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
               disabled={loading}
               className="sm:hidden absolute right-2 top-1/2 -translate-y-1/2
                          w-9 h-9 rounded-full
-                         border border-[rgba(122,92,255,0.28)]
-                         text-[#cfc8ff] bg-transparent hover:bg-white/5 hover:text-white
+                         border border-[rgba(212,175,55,0.55)]
+                         text-[#D9A441] bg-transparent hover:bg-[#D9A441]/10 hover:text-[#D9A441]
                          flex items-center justify-center shadow-sm transition disabled:opacity-60"
               aria-label={t("search.search")}
             >
@@ -1016,7 +1016,7 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
           <button
             type="button"
             onClick={startMic}
-            className="ml-1 text-[#cfc8ff] hover:text-white transition p-2 rounded-full"
+            className="ml-1 text-[#D9A441] hover:text-[#D9A441] transition p-2 rounded-full hover:bg-[#D9A441]/10"
             aria-label={t("search.voice", { defaultValue: "Sesli arama" })}
           >
             <Mic className={`w-5 h-5 ${micListening ? "animate-pulse" : ""}`} />
@@ -1025,7 +1025,7 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
           <button
             type="button"
             onClick={openCamera}
-            className="text-[#cfc8ff] hover:text-white transition p-2 rounded-full"
+            className="text-[#D9A441] hover:text-[#D9A441] transition p-2 rounded-full hover:bg-[#D9A441]/10"
             aria-label={t("cameraSearch", { defaultValue: "Kamera ile ara" })}
           >
             <Camera className="w-5 h-5" />
@@ -1034,7 +1034,7 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
           <button
             type="button"
             onClick={() => setScannerOpen(true)}
-            className="text-[#cfc8ff] hover:text-white transition p-2 rounded-full"
+            className="text-[#D9A441] hover:text-[#D9A441] transition p-2 rounded-full hover:bg-[#D9A441]/10"
             aria-label={t("qrSearch", { defaultValue: "QR ile ara" })}
           >
             <QrCode className="w-5 h-5" />
@@ -1044,8 +1044,8 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
             onClick={() => doSearch()}
             disabled={loading}
             className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full
-                       border border-[rgba(122,92,255,0.28)]
-                       text-[#cfc8ff] bg-transparent hover:bg-white/5 hover:text-white
+                       border border-[rgba(212,175,55,0.55)]
+                       text-[#D9A441] bg-transparent hover:bg-[#D9A441]/10 hover:text-[#D9A441]
                        transition disabled:opacity-60"
           >
             <Search size={18} />
