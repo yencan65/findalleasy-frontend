@@ -30,6 +30,53 @@ export default function NeuralBackground({
 
     const rand = (a, b) => a + Math.random() * (b - a);
 
+    function getProfile(w) {
+      // Goal:
+      // - Mobile: lighter / less dense (so it doesn't look noisy)
+      // - Tablet/Desktop: slightly denser (so the "AI web" is felt)
+      if (w < 640) {
+        return {
+          // fewer nodes, fewer links, slightly lower alpha
+          areaDiv: 42000,
+          minNodes: 34,
+          maxNodes: 90,
+          linkDist: 150,
+          maxLinksPerNode: 3,
+          lineWidth: 1.05,
+          nodeRadius: 1.35,
+          nodeAlpha: 0.28,
+          linkAlphaMin: 0.045,
+          linkAlphaGain: 0.18,
+        };
+      }
+      if (w < 1024) {
+        return {
+          areaDiv: 31000,
+          minNodes: 55,
+          maxNodes: 165,
+          linkDist: 175,
+          maxLinksPerNode: 4,
+          lineWidth: 1.2,
+          nodeRadius: 1.5,
+          nodeAlpha: 0.32,
+          linkAlphaMin: 0.055,
+          linkAlphaGain: 0.22,
+        };
+      }
+      return {
+        areaDiv: 26000,
+        minNodes: 80,
+        maxNodes: 210,
+        linkDist: 195,
+        maxLinksPerNode: 5,
+        lineWidth: 1.3,
+        nodeRadius: 1.6,
+        nodeAlpha: 0.35,
+        linkAlphaMin: 0.06,
+        linkAlphaGain: 0.24,
+      };
+    }
+
     function resizeAndSeed() {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = Math.max(1, window.innerWidth);
@@ -42,8 +89,9 @@ export default function NeuralBackground({
 
       // Density based on area; cap to keep perf stable.
       const area = w * h;
-      const base = Math.round(area / 26000);
-      const n = Math.max(60, Math.min(180, base));
+      const P = getProfile(w);
+      const base = Math.round(area / P.areaDiv);
+      const n = Math.max(P.minNodes, Math.min(P.maxNodes, base));
 
       const nodes = [];
       for (let i = 0; i < n; i++) {
@@ -79,9 +127,19 @@ export default function NeuralBackground({
       }
     }
 
-    const maxDist = 170; // connection radius
-    const maxDist2 = maxDist * maxDist;
-    const maxLinksPerNode = 4; // prevents overdraw bursts
+    function getDrawParams() {
+      const w = window.innerWidth;
+      const P = getProfile(w);
+      return {
+        maxDist: P.linkDist,
+        maxLinksPerNode: P.maxLinksPerNode,
+        lineWidth: P.lineWidth,
+        nodeRadius: P.nodeRadius,
+        nodeAlpha: P.nodeAlpha,
+        linkAlphaMin: P.linkAlphaMin,
+        linkAlphaGain: P.linkAlphaGain,
+      };
+    }
 
     function tick(t) {
       if (!runningRef.current) return;
@@ -95,6 +153,9 @@ export default function NeuralBackground({
 
       const w = window.innerWidth;
       const h = window.innerHeight;
+
+      const DP = getDrawParams();
+      const maxDist2 = DP.maxDist * DP.maxDist;
 
       // Full clear each frame (no trails)
       ctx.clearRect(0, 0, w, h);
@@ -144,7 +205,7 @@ export default function NeuralBackground({
 
       ctx.save();
       ctx.globalAlpha = opacity;
-      ctx.lineWidth = 1.25; // thicker but still premium
+      ctx.lineWidth = DP.lineWidth;
       ctx.strokeStyle = color;
       ctx.fillStyle = color;
 
@@ -163,24 +224,24 @@ export default function NeuralBackground({
             // draw closer first by quick thresholding
             const strength = 1 - d2 / maxDist2;
             // keep very faint far links
-            const alpha = 0.06 + 0.22 * strength;
+            const alpha = DP.linkAlphaMin + DP.linkAlphaGain * strength;
             ctx.globalAlpha = opacity * alpha;
             ctx.beginPath();
             ctx.moveTo(a.x, a.y);
             ctx.lineTo(b.x, b.y);
             ctx.stroke();
             links++;
-            if (links >= maxLinksPerNode) break;
+            if (links >= DP.maxLinksPerNode) break;
           }
         }
       }
 
       // Draw nodes (subtle)
-      ctx.globalAlpha = opacity * 0.35;
+      ctx.globalAlpha = opacity * DP.nodeAlpha;
       for (let i = 0; i < nodes.length; i++) {
         const p = nodes[i];
         ctx.beginPath();
-        ctx.arc(p.x, p.y, 1.6, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, DP.nodeRadius, 0, Math.PI * 2);
         ctx.fill();
       }
 
