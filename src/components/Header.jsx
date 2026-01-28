@@ -205,8 +205,8 @@ export default function Header() {
       className="
         w-full flex flex-row justify-between items-center flex-nowrap gap-2 sm:gap-3 relative z-10
         px-3 sm:px-6 py-3 sm:py-4
-        bg-[rgba(10,9,28,0.72)]
-        border-b border-[rgba(122,92,255,0.18)]
+        bg-[rgba(16,14,40,0.52)]
+        border-b border-[rgba(122,92,255,0.20)]
         text-white font-sans backdrop-blur-2xl
       "
       style={{
