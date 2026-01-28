@@ -211,7 +211,16 @@ const resources = {
         personalizing: "Kişiselleştiriliyor…",
         others: "Diğerleri",
         noResults: "Henüz sonuç bulunamadı."
-      },
+,
+        emptyInfoLine: "Bu site, aradığın ürün veya hizmeti hızlıca bulup fiyatları karşılaştırır.",
+        emptyBenefitsTitle: "Sana faydası:",
+        benefitTimeTitle: "Zaman kazandırır",
+        benefitTimeDesc: "Tek tek site gezmeden sonuçları tek yerde görürsün.",
+        benefitMoneyTitle: "Para kazandırır",
+        benefitMoneyDesc: "En uygun/ekonomik seçenekleri öne çıkarır, gereksiz pahalıya kaçmanı engeller.",
+        benefitPeaceTitle: "Kafa rahatlatır",
+        benefitPeaceDesc: "Alakasız “çer çöp” sonuçları ayıklayıp daha güvenilir kaynaklara öncelik verir."
+      },,
 
       common: {
         loading: "Yükleniyor…",
@@ -604,7 +613,16 @@ const resources = {
         personalizing: "Personalizing…",
         others: "Others",
         noResults: "No results yet."
-      },
+,
+        emptyInfoLine: "This site helps you quickly find the product or service you’re looking for and compare prices.",
+        emptyBenefitsTitle: "Benefits for you:",
+        benefitTimeTitle: "Saves time",
+        benefitTimeDesc: "See results in one place instead of browsing site by site.",
+        benefitMoneyTitle: "Saves money",
+        benefitMoneyDesc: "Highlights budget-friendly options so you don’t overpay.",
+        benefitPeaceTitle: "Peace of mind",
+        benefitPeaceDesc: "Filters out irrelevant junk and prioritizes more reliable sources."
+      },,
 
       common: {
         loading: "Loading…",
@@ -1004,7 +1022,16 @@ const resources = {
         personalizing: "Personnalisation…",
         others: "Autres",
         noResults: "Aucun résultat."
-      },
+,
+        emptyInfoLine: "Ce site t’aide à trouver rapidement le produit ou le service que tu cherches et à comparer les prix.",
+        emptyBenefitsTitle: "Tes avantages :",
+        benefitTimeTitle: "Gagne du temps",
+        benefitTimeDesc: "Tu vois les résultats au même endroit, sans visiter chaque site.",
+        benefitMoneyTitle: "Économise de l’argent",
+        benefitMoneyDesc: "Met en avant les options les plus économiques pour éviter de payer trop cher.",
+        benefitPeaceTitle: "Tranquillité d’esprit",
+        benefitPeaceDesc: "Filtre le contenu hors sujet et privilégie des sources plus fiables."
+      },,
 
       common: {
         loading: "Chargement…",
@@ -1401,7 +1428,16 @@ const resources = {
         personalizing: "Персонализация…",
         others: "Другие",
         noResults: "Нет результатов."
-      },
+,
+        emptyInfoLine: "Этот сайт помогает быстро найти нужный товар или услугу и сравнить цены.",
+        emptyBenefitsTitle: "Твоя выгода:",
+        benefitTimeTitle: "Экономит время",
+        benefitTimeDesc: "Результаты в одном месте — без обхода множества сайтов.",
+        benefitMoneyTitle: "Экономит деньги",
+        benefitMoneyDesc: "Выдвигает бюджетные варианты, чтобы не переплачивать.",
+        benefitPeaceTitle: "Спокойствие",
+        benefitPeaceDesc: "Отсекает нерелевантный мусор и отдаёт приоритет более надёжным источникам."
+      },,
 
       common: {
         loading: "Загрузка…",
@@ -1796,7 +1832,16 @@ const resources = {
         personalizing: "جارٍ التخصيص…",
         others: "آخرون",
         noResults: "لا توجد نتائج."
-      },
+,
+        emptyInfoLine: "يساعدك هذا الموقع على العثور بسرعة على المنتج أو الخدمة التي تبحث عنها ومقارنة الأسعار.",
+        emptyBenefitsTitle: "الفائدة لك:",
+        benefitTimeTitle: "يوفر الوقت",
+        benefitTimeDesc: "ترى النتائج في مكان واحد بدلًا من زيارة مواقع متعددة.",
+        benefitMoneyTitle: "يوفر المال",
+        benefitMoneyDesc: "يبرز الخيارات الاقتصادية حتى لا تدفع أكثر من اللازم.",
+        benefitPeaceTitle: "راحة البال",
+        benefitPeaceDesc: "يصفّي النتائج غير ذات الصلة ويعطي أولوية للمصادر الأكثر موثوقية."
+      },,
 
       common: {
         loading: "جارٍ التحميل…",
