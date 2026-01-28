@@ -210,8 +210,7 @@ const resources = {
         aiCumulative: "SonoAI Önerileri",
         personalizing: "Kişiselleştiriliyor…",
         others: "Diğerleri",
-        noResults: "Henüz sonuç bulunamadı."
-,
+        noResults: "Henüz sonuç bulunamadı.",
         emptyInfoLine: "Bu site, aradığın ürün veya hizmeti hızlıca bulup fiyatları karşılaştırır.",
         emptyBenefitsTitle: "Sana faydası:",
         benefitTimeTitle: "Zaman kazandırır",
@@ -220,7 +219,7 @@ const resources = {
         benefitMoneyDesc: "En uygun/ekonomik seçenekleri öne çıkarır, gereksiz pahalıya kaçmanı engeller.",
         benefitPeaceTitle: "Kafa rahatlatır",
         benefitPeaceDesc: "Alakasız “çer çöp” sonuçları ayıklayıp daha güvenilir kaynaklara öncelik verir."
-      },,
+      },
 
       common: {
         loading: "Yükleniyor…",
@@ -612,8 +611,7 @@ const resources = {
         aiCumulative: "SonoAI Suggestions",
         personalizing: "Personalizing…",
         others: "Others",
-        noResults: "No results yet."
-,
+        noResults: "No results yet.",
         emptyInfoLine: "This site helps you quickly find the product or service you’re looking for and compare prices.",
         emptyBenefitsTitle: "Benefits for you:",
         benefitTimeTitle: "Saves time",
@@ -622,7 +620,7 @@ const resources = {
         benefitMoneyDesc: "Highlights budget-friendly options so you don’t overpay.",
         benefitPeaceTitle: "Peace of mind",
         benefitPeaceDesc: "Filters out irrelevant junk and prioritizes more reliable sources."
-      },,
+      },
 
       common: {
         loading: "Loading…",
@@ -1021,8 +1019,7 @@ const resources = {
         aiCumulative: "Suggestions SonoAI",
         personalizing: "Personnalisation…",
         others: "Autres",
-        noResults: "Aucun résultat."
-,
+        noResults: "Aucun résultat.",
         emptyInfoLine: "Ce site t’aide à trouver rapidement le produit ou le service que tu cherches et à comparer les prix.",
         emptyBenefitsTitle: "Tes avantages :",
         benefitTimeTitle: "Gagne du temps",
@@ -1031,7 +1028,7 @@ const resources = {
         benefitMoneyDesc: "Met en avant les options les plus économiques pour éviter de payer trop cher.",
         benefitPeaceTitle: "Tranquillité d’esprit",
         benefitPeaceDesc: "Filtre le contenu hors sujet et privilégie des sources plus fiables."
-      },,
+      },
 
       common: {
         loading: "Chargement…",
@@ -1427,8 +1424,7 @@ const resources = {
         aiCumulative: "Рекомендации SonoAI",
         personalizing: "Персонализация…",
         others: "Другие",
-        noResults: "Нет результатов."
-,
+        noResults: "Нет результатов.",
         emptyInfoLine: "Этот сайт помогает быстро найти нужный товар или услугу и сравнить цены.",
         emptyBenefitsTitle: "Твоя выгода:",
         benefitTimeTitle: "Экономит время",
@@ -1437,7 +1433,7 @@ const resources = {
         benefitMoneyDesc: "Выдвигает бюджетные варианты, чтобы не переплачивать.",
         benefitPeaceTitle: "Спокойствие",
         benefitPeaceDesc: "Отсекает нерелевантный мусор и отдаёт приоритет более надёжным источникам."
-      },,
+      },
 
       common: {
         loading: "Загрузка…",
@@ -1831,8 +1827,7 @@ const resources = {
         aiCumulative: "اقتراحات SonoAI",
         personalizing: "جارٍ التخصيص…",
         others: "آخرون",
-        noResults: "لا توجد نتائج."
-,
+        noResults: "لا توجد نتائج.",
         emptyInfoLine: "يساعدك هذا الموقع على العثور بسرعة على المنتج أو الخدمة التي تبحث عنها ومقارنة الأسعار.",
         emptyBenefitsTitle: "الفائدة لك:",
         benefitTimeTitle: "يوفر الوقت",
@@ -1841,7 +1836,7 @@ const resources = {
         benefitMoneyDesc: "يبرز الخيارات الاقتصادية حتى لا تدفع أكثر من اللازم.",
         benefitPeaceTitle: "راحة البال",
         benefitPeaceDesc: "يصفّي النتائج غير ذات الصلة ويعطي أولوية للمصادر الأكثر موثوقية."
-      },,
+      },
 
       common: {
         loading: "جارٍ التحميل…",
