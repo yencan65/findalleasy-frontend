@@ -45,6 +45,12 @@ export default function NeuralBackground() {
     const ctx = canvas.getContext("2d", { alpha: true });
     if (!ctx) return;
 
+    const reduceMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+
     const resize = () => {
       const dpr = clamp(window.devicePixelRatio || 1, 1, 2);
       const w = window.innerWidth || 1;
@@ -68,8 +74,8 @@ export default function NeuralBackground() {
           x: Math.random() * w,
           y: Math.random() * h,
           // Slow drift only — premium feel (no jitter)
-          vx: (Math.random() - 0.5) * (isSmall ? 0.08 : 0.12),
-          vy: (Math.random() - 0.5) * (isSmall ? 0.08 : 0.12),
+          vx: (Math.random() - 0.5) * (isSmall ? 0.05 : 0.08),
+          vy: (Math.random() - 0.5) * (isSmall ? 0.05 : 0.08),
           r: isSmall ? 1.1 : 1.35,
         });
       }
@@ -118,7 +124,7 @@ export default function NeuralBackground() {
 
       // Update background nodes
       // Global speed control: keep it slow & easy on the eyes.
-      const speed = w < 520 ? 0.22 : 0.32;
+      const speed = reduceMotion ? 0.06 : (w < 520 ? 0.14 : 0.18);
       for (const n of st.nodes) {
         // Gentle drift + tiny pull toward midline between a and b
         const midx = (a.x + b.x) / 2;
@@ -149,9 +155,9 @@ export default function NeuralBackground() {
           const dy = ni.y - nj.y;
           const d = Math.hypot(dx, dy);
           if (d < maxDist) {
-            const a1 = (1 - d / maxDist) * 0.075; // extra subtle
+            const a1 = (1 - d / maxDist)  * 0.06; // extra subtle
             ctx.strokeStyle = `rgba(${palette.line},${a1})`;
-            ctx.lineWidth = 0.7;
+            ctx.lineWidth = 0.6;
             ctx.beginPath();
             ctx.moveTo(ni.x, ni.y);
             ctx.lineTo(nj.x, nj.y);
