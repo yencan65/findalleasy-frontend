@@ -716,8 +716,19 @@ useEffect(() => {
     return () => clearInterval(i);
   }, [i18n.language, t]);
 
+  // Theme background: slightly brighter (still premium), matched to header/footer glass.
+  const appBgStyle = {
+    background:
+      "radial-gradient(900px circle at 50% 18%, rgba(122,92,255,0.18), transparent 60%)," +
+      " radial-gradient(760px circle at 18% 78%, rgba(212,175,55,0.10), transparent 55%)," +
+      " #0a0920",
+  };
+
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-[#050512] text-white font-sans overflow-x-hidden relative">
+    <div
+      className="min-h-[100dvh] flex flex-col text-white font-sans overflow-x-hidden relative"
+      style={appBgStyle}
+    >
       <NeuralBackground />
       <Header />
       <NetworkStatusBanner />
