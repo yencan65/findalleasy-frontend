@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useRef } from "react";
 
-// Lightweight animated neural-network background.
-// - Purple network, subtle motion.
-// - "Starts" near logo (#fae-logo) and drifts toward search bar (#search-input).
-// - Covers full viewport; pointer-events disabled.
-// - Responsive: fewer nodes on small screens.
+// Animated neural-network background (purple) — visible but not noisy.
+// Goals per request:
+// - Thicker lines (more presence), still premium.
+// - Slow motion (eye-friendly).
+// - Dense coverage across the whole viewport (web everywhere).
+// - Starts near logo (#fae-logo) and drifts toward search bar (#search-input).
+// - Respects prefers-reduced-motion.
 
 function clamp(n, a, b) {
   return Math.max(a, Math.min(b, n));
@@ -26,13 +28,13 @@ export default function NeuralBackground() {
     nodes: [],
     stream: [],
     t0: 0,
+    reduce: false,
   });
 
   const palette = useMemo(() => {
-    // Purple, not neon. Adjust alphas in draw loop.
     return {
-      line: "122,92,255",     // #7A5CFF
-      line2: "107,78,255",    // #6B4EFF
+      line: "122,92,255",  // #7A5CFF
+      line2: "107,78,255", // #6B4EFF
       glow: "160,140,255",
       bg: "5,5,18",
     };
@@ -45,6 +47,14 @@ export default function NeuralBackground() {
     const ctx = canvas.getContext("2d", { alpha: true });
     if (!ctx) return;
 
+    const detectReduceMotion = () => {
+      try {
+        return !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      } catch {
+        return false;
+      }
+    };
+
     const resize = () => {
       const dpr = clamp(window.devicePixelRatio || 1, 1, 2);
       const w = window.innerWidth || 1;
@@ -55,38 +65,46 @@ export default function NeuralBackground() {
       canvas.style.width = `${w}px`;
       canvas.style.height = `${h}px`;
 
-      stateRef.current.w = w;
-      stateRef.current.h = h;
-      stateRef.current.dpr = dpr;
+      const st = stateRef.current;
+      st.w = w;
+      st.h = h;
+      st.dpr = dpr;
+      st.reduce = detectReduceMotion();
 
-      // (Re)seed nodes based on viewport size
+      // Dense web across the whole viewport, but keep CPU sane.
+      // Scale node count by screen area with caps.
+      const area = w * h;
       const isSmall = w < 520;
-      const baseN = isSmall ? 34 : w < 900 ? 54 : 74;
+      const baseN = isSmall
+        ? clamp(Math.round(area / 18000), 46, 86)
+        : clamp(Math.round(area / 15000), 80, 125);
+
       const nodes = [];
       for (let i = 0; i < baseN; i++) {
+        const slow = isSmall ? 0.06 : 0.075;
         nodes.push({
           x: Math.random() * w,
           y: Math.random() * h,
-          // Slow drift only — premium feel (no jitter)
-          vx: (Math.random() - 0.5) * (isSmall ? 0.05 : 0.08),
-          vy: (Math.random() - 0.5) * (isSmall ? 0.05 : 0.08),
-          r: isSmall ? 1.1 : 1.35,
+          // Slow drift only — no jitter
+          vx: (Math.random() - 0.5) * slow,
+          vy: (Math.random() - 0.5) * slow,
+          r: isSmall ? 1.25 : 1.55,
         });
       }
 
       // "Stream" nodes along logo -> search bar
-      const streamN = isSmall ? 10 : 14;
+      const streamN = isSmall ? 12 : 18;
       const stream = [];
       for (let i = 0; i < streamN; i++) {
         stream.push({
           p: i / (streamN - 1),
-          wig: (Math.random() - 0.5) * 18,
+          wig: (Math.random() - 0.5) * (isSmall ? 16 : 22),
           ph: Math.random() * Math.PI * 2,
         });
       }
 
-      stateRef.current.nodes = nodes;
-      stateRef.current.stream = stream;
+      st.nodes = nodes;
+      st.stream = stream;
     };
 
     const step = (t) => {
@@ -103,44 +121,54 @@ export default function NeuralBackground() {
       const logo = document.getElementById("fae-logo");
       const search = document.getElementById("search-input");
 
-      const a = getCenter(logo) || { x: w * 0.12, y: 42 };
+      const a = getCenter(logo) || { x: w * 0.12, y: 44 };
       const b = getCenter(search) || { x: w * 0.5, y: h * 0.32 };
 
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
 
-      // Very subtle vignette to blend the network
-      const g = ctx.createRadialGradient(w * 0.55, h * 0.25, 40, w * 0.55, h * 0.25, Math.max(w, h) * 0.9);
+      // Subtle vignette to blend the web into the page (not to darken the whole UI)
+      const g = ctx.createRadialGradient(
+        w * 0.55,
+        h * 0.25,
+        40,
+        w * 0.55,
+        h * 0.25,
+        Math.max(w, h) * 0.95
+      );
       g.addColorStop(0, `rgba(${palette.bg},0.0)`);
-      g.addColorStop(1, `rgba(${palette.bg},0.10)`);
+      g.addColorStop(1, `rgba(${palette.bg},0.06)`);
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, w, h);
 
-      // Update background nodes
-      // Global speed control: keep it slow & easy on the eyes.
-      const speed = w < 520 ? 0.14 : 0.20;
+      // Update background nodes (slow)
+      const isSmall = w < 520;
+      const reduce = !!st.reduce;
+
+      // Keep motion slow; extra slow if reduce-motion is enabled.
+      const speed = reduce ? 0.055 : isSmall ? 0.11 : 0.13;
+
       for (const n of st.nodes) {
-        // Gentle drift + tiny pull toward midline between a and b
+        // Gentle pull toward the midline between anchors to make the web feel "directed"
         const midx = (a.x + b.x) / 2;
         const midy = (a.y + b.y) / 2;
-        const pullx = (midx - n.x) * 0.00002;
-        const pully = (midy - n.y) * 0.00002;
-
-        n.vx += pullx;
-        n.vy += pully;
+        n.vx += (midx - n.x) * 0.000018;
+        n.vy += (midy - n.y) * 0.000018;
 
         n.x += n.vx * dt * speed;
         n.y += n.vy * dt * speed;
 
-        // soft bounds
-        if (n.x < -40) n.x = w + 40;
-        if (n.x > w + 40) n.x = -40;
-        if (n.y < -40) n.y = h + 40;
-        if (n.y > h + 40) n.y = -40;
+        // wrap bounds
+        if (n.x < -50) n.x = w + 50;
+        if (n.x > w + 50) n.x = -50;
+        if (n.y < -50) n.y = h + 50;
+        if (n.y > h + 50) n.y = -50;
       }
 
       // Draw connections among nearby nodes
-      const maxDist = w < 520 ? 95 : 120;
+      // More coverage: larger distance threshold + thicker lines.
+      const maxDist = reduce ? (isSmall ? 120 : 150) : (isSmall ? 150 : 190);
+
       for (let i = 0; i < st.nodes.length; i++) {
         const ni = st.nodes[i];
         for (let j = i + 1; j < st.nodes.length; j++) {
@@ -149,9 +177,16 @@ export default function NeuralBackground() {
           const dy = ni.y - nj.y;
           const d = Math.hypot(dx, dy);
           if (d < maxDist) {
-            const a1 = (1 - d / maxDist) * 0.075; // extra subtle
-            ctx.strokeStyle = `rgba(${palette.line},${a1})`;
-            ctx.lineWidth = 0.7;
+            const k = 1 - d / maxDist;
+
+            // Presence without neon: keep alpha modest, but higher than before.
+            const alpha = clamp(k * (reduce ? 0.10 : 0.14), 0.015, reduce ? 0.10 : 0.14);
+
+            // Thicker lines, vary by proximity for depth.
+            const lw = (isSmall ? 0.95 : 1.15) + k * (isSmall ? 0.70 : 0.85);
+
+            ctx.strokeStyle = `rgba(${palette.line},${alpha})`;
+            ctx.lineWidth = lw;
             ctx.beginPath();
             ctx.moveTo(ni.x, ni.y);
             ctx.lineTo(nj.x, nj.y);
@@ -168,33 +203,36 @@ export default function NeuralBackground() {
       const ny = sx / len;
 
       const time = t * 0.001;
+      const wigSpeed = reduce ? 0.14 : 0.22;
+
       const streamPts = [];
       for (const s of st.stream) {
-        const wiggle = Math.sin(time * 0.35 + s.ph) * (w < 520 ? 5 : 7) + s.wig * 0.18;
+        const wiggle =
+          Math.sin(time * wigSpeed + s.ph) * (isSmall ? 6 : 9) +
+          s.wig * 0.20;
         const x = a.x + sx * s.p + nx * wiggle;
         const y = a.y + sy * s.p + ny * wiggle;
         streamPts.push({ x, y });
       }
 
-      // draw stream segments
+      // draw stream segments (slightly thicker + clearer)
       for (let i = 0; i < streamPts.length - 1; i++) {
         const p1 = streamPts[i];
         const p2 = streamPts[i + 1];
-        const a2 = 0.16;
-        ctx.strokeStyle = `rgba(${palette.line2},${a2})`;
-        ctx.lineWidth = w < 520 ? 0.9 : 1.0;
+        ctx.strokeStyle = `rgba(${palette.line2},${reduce ? 0.14 : 0.18})`;
+        ctx.lineWidth = isSmall ? 1.55 : 1.85;
         ctx.beginPath();
         ctx.moveTo(p1.x, p1.y);
         ctx.lineTo(p2.x, p2.y);
         ctx.stroke();
       }
 
-      // nodes (small dots) + slight glow near stream
+      // nodes (dots)
       for (const n of st.nodes) {
         const dx = n.x - b.x;
         const dy = n.y - b.y;
         const d = Math.hypot(dx, dy);
-        const alpha = d < 240 ? 0.12 : 0.07;
+        const alpha = d < 260 ? (reduce ? 0.11 : 0.15) : (reduce ? 0.07 : 0.10);
         ctx.fillStyle = `rgba(${palette.glow},${alpha})`;
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
@@ -205,18 +243,18 @@ export default function NeuralBackground() {
       const drawAnchor = (p, a0) => {
         ctx.fillStyle = `rgba(${palette.glow},${a0})`;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, w < 520 ? 4.2 : 5.2, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, isSmall ? 4.5 : 5.6, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.strokeStyle = `rgba(${palette.line},${a0 * 0.75})`;
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = `rgba(${palette.line},${a0 * 0.78})`;
+        ctx.lineWidth = isSmall ? 1.25 : 1.35;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, w < 520 ? 12 : 14, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, isSmall ? 12.5 : 15.5, 0, Math.PI * 2);
         ctx.stroke();
       };
 
-      drawAnchor(a, 0.18);
-      drawAnchor(b, 0.16);
+      drawAnchor(a, reduce ? 0.16 : 0.20);
+      drawAnchor(b, reduce ? 0.14 : 0.18);
 
       rafRef.current = requestAnimationFrame(step);
     };
@@ -224,12 +262,26 @@ export default function NeuralBackground() {
     resize();
     window.addEventListener("resize", resize, { passive: true });
 
+    // listen reduce-motion changes
+    let mql;
+    try {
+      mql = window.matchMedia("(prefers-reduced-motion: reduce)");
+      const onChange = () => {
+        stateRef.current.reduce = detectReduceMotion();
+      };
+      if (mql && mql.addEventListener) mql.addEventListener("change", onChange);
+      else if (mql && mql.addListener) mql.addListener(onChange);
+    } catch {}
+
     rafRef.current = requestAnimationFrame(step);
 
     return () => {
       window.removeEventListener("resize", resize);
       try {
         cancelAnimationFrame(rafRef.current);
+      } catch {}
+      try {
+        if (mql && mql.removeEventListener) mql.removeEventListener("change", () => {});
       } catch {}
     };
   }, [palette]);
@@ -239,9 +291,9 @@ export default function NeuralBackground() {
       aria-hidden="true"
       className="fixed inset-0 z-0 pointer-events-none"
       style={{
-        // keep it behind UI layers but visible through transparent/glass
+        // visible through glass UI; keep behind main content layers
         mixBlendMode: "screen",
-        opacity: 0.55,
+        opacity: 0.62,
       }}
     >
       <canvas ref={canvasRef} className="w-full h-full" />
