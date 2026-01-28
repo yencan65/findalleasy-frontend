@@ -215,7 +215,8 @@ export default function NeuralBackground({
         width: "100%",
         height: "100%",
         pointerEvents: "none",
-        zIndex: -1, // <-- critical: never covers UI
+        mixBlendMode: "multiply",
+        zIndex: 0, // show behind UI; content should render above by DOM order
       }}
     />
   );
