@@ -1418,8 +1418,8 @@ const isFailish = (t) => {
       {open && (
         <div
           className="mt-2
-          bg-[rgba(10,9,28,0.82)] text-[#f2f1ff]
-          border border-[rgba(122,92,255,0.28)]
+          bg-[var(--ui-surface-strong)] text-white/95
+          border border-[rgba(212,175,55,0.20)]
           rounded-2xl shadow-[0_18px_70px_rgba(0,0,0,0.60),0_0_40px_rgba(122,92,255,0.12)]
           backdrop-blur-2xl p-3 w-[calc(100vw-32px)] max-w-[380px] md:w-[340px] md:max-w-[340px]
           flex flex-col overflow-hidden"
@@ -1427,7 +1427,7 @@ const isFailish = (t) => {
         >
           {/* ✅ Mode chooser / active mode badge */}
           {!sonoMode ? (
-            <div className="mb-2 p-2 rounded-xl border border-[rgba(122,92,255,0.22)] bg-white/5">
+            <div className="mb-2 p-2 rounded-xl border border-[rgba(212,175,55,0.18)] bg-black/10">
               <div className="text-xs text-white/80">
                 {t("ai.chooseModeTitle", { defaultValue: "Mod seç: Ürün/Hizmet Ara veya Soru Sor/Bilgi Al" })}
               </div>
@@ -1453,7 +1453,7 @@ const isFailish = (t) => {
             </div>
           ) : (
             <div className="mb-2 flex items-center justify-between gap-2">
-              <div className="text-[11px] px-2 py-1 rounded-full border border-[rgba(122,92,255,0.22)] text-white/80 bg-white/5">
+              <div className="text-[11px] px-2 py-1 rounded-full border border-[rgba(212,175,55,0.18)] text-white/85 bg-black/10">
                 {String(sonoMode).toLowerCase() === "search"
                   ? t("ai.modeActiveSearch", { defaultValue: "Mod: Ürün/Hizmet Arama" })
                   : t("ai.modeActiveChat", { defaultValue: "Mod: Bilgi / Sohbet" })}
