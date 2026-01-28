@@ -1255,8 +1255,42 @@ export default function Vitrin() {
               }}
             />
           ) : (
-            <div className="rounded-2xl border border-dashed border-white/15 text-xs text-white/40 p-4 flex items-center justify-center h-full min-h-[160px]">
-              {t("trigger.customShowcase", { defaultValue: "Kişisel vitrinini hazırlıyorum..." })}
+            <div className="rounded-2xl border border-dashed border-white/15 p-5 sm:p-6 flex items-center justify-center h-full min-h-[180px] bg-[rgba(16,12,32,0.35)] backdrop-blur">
+              <div className="max-w-[720px]">
+                <p className="text-white/85 text-sm sm:text-base font-medium text-center">
+                  {t("showcase.emptyInfoLine", { defaultValue: "Bu site, aradığın ürün veya hizmeti hızlıca bulup fiyatları karşılaştırır." })}
+                </p>
+
+                <div className="mt-4">
+                  <div className="text-white/80 font-semibold text-sm sm:text-base" style={{ textAlign: "start" }}>
+                    {t("showcase.emptyBenefitsTitle", { defaultValue: "Sana faydası:" })}
+                  </div>
+
+                  <ul
+                    className="mt-2 space-y-1.5 text-[12px] sm:text-[13px] text-white/70"
+                    style={{ textAlign: "start", paddingInlineStart: "1.1rem" }}
+                  >
+                    <li>
+                      <span className="text-white/85 font-semibold">
+                        {t("showcase.benefitTimeTitle", { defaultValue: "Zaman kazandırır" })}
+                      </span>
+                      : {t("showcase.benefitTimeDesc", { defaultValue: "Tek tek site gezmeden sonuçları tek yerde görürsün." })}
+                    </li>
+                    <li>
+                      <span className="text-white/85 font-semibold">
+                        {t("showcase.benefitMoneyTitle", { defaultValue: "Para kazandırır" })}
+                      </span>
+                      : {t("showcase.benefitMoneyDesc", { defaultValue: "En uygun/ekonomik seçenekleri öne çıkarır, gereksiz pahalıya kaçmanı engeller." })}
+                    </li>
+                    <li>
+                      <span className="text-white/85 font-semibold">
+                        {t("showcase.benefitPeaceTitle", { defaultValue: "Kafa rahatlatır" })}
+                      </span>
+                      : {t("showcase.benefitPeaceDesc", { defaultValue: "Alakasız “çer çöp” sonuçları ayıklayıp daha güvenilir kaynaklara öncelik verir." })}
+                    </li>
+                  </ul>
+                </div>
+              </div>
             </div>
           )}
         </div>
