@@ -205,13 +205,11 @@ export default function Header() {
       className="
         w-full flex flex-row justify-between items-center flex-nowrap gap-2 sm:gap-3 relative z-10
         px-3 sm:px-6 py-3 sm:py-4
-        bg-[rgba(16,14,40,0.52)]
-        border-b border-[rgba(122,92,255,0.20)]
-        text-white font-sans backdrop-blur-2xl
+        bg-[var(--ui-surface-strong)]
+        border-b border-[rgba(212,175,55,0.13)]
+        text-white font-sans backdrop-blur-xl
       "
-      style={{
-        boxShadow: "0 10px 34px rgba(0,0,0,0.35), 0 0 26px rgba(122,92,255,0.10)",
-      }}
+      style={{ boxShadow: "0 6px 18px rgba(0,0,0,0.10)" }}
     >
       {/* LOGO */}
       <button
