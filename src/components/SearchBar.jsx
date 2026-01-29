@@ -7,7 +7,6 @@ import { useStatusBus } from "../context/StatusBusContext";
 import QRScanner from "./QRScanner";
 import { API_BASE } from "../utils/api";
 import { detectCategory } from "../utils/categoryExtractor";
-import { analyzeImageLocal } from "../utils/localVision";
 
 export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
   const { t, i18n } = useTranslation();
@@ -374,6 +373,8 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
           categoryHint: category,
           locale,
           source,
+          // 🔒 Vitrin sadece kullanıcı aramasıyla tetiklensin
+          userInitiated: opts?.userInitiated !== false,
         });
       } finally {
         setLoading(false);
@@ -748,55 +749,6 @@ export default function SearchBar({ onSearch, selectedRegion = "TR" }) {
         tone: "gold",
         priority: STATUS_PRIO,
       });
-
-
-      // LOCAL (no-key) vision: run a conservative on-device classifier first.
-      // This avoids sending the image anywhere and prevents junk OCR from triggering wrong searches.
-      const localVisionEnabled = (() => {
-        const v = String(import.meta.env.VITE_FAE_LOCAL_VISION ?? "1").trim();
-        return v !== "0";
-      })();
-
-      if (localVisionEnabled) {
-        try {
-          let lastPct = -1;
-          const lv = await analyzeImageLocal(f, {
-            locale: i18n?.language || "tr",
-            onProgress: (p) => {
-              const loaded = Number(p?.loaded ?? 0);
-              const total = Number(p?.total ?? 0);
-              const pct = total > 0 ? Math.round((loaded / total) * 100) : null;
-              if (pct != null && pct !== lastPct) {
-                lastPct = pct;
-                setStatus(STATUS_SRC, {
-                  text: t("search.modelDownloading", { defaultValue: "Model indiriliyor… %{{pct}}", pct }),
-                  showDots: true,
-                  tone: "gold",
-                  priority: STATUS_PRIO,
-                });
-              }
-            },
-          });
-
-          const qlv = String(lv?.query || "").trim();
-          const conf = Number(lv?.confidence ?? 0);
-
-          if (qlv && conf >= 0.55) {
-            setValue(qlv);
-            flashMsg(
-              t("search.imageDetected", { defaultValue: "Görüntüden anladığım: {{query}}", query: qlv }),
-              900,
-              "muted"
-            );
-            setCalm(t("search.voiceDone", { defaultValue: "Tamam — arıyorum." }), 600);
-            kickedSearch = true;
-            await doSearch(qlv, "camera");
-            return;
-          }
-        } catch {
-          // ignore, fall through
-        }
-      }
 
       const text = await detectTextFromFile(f);
       if (text) {
