@@ -1,5 +1,5 @@
 // src/components/Vitrin.jsx
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getProviderIconFinal } from "../utils/providerIcons";
 import { sendClick } from "../api/click";
@@ -319,26 +319,9 @@ export default function Vitrin() {
   const [cursor, setCursor] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  // ============================================================
-  // 🔒 "Has the user searched?" flag (prevents auto-trigger on page load)
-  // ============================================================
-  const getHasSearchedFlag = () => {
-    try {
-      if (typeof window === "undefined" || !window.sessionStorage) return false;
-      return window.sessionStorage.getItem("fae.hasSearched") === "1";
-    } catch {
-      return false;
-    }
-  };
-
-  const markHasSearched = () => {
-    try {
-      if (typeof window === "undefined" || !window.sessionStorage) return;
-      window.sessionStorage.setItem("fae.hasSearched", "1");
-    } catch {}
-  };
-
-  const [hasSearchedOnce, setHasSearchedOnce] = useState(() => getHasSearchedFlag());
+  // 🔒 Kullanıcı arama yapmadan vitrin fetch tetiklenmesin
+  const [hasSearchedOnce, setHasSearchedOnce] = useState(false);
+  const hasSearchedOnceRef = useRef(false);
 
   const initialLastQuery =
     getLastQuery() ||
@@ -559,17 +542,17 @@ export default function Vitrin() {
   // ============================================================
   useEffect(() => {
     async function unifiedHandleSearch(e) {
-      const q = e.detail?.query?.trim();
+      const d = e?.detail || {};
+      const q = String(d.query || "").trim();
       if (!q) return;
 
-      // ✅ Page-load guard: ignore auto refresh/search until user actually triggers a search
-      const userInitiated = !!e?.detail?.userInitiated;
-      const sessionSearched = getHasSearchedFlag();
-      if (!userInitiated && !sessionSearched) return;
-
-      // Mark session as searched (so language refresh can work later)
-      if (!sessionSearched) markHasSearched();
-      setHasSearchedOnce(true);
+      // ❗️Kullanıcı arama yapmadıysa, otomatik tetikleri blokla
+      const userInitiated = !!d.userInitiated;
+      if (!userInitiated && !hasSearchedOnceRef.current) return;
+      if (userInitiated && !hasSearchedOnceRef.current) {
+        hasSearchedOnceRef.current = true;
+        setHasSearchedOnce(true);
+      }
 
       // 🔒 Dedupe: aynı sorgu üst üste gelirse (çift event / çift tetik) tek sefer çalışsın
       const now = Date.now();
@@ -612,17 +595,7 @@ export default function Vitrin() {
     }
 
     const refreshHandler = () => {
-      // Ignore initial page-load refreshes until the user has actually searched
-      if (!getHasSearchedFlag()) return;
-
-      // Dedupe: çok kısa aralıkla gelen refresh event'lerini tekle
-      try {
-        const now = Date.now();
-        const lastAt = Number(window.__fae_lastVitrineRefreshAt || 0);
-        if (now - lastAt < 800) return;
-        window.__fae_lastVitrineRefreshAt = now;
-      } catch {}
-
+      if (!hasSearchedOnceRef.current) return;
       loadVitrine(true);
     };
 
@@ -634,6 +607,11 @@ export default function Vitrin() {
       const q = d.query || d.q || "";
       const injectedItems = d.items || [];
 
+      if (!hasSearchedOnceRef.current) {
+        hasSearchedOnceRef.current = true;
+        setHasSearchedOnce(true);
+      }
+
       setLoading(false);
       setLastQuery(q);
 
@@ -641,10 +619,6 @@ export default function Vitrin() {
       setBest(injectedItems);
       setSmart([]);
       setOthers([]);
-
-      // Mark session as searched (barcode/camera etc.)
-      markHasSearched();
-      setHasSearchedOnce(true);
 
       // App.jsx dinlediği event: TTS + status için
       window.dispatchEvent(
@@ -1121,6 +1095,16 @@ export default function Vitrin() {
     }
   }
 
+  // ============================================================
+    // ============================================================
+  //   🔥 Dil değişince: sadece kullanıcı arama yaptıysa yenile
+  // ============================================================
+  useEffect(() => {
+    if (!hasSearchedOnceRef.current) return;
+    loadVitrine(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [i18n.language]);
+
   // Interaction logger
   async function logInteraction(type, item) {
     try {
@@ -1270,7 +1254,32 @@ export default function Vitrin() {
             {/* Başlık bilerek boş; sadece alt kart öne çıkacak */}
           </h2>
 
-          {bestItem ? (
+          {!hasSearchedOnce ? (
+            <div className="rounded-2xl border border-dashed border-white/15 bg-black/10 p-5 sm:p-7 text-white/80">
+              <div className="text-sm sm:text-base font-semibold text-white/90 mb-4">
+                {t("vitrine.introTitle")}
+              </div>
+
+              <div className="text-xs sm:text-sm text-white/70 mb-3">
+                {t("vitrine.introBenefitsTitle")}
+              </div>
+
+              <div className="space-y-2 text-xs sm:text-sm text-white/70 leading-relaxed">
+                <div>
+                  <span className="font-semibold text-white/90">{t("vitrine.introTimeLabel")}</span>{" "}
+                  {t("vitrine.introTimeDesc")}
+                </div>
+                <div>
+                  <span className="font-semibold text-white/90">{t("vitrine.introMoneyLabel")}</span>{" "}
+                  {t("vitrine.introMoneyDesc")}
+                </div>
+                <div>
+                  <span className="font-semibold text-white/90">{t("vitrine.introCalmLabel")}</span>{" "}
+                  {t("vitrine.introCalmDesc")}
+                </div>
+              </div>
+            </div>
+          ) : bestItem ? (
             <InnerCard
               item={bestItem}
               compact={true}
@@ -1280,57 +1289,9 @@ export default function Vitrin() {
               }}
             />
           ) : (
-            !hasSearchedOnce ? (
-              <div className="rounded-2xl border border-white/10 bg-black/25 backdrop-blur-sm p-6 sm:p-7 text-white/80">
-                <div className="text-sm sm:text-base font-semibold text-white/90 mb-3">
-                  {t("home.vitrineIntro.title", {
-                    defaultValue:
-                      "Bu site, aradığın ürün veya hizmeti hızlıca bulup fiyatları karşılaştırır.",
-                  })}
-                </div>
-
-                <div className="text-xs sm:text-sm text-white/70 mb-2">
-                  {t("home.vitrineIntro.subtitle", { defaultValue: "Sana faydası:" })}
-                </div>
-
-                <div className="space-y-2 text-xs sm:text-sm text-white/75 leading-relaxed">
-                  <div>
-                    <span className="font-semibold text-white/90">
-                      {t("home.vitrineIntro.b1h", { defaultValue: "Zaman kazandırır:" })}
-                    </span>{" "}
-                    {t("home.vitrineIntro.b1", {
-                      defaultValue: "Tek tek site gezmeden sonuçları tek yerde görürsün.",
-                    })}
-                  </div>
-
-                  <div>
-                    <span className="font-semibold text-white/90">
-                      {t("home.vitrineIntro.b2h", { defaultValue: "Para kazandırır:" })}
-                    </span>{" "}
-                    {t("home.vitrineIntro.b2", {
-                      defaultValue:
-                        "En uygun/ekonomik seçenekleri öne çıkarır, gereksiz pahalıya kaçmanı engeller.",
-                    })}
-                  </div>
-
-                  <div>
-                    <span className="font-semibold text-white/90">
-                      {t("home.vitrineIntro.b3h", { defaultValue: "Kafa rahatlatır:" })}
-                    </span>{" "}
-                    {t("home.vitrineIntro.b3", {
-                      defaultValue:
-                        "Alakasız “çer çöp” sonuçları ayıklayıp daha güvenilir kaynaklara öncelik verir.",
-                    })}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-white/15 text-xs text-white/60 p-4 flex items-center justify-center h-full min-h-[160px]">
-                {loading
-                  ? t("vitrine.loading", { defaultValue: "Vitrin hazırlanıyor…" })
-                  : t("vitrine.noResults", { defaultValue: "Sonuç bulunamadı." })}
-              </div>
-            )}
+            <div className="rounded-2xl border border-dashed border-white/15 text-xs text-white/70 p-4 flex items-center justify-center h-full min-h-[160px]">
+              {loading ? t("assistant.searching", { defaultValue: "Arıyorum…" }) : t("vitrine.noResults")}
+            </div>
           )}
         </div>
       </div>
