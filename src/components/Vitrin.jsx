@@ -1280,7 +1280,7 @@ export default function Vitrin() {
               }}
             />
           ) : (
-            {!hasSearchedOnce ? (
+            !hasSearchedOnce ? (
               <div className="rounded-2xl border border-white/10 bg-black/25 backdrop-blur-sm p-6 sm:p-7 text-white/80">
                 <div className="text-sm sm:text-base font-semibold text-white/90 mb-3">
                   {t("home.vitrineIntro.title", {
