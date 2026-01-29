@@ -151,6 +151,16 @@ export default function App() {
   
   useRewards(); // cüzdan & ödül hook’u — mevcut işlev KALDI
 
+  // === Vitrin yenileme sadece kullanıcı arama yaptıktan sonra ===
+  const canRefreshVitrine = () => {
+    try {
+      if (typeof window === "undefined" || !window.sessionStorage) return false;
+      return window.sessionStorage.getItem("fae.hasSearched") === "1";
+    } catch {
+      return false;
+    }
+  };
+
   // === Dil değişince vitrin yenile + placeholder reset ===
   useEffect(() => {
     if (i18n.language) {
@@ -159,7 +169,7 @@ export default function App() {
       } catch {
         // localStorage fail etse bile app çökmeyecek
       }
-      if (typeof window !== "undefined") {
+      if (canRefreshVitrine()) {
         window.dispatchEvent(new Event("fae.vitrine.refresh"));
       }
     }
@@ -167,7 +177,7 @@ export default function App() {
 
   // === İlk yüklemede vitrin tetikle ===
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (canRefreshVitrine()) {
       window.dispatchEvent(new Event("fae.vitrine.refresh"));
     }
   }, []);
