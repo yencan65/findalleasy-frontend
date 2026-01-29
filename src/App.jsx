@@ -151,26 +151,26 @@ export default function App() {
   
   useRewards(); // cüzdan & ödül hook’u — mevcut işlev KALDI
 
-  // === Dil değişince vitrin yenile + placeholder reset ===
+  // === Dil değişince (sadece kullanıcı arama yaptıysa) vitrin yenile + placeholder reset ===
   useEffect(() => {
-    if (i18n.language) {
-      try {
-        localStorage.setItem("appLang", i18n.language);
-      } catch {
-        // localStorage fail etse bile app çökmeyecek
-      }
-      if (typeof window !== "undefined") {
+    if (!i18n.language) return;
+
+    try {
+      localStorage.setItem("appLang", i18n.language);
+    } catch {
+      // localStorage fail etse bile app çökmeyecek
+    }
+
+    // 🚫 Sayfa ilk açılırken otomatik "sonuç yok" çıkmasın.
+    // ✅ Kullanıcı bu oturumda arama yaptıysa (manuel/voice/qr/barcode) dil değişiminde yenile.
+    try {
+      const didSearch = typeof window !== "undefined" && window.__faeUserSearched === true;
+      if (didSearch && typeof window !== "undefined") {
         window.dispatchEvent(new Event("fae.vitrine.refresh"));
       }
-    }
+    } catch {}
   }, [i18n.language]);
 
-  // === İlk yüklemede vitrin tetikle ===
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new Event("fae.vitrine.refresh"));
-    }
-  }, []);
   const [value, setValue] = useState("");
 
   // === Sesli arama UI (kullanıcı ne olduğunu ANLASIN diye) ===
@@ -306,6 +306,13 @@ useEffect(() => {
       );
       return null;
     }
+
+    // ✅ Kullanıcı gerçekten arama yaptı (bu oturumda)
+    try {
+      if (typeof window !== "undefined") {
+        window.__faeUserSearched = true;
+      }
+    } catch {}
 
     const source = String(opts?.source || "manual");
 
