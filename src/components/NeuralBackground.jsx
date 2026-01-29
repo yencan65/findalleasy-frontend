@@ -1,12 +1,19 @@
 import React, { useEffect, useRef } from "react";
 
 /**
- * Calm, stable neural-web background (responsive density + subtle rotation).
+ * NeuralBackground (Rubik Cycle)
  *
- * Updates (per request):
- *  - Mobile: NOT dense, but LINK lines are a bit more visible (nodes stay subtle)
- *  - Tablet/PC: can move a bit faster (still calm)
- *  - Safe over time: dt clamp + visibility pause + full clear (no lightning)
+ * Goal: NOT eye-straining. NOT random scribbles.
+ * Visual: a small "Rubik cube" sized neural mesh appears in a corner,
+ *         expands to a calm sparse web over the whole page,
+ *         then retracts back into the Rubik mesh.
+ * Cycle repeats; corner rotates TL -> TR -> BR -> BL (session-based).
+ *
+ * Safety / Stability:
+ *  - full clear every frame (no trails)
+ *  - dt clamp
+ *  - pause when tab hidden (no dt spike "lightning")
+ *  - no velocity runaway: positions are interpolated between 2 stable layouts
  */
 export default function NeuralBackground({
   className = "",
@@ -16,19 +23,34 @@ export default function NeuralBackground({
   const canvasRef = useRef(null);
   const rafRef = useRef(0);
   const lastTRef = useRef(0);
-  const nodesRef = useRef([]);
+
+  // precomputed layouts
+  const nodesRef = useRef([]); // {cx,cy,sx,sy,ph1,ph2}
+  const linksCubeRef = useRef([]); // [a,b]
+  const linksSpreadRef = useRef([]); // [a,b]
+  const metaRef = useRef({ w: 0, h: 0, tier: "desktop", n: 27 });
+
+  // cycle state
+  const cycleRef = useRef({
+    startAt: 0,
+    cornerIdx: 0,
+    origin: { x: 0, y: 0 },
+  });
+
   const runningRef = useRef(true);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
     const ctx = canvas.getContext("2d", { alpha: true });
     if (!ctx) return;
 
     const prefersReduced =
       window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
 
-    const rand = (a, b) => a + Math.random() * (b - a);
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+    const smooth01 = (t) => t * t * (3 - 2 * t);
 
     function getTier(w) {
       if (w < 640) return "mobile";
@@ -36,37 +58,224 @@ export default function NeuralBackground({
       return "desktop";
     }
 
-    function getParams(w, h) {
-      const tier = getTier(w);
-      const area = w * h;
-
-      let nMin, nMax, divisor, maxLinksPerNode, maxDist;
-
-      if (tier === "mobile") {
-        nMin = 26;
-        nMax = 64;
-        divisor = 56000;
-        maxLinksPerNode = 2;
-        maxDist = 125;
-      } else if (tier === "tablet") {
-        nMin = 45;
-        nMax = 120;
-        divisor = 36000;
-        maxLinksPerNode = 3;
-        maxDist = 165;
-      } else {
-        nMin = 70;
-        nMax = 185;
-        divisor = 28000;
-        maxLinksPerNode = 4;
-        maxDist = 185;
-      }
-
-      const n = Math.max(nMin, Math.min(nMax, Math.round(area / divisor)));
-      return { tier, n, maxLinksPerNode, maxDist };
+    function pickNextCorner() {
+      const key = "fae_neural_corner_idx";
+      const raw = sessionStorage.getItem(key);
+      let idx;
+      if (raw == null) idx = Math.floor(Math.random() * 4);
+      else idx = (parseInt(raw, 10) + 1) % 4;
+      sessionStorage.setItem(key, String(idx));
+      return idx;
     }
 
-    function resizeAndSeed() {
+    function cornerPoint(idx, w, h) {
+      // 0 TL, 1 TR, 2 BR, 3 BL
+      if (idx === 0) return { x: 0, y: 0 };
+      if (idx === 1) return { x: w, y: 0 };
+      if (idx === 2) return { x: w, y: h };
+      return { x: 0, y: h };
+    }
+
+    function cornerRubikAnchor(idx, w, h) {
+      // small inset so it doesn't touch edges
+      const insetX = Math.max(48, Math.min(90, w * 0.10));
+      const insetY = Math.max(64, Math.min(110, h * 0.12));
+      if (idx === 0) return { x: insetX, y: insetY };
+      if (idx === 1) return { x: w - insetX, y: insetY };
+      if (idx === 2) return { x: w - insetX, y: h - insetY };
+      return { x: insetX, y: h - insetY };
+    }
+
+    function buildRubikCubePositions(w, h, tier, cornerIdx) {
+      // 3x3x3 = 27 nodes
+      const dim = 3;
+      // cube size per tier (Rubik-like)
+      const s = tier === "mobile" ? 18 : tier === "tablet" ? 22 : 26;
+
+      // isometric-ish projection (calm, readable)
+      const proj = (i, j, k) => {
+        // center around 0
+        const x = (i - (dim - 1) / 2);
+        const y = (j - (dim - 1) / 2);
+        const z = (k - (dim - 1) / 2);
+        // isometric projection
+        const px = (x - z) * s;
+        const py = (x + z) * s * 0.55 + y * s * 0.9;
+        return { px, py };
+      };
+
+      const anchor = cornerRubikAnchor(cornerIdx, w, h);
+      const flipX = cornerIdx === 1 || cornerIdx === 2 ? -1 : 1;
+      const flipY = cornerIdx === 2 || cornerIdx === 3 ? -1 : 1;
+
+      const pts = [];
+      for (let j = 0; j < dim; j++) {
+        for (let i = 0; i < dim; i++) {
+          for (let k = 0; k < dim; k++) {
+            const { px, py } = proj(i, j, k);
+            // Flip depending on corner so cube "faces inward"
+            pts.push({
+              x: anchor.x + px * flipX,
+              y: anchor.y + py * flipY,
+            });
+          }
+        }
+      }
+      return pts;
+    }
+
+    function buildRubikLinks() {
+      // 3x3x3 adjacency
+      const dim = 3;
+      const idx = (i, j, k) => j * dim * dim + i * dim + k;
+      const links = [];
+      const add = (a, b) => {
+        if (a < b) links.push([a, b]);
+        else links.push([b, a]);
+      };
+      for (let j = 0; j < dim; j++) {
+        for (let i = 0; i < dim; i++) {
+          for (let k = 0; k < dim; k++) {
+            const a = idx(i, j, k);
+            if (i + 1 < dim) add(a, idx(i + 1, j, k));
+            if (j + 1 < dim) add(a, idx(i, j + 1, k));
+            if (k + 1 < dim) add(a, idx(i, j, k + 1));
+          }
+        }
+      }
+      // unique
+      const seen = new Set();
+      const out = [];
+      for (const [a, b] of links) {
+        const key = a + ":" + b;
+        if (!seen.has(key)) {
+          seen.add(key);
+          out.push([a, b]);
+        }
+      }
+      return out;
+    }
+
+    function buildSpreadPositions(w, h, n) {
+      // calm sparse distribution: grid + light jitter
+      const marginX = Math.max(28, Math.min(64, w * 0.06));
+      const marginY = Math.max(40, Math.min(82, h * 0.07));
+
+      const cols = Math.max(3, Math.ceil(Math.sqrt((n * w) / h)));
+      const rows = Math.max(3, Math.ceil(n / cols));
+
+      const cellW = (w - marginX * 2) / (cols - 1);
+      const cellH = (h - marginY * 2) / (rows - 1);
+
+      const jitterX = Math.min(18, cellW * 0.14);
+      const jitterY = Math.min(18, cellH * 0.14);
+
+      const pts = [];
+      let idx = 0;
+      for (let r = 0; r < rows && idx < n; r++) {
+        for (let c = 0; c < cols && idx < n; c++) {
+          const x = marginX + c * cellW + (Math.random() * 2 - 1) * jitterX;
+          const y = marginY + r * cellH + (Math.random() * 2 - 1) * jitterY;
+          pts.push({ x, y });
+          idx++;
+        }
+      }
+      return pts;
+    }
+
+    function buildSpreadLinks(pts, tier) {
+      const n = pts.length;
+      const k = tier === "mobile" ? 2 : tier === "tablet" ? 3 : 4;
+      const maxLen =
+        tier === "mobile" ? 220 : tier === "tablet" ? 260 : 300;
+      const maxLen2 = maxLen * maxLen;
+
+      const pairs = new Set();
+      for (let i = 0; i < n; i++) {
+        // find k nearest (O(n^2) but n=27)
+        const dists = [];
+        const a = pts[i];
+        for (let j = 0; j < n; j++) {
+          if (i === j) continue;
+          const b = pts[j];
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 <= maxLen2) dists.push([d2, j]);
+        }
+        dists.sort((u, v) => u[0] - v[0]);
+        for (let t = 0; t < Math.min(k, dists.length); t++) {
+          const j = dists[t][1];
+          const a0 = Math.min(i, j);
+          const b0 = Math.max(i, j);
+          pairs.add(a0 + ":" + b0);
+        }
+      }
+
+      const links = [];
+      pairs.forEach((key) => {
+        const [a, b] = key.split(":").map((x) => parseInt(x, 10));
+        links.push([a, b]);
+      });
+      return links;
+    }
+
+    function patchHistoryOnce() {
+      if (window.__faeHistoryPatched) return;
+      window.__faeHistoryPatched = true;
+
+      const fire = () => window.dispatchEvent(new Event("fae:navigation"));
+      const wrap = (fn) =>
+        function (...args) {
+          const ret = fn.apply(this, args);
+          try {
+            fire();
+          } catch {}
+          return ret;
+        };
+
+      try {
+        history.pushState = wrap(history.pushState);
+        history.replaceState = wrap(history.replaceState);
+      } catch {}
+    }
+
+    function initCycle(now = performance.now()) {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const tier = getTier(w);
+
+      metaRef.current = { w, h, tier, n: 27 };
+
+      const cornerIdx = pickNextCorner();
+      cycleRef.current.cornerIdx = cornerIdx;
+      cycleRef.current.origin = cornerPoint(cornerIdx, w, h);
+      cycleRef.current.startAt = now;
+
+      // layouts
+      const cube = buildRubikCubePositions(w, h, tier, cornerIdx);
+      const spread = buildSpreadPositions(w, h, 27);
+
+      // nodes store both layouts; also a tiny breathing phase for life
+      const nodes = [];
+      for (let i = 0; i < 27; i++) {
+        nodes.push({
+          cx: cube[i].x,
+          cy: cube[i].y,
+          sx: spread[i].x,
+          sy: spread[i].y,
+          ph1: Math.random() * Math.PI * 2,
+          ph2: Math.random() * Math.PI * 2,
+        });
+      }
+      nodesRef.current = nodes;
+
+      // links
+      linksCubeRef.current = buildRubikLinks();
+      linksSpreadRef.current = buildSpreadLinks(spread, tier);
+    }
+
+    function resizeAll() {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = Math.max(1, window.innerWidth);
       const h = Math.max(1, window.innerHeight);
@@ -77,18 +286,7 @@ export default function NeuralBackground({
       canvas.style.height = h + "px";
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      const { n } = getParams(w, h);
-
-      const nodes = [];
-      for (let i = 0; i < n; i++) {
-        nodes.push({
-          x: rand(0, w),
-          y: rand(0, h),
-          vx: rand(-0.12, 0.12),
-          vy: rand(-0.12, 0.12),
-        });
-      }
-      nodesRef.current = nodes;
+      initCycle(performance.now());
     }
 
     function stop() {
@@ -120,9 +318,9 @@ export default function NeuralBackground({
       if (!Number.isFinite(dt) || dt <= 0) dt = 0.016;
       dt = Math.min(dt, 0.033);
 
-      const w = window.innerWidth;
-      const h = window.innerHeight;
+      const { w, h, tier } = metaRef.current;
 
+      // full clear, always
       ctx.clearRect(0, 0, w, h);
 
       const nodes = nodesRef.current;
@@ -131,138 +329,136 @@ export default function NeuralBackground({
         return;
       }
 
-      const { tier, maxLinksPerNode, maxDist } = getParams(w, h);
-      const maxDist2 = maxDist * maxDist;
+      // cycle timings (ms)
+      const cycle = cycleRef.current;
+      const cycleMs = prefersReduced ? 4200 : 8200;
+      const expandMs = prefersReduced ? 1200 : 2600;
+      const holdMs = prefersReduced ? 300 : 700;
+      const retractMs = prefersReduced ? 1200 : 2600;
+      const restMs = Math.max(200, cycleMs - (expandMs + holdMs + retractMs));
 
-      let speed;
-      if (prefersReduced) speed = 0.25;
-      else if (tier === "mobile") speed = 0.58;
-      else if (tier === "tablet") speed = 0.82;
-      else speed = 0.92;
+      const e = t - cycle.startAt;
+      let phaseT = 0;
 
-      for (let i = 0; i < nodes.length; i++) {
-        const p = nodes[i];
-        p.x += p.vx * speed * (dt * 60);
-        p.y += p.vy * speed * (dt * 60);
-
-        if (p.x < -20) p.x = w + 20;
-        if (p.x > w + 20) p.x = -20;
-        if (p.y < -20) p.y = h + 20;
-        if (p.y > h + 20) p.y = -20;
+      if (e < expandMs) {
+        phaseT = smooth01(clamp(e / expandMs, 0, 1));
+      } else if (e < expandMs + holdMs) {
+        phaseT = 1;
+      } else if (e < expandMs + holdMs + retractMs) {
+        const k = clamp((e - expandMs - holdMs) / retractMs, 0, 1);
+        phaseT = 1 - smooth01(k);
+      } else if (e < cycleMs) {
+        phaseT = 0;
+      } else {
+        // new cycle: next corner, fresh spread jitter
+        initCycle(t);
+        phaseT = 0;
       }
 
-      const repelRadius = tier === "mobile" ? 62 : 55;
-      const repelRadius2 = repelRadius * repelRadius;
-      const repelStrength = tier === "mobile" ? 0.22 : 0.18;
+      // breathing drift (tiny, calm)
+      const tt = t / 1000;
+      const amp =
+        prefersReduced ? 0 : tier === "mobile" ? 1.4 : tier === "tablet" ? 1.8 : 2.2;
+      const driftSpeed = tier === "mobile" ? 0.35 : 0.45;
 
-      for (let i = 0; i < nodes.length; i++) {
-        const a = nodes[i];
-        for (let j = i + 1; j < nodes.length; j++) {
-          const b = nodes[j];
-          const dx = b.x - a.x;
-          const dy = b.y - a.y;
-          const d2 = dx * dx + dy * dy;
-          if (d2 > 0 && d2 < repelRadius2) {
-            const d = Math.sqrt(d2);
-            const push = (repelRadius - d) / repelRadius;
-            const ux = dx / d;
-            const uy = dy / d;
-            a.x -= ux * push * repelStrength;
-            a.y -= uy * push * repelStrength;
-            b.x += ux * push * repelStrength;
-            b.y += uy * push * repelStrength;
-          }
-        }
-      }
-
-      const angle =
-        tier === "mobile" && !prefersReduced ? Math.sin(t / 17000) * 0.03 : 0;
+      // Blend link sets: cube dominates near 0, spread dominates near 1
+      const blend = phaseT; // 0..1
+      const linksA = linksCubeRef.current;
+      const linksB = linksSpreadRef.current;
 
       ctx.save();
-      if (angle) {
-        ctx.translate(w / 2, h / 2);
-        ctx.rotate(angle);
-        ctx.translate(-w / 2, -h / 2);
-      }
-
-      ctx.save();
-      ctx.globalAlpha = opacity;
-      ctx.lineWidth = tier === "mobile" ? 1.32 : 1.25;
       ctx.strokeStyle = color;
       ctx.fillStyle = color;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
 
-      for (let i = 0; i < nodes.length; i++) {
-        const a = nodes[i];
-        let links = 0;
+      // Line widths tuned to avoid eye strain
+      const lw =
+        tier === "mobile" ? 1.15 : tier === "tablet" ? 1.18 : 1.22;
+      ctx.lineWidth = lw;
 
-        for (let j = 0; j < nodes.length; j++) {
-          if (i === j) continue;
-          const b = nodes[j];
-          const dx = b.x - a.x;
-          const dy = b.y - a.y;
-          const d2 = dx * dx + dy * dy;
+      // draw cube links
+      const cubeAlphaBase = tier === "mobile" ? 0.18 : 0.15; // cube should read as "rubik"
+      const spreadAlphaBase = tier === "mobile" ? 0.10 : 0.085; // spread is calmer
 
-          if (d2 < maxDist2) {
-            const strength = 1 - d2 / maxDist2;
+      // helper: get interpolated position for node i
+      const pos = (i) => {
+        const p = nodes[i];
+        const x = p.cx + (p.sx - p.cx) * blend + Math.sin(tt * driftSpeed + p.ph1) * amp;
+        const y = p.cy + (p.sy - p.cy) * blend + Math.cos(tt * driftSpeed * 0.9 + p.ph2) * amp;
+        return { x, y };
+      };
 
-            let baseAlpha, boost, cap;
-            if (tier === "mobile") {
-              baseAlpha = 0.095;
-              boost = 0.34;
-              cap = 0.46;
-            } else if (tier === "tablet") {
-              baseAlpha = 0.06;
-              boost = 0.24;
-              cap = 0.38;
-            } else {
-              baseAlpha = 0.06;
-              boost = 0.22;
-              cap = 0.36;
-            }
-
-            const alpha = Math.min(cap, baseAlpha + boost * strength);
-
-            ctx.globalAlpha = opacity * alpha;
-            ctx.beginPath();
-            ctx.moveTo(a.x, a.y);
-            ctx.lineTo(b.x, b.y);
-            ctx.stroke();
-
-            links++;
-            if (links >= maxLinksPerNode) break;
-          }
+      // Cube links: fade out as we expand
+      const aAlpha = opacity * cubeAlphaBase * (1 - blend);
+      if (aAlpha > 0.002) {
+        ctx.globalAlpha = aAlpha;
+        for (let k = 0; k < linksA.length; k++) {
+          const [i, j] = linksA[k];
+          const pi = pos(i);
+          const pj = pos(j);
+          ctx.beginPath();
+          ctx.moveTo(pi.x, pi.y);
+          ctx.lineTo(pj.x, pj.y);
+          ctx.stroke();
         }
       }
 
-      const nodeAlpha = tier === "mobile" ? 0.18 : 0.35;
-      const r = tier === "mobile" ? 1.15 : 1.6;
-      ctx.globalAlpha = opacity * nodeAlpha;
+      // Spread links: fade in as we expand (never too strong)
+      const bAlpha = opacity * spreadAlphaBase * blend;
+      if (bAlpha > 0.002) {
+        ctx.globalAlpha = bAlpha;
+        for (let k = 0; k < linksB.length; k++) {
+          const [i, j] = linksB[k];
+          const pi = pos(i);
+          const pj = pos(j);
+          ctx.beginPath();
+          ctx.moveTo(pi.x, pi.y);
+          ctx.lineTo(pj.x, pj.y);
+          ctx.stroke();
+        }
+      }
 
+      // Nodes (very subtle; links define the "network")
+      const nodeR = tier === "mobile" ? 1.2 : 1.35;
+      const nodeAlpha = opacity * (tier === "mobile" ? 0.10 : 0.12);
+      ctx.globalAlpha = nodeAlpha;
       for (let i = 0; i < nodes.length; i++) {
-        const p = nodes[i];
+        const p = pos(i);
         ctx.beginPath();
-        ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, nodeR, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      ctx.restore();
       ctx.restore();
 
       rafRef.current = requestAnimationFrame(tick);
     }
 
-    const onResize = () => resizeAndSeed();
-
-    resizeAndSeed();
+    // init
+    patchHistoryOnce();
+    resizeAll();
     start();
+
+    // events
+    const onResize = () => resizeAll();
+    const onNav = () => initCycle(performance.now());
 
     window.addEventListener("resize", onResize, { passive: true });
     document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("fae:navigation", onNav);
+    window.addEventListener("popstate", onNav);
+    window.addEventListener("hashchange", onNav);
+    window.addEventListener("pageshow", onNav);
 
     return () => {
       stop();
       window.removeEventListener("resize", onResize);
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("fae:navigation", onNav);
+      window.removeEventListener("popstate", onNav);
+      window.removeEventListener("hashchange", onNav);
+      window.removeEventListener("pageshow", onNav);
     };
   }, [opacity, color]);
 
