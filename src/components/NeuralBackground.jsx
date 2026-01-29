@@ -1,405 +1,206 @@
 import React, { useEffect, useRef } from "react";
 
-// Calm "neural web" background with corner-cycling wave.
-// - Wave expands from a corner across the page, then retracts back.
-// - Corners rotate in order: TL -> TR -> BR -> BL.
-// - Designed to stay calm forever: dt clamped, no trails, limited links.
-// - Responsive density: mobile lighter, tablet/desktop a bit denser.
-//
-// NOTE: This component fills its parent. Put it in a fixed/absolute wrapper
-// behind your content (e.g. <div className="fixed inset-0 -z-10">...).
-
-function clamp(n, a, b) {
-  return Math.max(a, Math.min(b, n));
-}
-
-function smoothstep(edge0, edge1, x) {
-  const t = clamp((x - edge0) / (edge1 - edge0), 0, 1);
-  return t * t * (3 - 2 * t);
-}
-
-function prefersReducedMotion() {
-  try {
-    return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  } catch {
-    return false;
-  }
-}
-
-function cornerPoint(idx, w, h, m) {
-  // idx: 0 TL, 1 TR, 2 BR, 3 BL
-  switch (idx % 4) {
-    case 0:
-      return { x: m, y: m };
-    case 1:
-      return { x: w - m, y: m };
-    case 2:
-      return { x: w - m, y: h - m };
-    default:
-      return { x: m, y: h - m };
-  }
-}
-
-function profileForWidth(w) {
-  // Mobile: not crowded.
-  if (w < 640) {
-    return {
-      areaDiv: 15000,
-      minNodes: 22,
-      maxNodes: 60,
-      linkDist: 140,
-      maxLinksPerNode: 2,
-      lineWidth: 0.9,
-      nodeRadius: 1.05,
-      nodeAlpha: 0.22,
-      linkAlphaMin: 0.04,
-      linkAlphaGain: 0.16,
-      driftAmp: 5,
-    };
-  }
-  // Tablet: a bit denser.
-  if (w < 1024) {
-    return {
-      areaDiv: 32000,
-      minNodes: 52,
-      maxNodes: 160,
-      linkDist: 175,
-      maxLinksPerNode: 3,
-      lineWidth: 1.05,
-      nodeRadius: 1.2,
-      nodeAlpha: 0.26,
-      linkAlphaMin: 0.045,
-      linkAlphaGain: 0.19,
-      driftAmp: 7,
-    };
-  }
-  // Desktop: slightly more presence.
-  return {
-    areaDiv: 26000,
-    minNodes: 78,
-    maxNodes: 220,
-    linkDist: 190,
-    maxLinksPerNode: 4,
-    lineWidth: 1.1,
-    nodeRadius: 1.3,
-    nodeAlpha: 0.28,
-    linkAlphaMin: 0.05,
-    linkAlphaGain: 0.2,
-    driftAmp: 8,
-  };
-}
-
-function buildTargets(w, h, count) {
-  // Jittered grid gives even coverage.
-  const area = w * h;
-  const step = Math.sqrt(area / Math.max(1, count));
-  const cols = Math.max(1, Math.ceil(w / step));
-  const rows = Math.max(1, Math.ceil(h / step));
-
-  const cells = [];
-  for (let y = 0; y < rows; y++) {
-    for (let x = 0; x < cols; x++) cells.push({ x, y });
-  }
-  for (let i = cells.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const tmp = cells[i];
-    cells[i] = cells[j];
-    cells[j] = tmp;
-  }
-
-  const out = [];
-  for (let i = 0; i < count; i++) {
-    const c = cells[i % cells.length];
-    const px = (c.x + (0.15 + Math.random() * 0.7)) * step;
-    const py = (c.y + (0.15 + Math.random() * 0.7)) * step;
-    out.push({
-      x: clamp(px, 0, w),
-      y: clamp(py, 0, h),
-    });
-  }
-  return out;
-}
-
-function buildSeeds(count) {
-  const seeds = [];
-  for (let i = 0; i < count; i++) {
-    seeds.push({
-      p1: Math.random() * Math.PI * 2,
-      p2: Math.random() * Math.PI * 2,
-      f1: 0.9 + Math.random() * 1.4,
-      f2: 0.9 + Math.random() * 1.4,
-      a: 0.65 + Math.random() * 0.55,
-    });
-  }
-  return seeds;
-}
-
-function keepBestK(best, cand, k) {
-  // best: array of {j, d2} sorted asc by d2
-  if (best.length === 0) {
-    best.push(cand);
-    return;
-  }
-  if (best.length >= k && cand.d2 >= best[best.length - 1].d2) return;
-
-  let idx = best.length;
-  for (let i = 0; i < best.length; i++) {
-    if (cand.d2 < best[i].d2) {
-      idx = i;
-      break;
-    }
-  }
-  best.splice(idx, 0, cand);
-  if (best.length > k) best.length = k;
-}
-
+/**
+ * Calm, stable neural-web background.
+ *
+ * Fixes the common "screen disappeared" issue by ensuring:
+ *  - canvas is fixed + behind everything (zIndex: -1)
+ *  - pointerEvents: none
+ *  - no trail accumulation (full clear each frame)
+ *  - animation pauses when tab is hidden (no dt jump)
+ */
 export default function NeuralBackground({
   className = "",
-  opacity = 0.55,
-  color = "rgba(122, 92, 255, 1)",
+  opacity = 0.55, // overall visibility (keep < 0.8)
+  color = "rgba(122, 92, 255, 1)", // purple
 }) {
   const canvasRef = useRef(null);
   const rafRef = useRef(0);
   const lastTRef = useRef(0);
-  const stateRef = useRef({
-    dpr: 1,
-    w: 1,
-    h: 1,
-    profile: profileForWidth(1024),
-    targets: [],
-    seeds: [],
-    cornerIndex: 0,
-    cycleStart: 0,
-  });
+  const nodesRef = useRef([]);
+  const runningRef = useRef(true);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
-    const ctx = canvas.getContext("2d", { alpha: true, desynchronized: true });
+    const ctx = canvas.getContext("2d", { alpha: true });
     if (!ctx) return;
 
-    const reduced = prefersReducedMotion();
+    const prefersReduced = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
 
-    // Timing: slow and calm.
-    const T_EXPAND = reduced ? 12.0 : 10.0;
-    const T_HOLD = 1.8;
-    const T_RETRACT = reduced ? 12.0 : 10.0;
-    const T_REST = 1.4;
-    const T_TOTAL = T_EXPAND + T_HOLD + T_RETRACT + T_REST;
+    const rand = (a, b) => a + Math.random() * (b - a);
 
-    const measure = () => {
-      const rect = canvas.getBoundingClientRect();
-      const w = Math.max(1, Math.floor(rect.width || window.innerWidth || 1));
-      const h = Math.max(1, Math.floor(rect.height || window.innerHeight || 1));
-      return { w, h };
-    };
-
-    const ensureSize = (force = false) => {
-      const { w, h } = measure();
+    function resizeAndSeed() {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-
-      const s = stateRef.current;
-      const need =
-        force ||
-        s.w !== w ||
-        s.h !== h ||
-        s.dpr !== dpr ||
-        canvas.width !== Math.floor(w * dpr) ||
-        canvas.height !== Math.floor(h * dpr);
-
-      if (!need) return;
-
+      const w = Math.max(1, window.innerWidth);
+      const h = Math.max(1, window.innerHeight);
       canvas.width = Math.floor(w * dpr);
       canvas.height = Math.floor(h * dpr);
+      canvas.style.width = w + "px";
+      canvas.style.height = h + "px";
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      const P = profileForWidth(w);
+      // Density based on area; cap to keep perf stable.
       const area = w * h;
-      const base = Math.round(area / P.areaDiv);
-      const n = clamp(base, P.minNodes, P.maxNodes);
+      const base = Math.round(area / 26000);
+      const n = Math.max(60, Math.min(180, base));
 
-      s.dpr = dpr;
-      s.w = w;
-      s.h = h;
-      s.profile = P;
-      s.targets = buildTargets(w, h, n);
-      s.seeds = buildSeeds(n);
-      s.cycleStart = 0;
+      const nodes = [];
+      for (let i = 0; i < n; i++) {
+        nodes.push({
+          x: rand(0, w),
+          y: rand(0, h),
+          vx: rand(-0.12, 0.12),
+          vy: rand(-0.12, 0.12),
+        });
+      }
+      nodesRef.current = nodes;
+    }
 
-      ctx.clearRect(0, 0, w, h);
-    };
+    function stop() {
+      runningRef.current = false;
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
+    }
 
-    const onVis = () => {
-      // Prevent any "jump" on tab/app switches.
+    function start() {
+      runningRef.current = true;
       lastTRef.current = 0;
-      stateRef.current.cycleStart = 0;
-    };
+      rafRef.current = requestAnimationFrame(tick);
+    }
 
-    const tick = (tMs) => {
+    function onVisibility() {
       if (document.hidden) {
-        lastTRef.current = tMs;
-        rafRef.current = requestAnimationFrame(tick);
-        return;
-      }
-
-      ensureSize(false);
-
-      const s = stateRef.current;
-      const w = s.w;
-      const h = s.h;
-      const P = s.profile;
-
-      // Clamp dt to kill spikes.
-      const last = lastTRef.current || tMs;
-      const dtRaw = (tMs - last) / 1000;
-      const dt = clamp(dtRaw, 0, 1 / 30);
-      lastTRef.current = tMs;
-
-      // Cycle time & corner changes.
-      if (!s.cycleStart) s.cycleStart = tMs;
-      let elapsed = (tMs - s.cycleStart) / 1000;
-      if (elapsed >= T_TOTAL) {
-        s.cornerIndex = (s.cornerIndex + 1) % 4;
-        s.cycleStart = tMs;
-        elapsed = 0;
-      }
-
-      // Progress p (0..1) with hold/rest.
-      let p = 0;
-      if (elapsed < T_EXPAND) {
-        p = smoothstep(0, 1, elapsed / T_EXPAND);
-      } else if (elapsed < T_EXPAND + T_HOLD) {
-        p = 1;
-      } else if (elapsed < T_EXPAND + T_HOLD + T_RETRACT) {
-        const u = (elapsed - (T_EXPAND + T_HOLD)) / T_RETRACT;
-        p = smoothstep(0, 1, 1 - u);
+        stop();
       } else {
-        p = 0;
+        // Reset timestamps to avoid dt jump → "lightning"
+        lastTRef.current = 0;
+        start();
       }
+    }
 
-      // Wave mask settings.
-      const diag = Math.hypot(w, h) || 1;
-      const margin = 26;
-      const origin = cornerPoint(s.cornerIndex, w, h, margin);
-      const band = w < 640 ? 0.09 : 0.075; // mobile a bit softer
+    const maxDist = 170; // connection radius
+    const maxDist2 = maxDist * maxDist;
+    const maxLinksPerNode = 4; // prevents overdraw bursts
 
-      // Fade in/out near the very beginning/end so the corner doesn't "flash".
-      const pVis = smoothstep(0.05, 0.22, p);
+    function tick(t) {
+      if (!runningRef.current) return;
 
-      // Clear each frame (no trails).
+      // dt in seconds; clamp to prevent speed spikes
+      const last = lastTRef.current || t;
+      let dt = (t - last) / 1000;
+      lastTRef.current = t;
+      if (!Number.isFinite(dt) || dt <= 0) dt = 0.016;
+      dt = Math.min(dt, 0.033); // clamp ~30fps max step
+
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+
+      // Full clear each frame (no trails)
       ctx.clearRect(0, 0, w, h);
 
-      const targets = s.targets;
-      const seeds = s.seeds;
-      const n = targets.length;
-      if (!n) {
+      const nodes = nodesRef.current;
+      if (!nodes || nodes.length === 0) {
         rafRef.current = requestAnimationFrame(tick);
         return;
       }
 
-      // Build positions + visibility factors.
-      const pos = new Array(n);
-      const vis = new Array(n);
-      const driftBase = (reduced ? 0.55 : 1) * P.driftAmp;
+      // Slow, calm speed
+      const speed = prefersReduced ? 0.25 : 0.65;
 
-      for (let i = 0; i < n; i++) {
-        const base = targets[i];
-        const sd = seeds[i];
+      // Move + wrap + mild repulsion to avoid clustering
+      for (let i = 0; i < nodes.length; i++) {
+        const p = nodes[i];
+        p.x += p.vx * speed * (dt * 60);
+        p.y += p.vy * speed * (dt * 60);
 
-        const amp = driftBase * sd.a;
-        const dx = Math.sin(tMs * 0.00022 * sd.f1 + sd.p1) * amp;
-        const dy = Math.cos(tMs * 0.00019 * sd.f2 + sd.p2) * amp;
-
-        const x = base.x + dx;
-        const y = base.y + dy;
-        pos[i] = { x, y };
-
-        const d = Math.hypot(x - origin.x, y - origin.y) / diag;
-        const inside = 1 - smoothstep(p, p + band, d); // 1 inside wave radius
-        vis[i] = clamp(inside * pVis, 0, 1);
+        // Wrap edges
+        if (p.x < -20) p.x = w + 20;
+        if (p.x > w + 20) p.x = -20;
+        if (p.y < -20) p.y = h + 20;
+        if (p.y > h + 20) p.y = -20;
       }
 
-      ctx.save();
-      ctx.strokeStyle = color;
-      ctx.fillStyle = color;
-      ctx.lineWidth = P.lineWidth;
-
-      const maxD2 = P.linkDist * P.linkDist;
-
-      // Links: nearest-K within distance, scaled by visibility.
-      for (let i = 0; i < n; i++) {
-        if (vis[i] <= 0.02) continue;
-        const a = pos[i];
-        const best = [];
-
-        for (let j = 0; j < n; j++) {
-          if (i === j || vis[j] <= 0.02) continue;
-          const b = pos[j];
+      // Repulsion pass (cheap)
+      for (let i = 0; i < nodes.length; i++) {
+        const a = nodes[i];
+        for (let j = i + 1; j < nodes.length; j++) {
+          const b = nodes[j];
           const dx = b.x - a.x;
           const dy = b.y - a.y;
           const d2 = dx * dx + dy * dy;
-          if (d2 >= maxD2) continue;
-          keepBestK(best, { j, d2 }, P.maxLinksPerNode);
-        }
-
-        for (let k = 0; k < best.length; k++) {
-          const { j, d2 } = best[k];
-          const strength = 1 - d2 / maxD2;
-          const aVis = Math.min(vis[i], vis[j]);
-          const alpha = (P.linkAlphaMin + P.linkAlphaGain * strength) * aVis;
-          if (alpha <= 0.001) continue;
-          ctx.globalAlpha = opacity * alpha;
-          ctx.beginPath();
-          ctx.moveTo(a.x, a.y);
-          ctx.lineTo(pos[j].x, pos[j].y);
-          ctx.stroke();
+          if (d2 > 0 && d2 < 55 * 55) {
+            const d = Math.sqrt(d2);
+            const push = (55 - d) / 55;
+            const ux = dx / d;
+            const uy = dy / d;
+            a.x -= ux * push * 0.18;
+            a.y -= uy * push * 0.18;
+            b.x += ux * push * 0.18;
+            b.y += uy * push * 0.18;
+          }
         }
       }
 
-      // Nodes (subtle)
-      for (let i = 0; i < n; i++) {
-        const aVis = vis[i];
-        if (aVis <= 0.02) continue;
-        ctx.globalAlpha = opacity * P.nodeAlpha * aVis;
-        const a = pos[i];
+      ctx.save();
+      ctx.globalAlpha = opacity;
+      ctx.lineWidth = 1.25; // thicker but still premium
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+
+      // Draw links with limit per node
+      for (let i = 0; i < nodes.length; i++) {
+        const a = nodes[i];
+        // Find nearest neighbors (simple partial selection)
+        let links = 0;
+        for (let j = 0; j < nodes.length; j++) {
+          if (i === j) continue;
+          const b = nodes[j];
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < maxDist2) {
+            // draw closer first by quick thresholding
+            const strength = 1 - d2 / maxDist2;
+            // keep very faint far links
+            const alpha = 0.06 + 0.22 * strength;
+            ctx.globalAlpha = opacity * alpha;
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.stroke();
+            links++;
+            if (links >= maxLinksPerNode) break;
+          }
+        }
+      }
+
+      // Draw nodes (subtle)
+      ctx.globalAlpha = opacity * 0.35;
+      for (let i = 0; i < nodes.length; i++) {
+        const p = nodes[i];
         ctx.beginPath();
-        ctx.arc(a.x, a.y, P.nodeRadius, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, 1.6, 0, Math.PI * 2);
         ctx.fill();
       }
 
       ctx.restore();
 
-      // Keep ticking.
       rafRef.current = requestAnimationFrame(tick);
-    };
+    }
 
-    ensureSize(true);
+    const onResize = () => resizeAndSeed();
 
-    // Extra mobile safety: VisualViewport changes when address bar shows/hides.
-    const vv = window.visualViewport;
-    const vvHandler = () => ensureSize(true);
-    const onResize = () => ensureSize(true);
-
-    rafRef.current = requestAnimationFrame(tick);
+    resizeAndSeed();
+    start();
 
     window.addEventListener("resize", onResize, { passive: true });
-    if (vv) {
-      vv.addEventListener("resize", vvHandler, { passive: true });
-      vv.addEventListener("scroll", vvHandler, { passive: true });
-    }
-    document.addEventListener("visibilitychange", onVis);
+    document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
+      stop();
       window.removeEventListener("resize", onResize);
-      document.removeEventListener("visibilitychange", onVis);
-      if (vv) {
-        vv.removeEventListener("resize", vvHandler);
-        vv.removeEventListener("scroll", vvHandler);
-      }
-      try {
-        cancelAnimationFrame(rafRef.current);
-      } catch {}
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [opacity, color]);
 
@@ -407,8 +208,16 @@ export default function NeuralBackground({
     <canvas
       ref={canvasRef}
       aria-hidden="true"
-      className={`pointer-events-none select-none w-full h-full ${className}`}
-      style={{ display: "block" }}
+      className={className}
+      style={{
+        position: "fixed",
+        inset: 0,
+        width: "100%",
+        height: "100%",
+        pointerEvents: "none",
+        mixBlendMode: "multiply",
+        zIndex: 0, // show behind UI; content should render above by DOM order
+      }}
     />
   );
 }
