@@ -541,6 +541,9 @@ export default function Vitrin() {
       const q = e.detail?.query?.trim();
       if (!q) return;
 
+      // ✅ Bu oturumda kullanıcı arama yaptı (auto-load değil)
+      try { if (typeof window !== "undefined") window.__faeUserSearched = true; } catch {}
+
       // 🔒 Dedupe: aynı sorgu üst üste gelirse (çift event / çift tetik) tek sefer çalışsın
       const now = Date.now();
       try {
@@ -581,7 +584,12 @@ export default function Vitrin() {
       setOthers(othersArr);
     }
 
-    const refreshHandler = () => loadVitrine(true);
+    const refreshHandler = () => {
+      try {
+        if (typeof window !== "undefined" && window.__faeUserSearched !== true) return;
+      } catch {}
+      loadVitrine(true);
+    };
 
     if (typeof window !== "undefined") {
     const onInject = (e) => {
@@ -593,6 +601,9 @@ export default function Vitrin() {
 
       setLoading(false);
       setLastQuery(q);
+
+      // ✅ Inject de bir aramadır (barcode/vision akışları)
+      try { window.__faeUserSearched = true; } catch {}
 
       // Inject ile gelenleri "best" olarak göster (tek liste)
       setBest(injectedItems);
@@ -770,22 +781,40 @@ export default function Vitrin() {
   //   🔥 VİTRİN MOTORU — stabil dinamik vitrin
   // ============================================================
   async function loadVitrine(reset = false) {
+    const queryForBody = String(getLastQuery() || lastQuery || "").trim();
+
+    // 🚫 Kullanıcı arama yapmadan vitrin tetiklenmesin (localStorage lastQuery olsa bile)
+    try {
+      if (typeof window !== "undefined" && window.__faeUserSearched !== true) {
+        return;
+      }
+    } catch {}
+
     if (typeof window !== "undefined") {
       if (window.__vitrineLoading) {
+        const loadingQ = String(window.__vitrineLoadingQuery || "").trim();
+        if (loadingQ && loadingQ === queryForBody) {
+          return; // aynı sorgu için çift tetik → yok say
+        }
         // Yükleme devam ederken gelen yeni sorguyu kaybetme.
         // Bitince bir kez daha tazeleyeceğiz.
         window.__vitrinePending = true;
+        window.__vitrinePendingQuery = queryForBody;
         return;
       }
       window.__vitrineLoading = true;
+      window.__vitrineLoadingQuery = queryForBody;
     }
 
     const OTHERS_ENABLED = false; // HARD
 
     try {
-      setLoading(true);
+      // 🚫 query boşsa backend çağrısı yapma; "sonuç bulunamadı" UX'ini de doğurma.
+      if (!queryForBody) {
+        return;
+      }
 
-      const queryForBody = getLastQuery() || lastQuery || "";
+      setLoading(true);
 
       const sourceHint = (() => {
         try {
@@ -1060,8 +1089,10 @@ export default function Vitrin() {
     } finally {
       if (typeof window !== "undefined") {
         window.__vitrineLoading = false;
+        window.__vitrineLoadingQuery = "";
         if (window.__vitrinePending) {
           window.__vitrinePending = false;
+          window.__vitrinePendingQuery = "";
           // Yeni sorgu load sırasında geldiyse, bir tick sonra tekrar yükle.
           setTimeout(() => {
             try {
@@ -1073,28 +1104,6 @@ export default function Vitrin() {
       setLoading(false);
     }
   }
-
-  // ============================================================
-  //   🔥 Global yenileme
-  // ============================================================
-  useEffect(() => {
-    const handler = () => loadVitrine(true);
-    if (typeof window !== "undefined") window.addEventListener("fae.vitrine.refresh", handler);
-    return () => {
-      if (typeof window !== "undefined") window.removeEventListener("fae.vitrine.refresh", handler);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    loadVitrine(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    loadVitrine(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [i18n.language]);
 
   // Interaction logger
   async function logInteraction(type, item) {
@@ -1157,18 +1166,20 @@ export default function Vitrin() {
           w-full
           max-w-[670px]
           mx-auto
-          bg-black/40 rounded-2xl p-3 sm:p-5
-          border border-[#d4af37]/35
-          shadow-[0_0_22px_rgba(212,175,55,0.25)]
+          rounded-2xl p-3 sm:p-5
+          bg-white/10
+          border border-white/15
+          ring-1 ring-[#d4af37]/10
+          shadow-[0_14px_55px_rgba(0,0,0,0.35)]
           backdrop-blur-xl
           transition-all duration-300
-          hover:bg-black/55 hover:border-[#d4af37]/70
-          hover:shadow-[0_0_40px_rgba(212,175,55,0.45)]
+          hover:bg-white/14 hover:border-white/20 hover:ring-[#d4af37]/18
+          hover:shadow-[0_18px_70px_rgba(0,0,0,0.45)]
           cursor-pointer
           flex flex-row gap-3 sm:gap-5 items-center
         "
       >
-        <div className="w-[96px] h-[96px] sm:w-[160px] sm:h-[160px] rounded-xl overflow-hidden flex-none bg-black/40 flex items-center justify-center">
+        <div className="w-[96px] h-[96px] sm:w-[160px] sm:h-[160px] rounded-xl overflow-hidden flex-none bg-white/7 border border-white/10 flex items-center justify-center">
           {img ? (
             <img src={img} alt={safeTitle} className="w-full h-full object-contain" />
           ) : (
