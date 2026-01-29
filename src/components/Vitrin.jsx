@@ -783,9 +783,16 @@ export default function Vitrin() {
     const OTHERS_ENABLED = false; // HARD
 
     try {
-      setLoading(true);
+      const queryForBody = String(getLastQuery() || lastQuery || "").trim();
 
-      const queryForBody = getLastQuery() || lastQuery || "";
+
+      // 🚫 Sayfa ilk açıldığında (kullanıcı arama yapmadan) vitrin tetiklenmesin.
+      // query boşsa backend çağrısı yapma; "sonuç bulunamadı" UX'ini de doğurma.
+      if (!queryForBody) {
+        return;
+      }
+
+      setLoading(true);
 
       const sourceHint = (() => {
         try {
@@ -1074,28 +1081,6 @@ export default function Vitrin() {
     }
   }
 
-  // ============================================================
-  //   🔥 Global yenileme
-  // ============================================================
-  useEffect(() => {
-    const handler = () => loadVitrine(true);
-    if (typeof window !== "undefined") window.addEventListener("fae.vitrine.refresh", handler);
-    return () => {
-      if (typeof window !== "undefined") window.removeEventListener("fae.vitrine.refresh", handler);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    loadVitrine(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    loadVitrine(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [i18n.language]);
-
   // Interaction logger
   async function logInteraction(type, item) {
     try {
@@ -1157,18 +1142,20 @@ export default function Vitrin() {
           w-full
           max-w-[670px]
           mx-auto
-          bg-black/40 rounded-2xl p-3 sm:p-5
-          border border-[#d4af37]/35
-          shadow-[0_0_22px_rgba(212,175,55,0.25)]
+          rounded-2xl p-3 sm:p-5
+          bg-white/10
+          border border-white/15
+          ring-1 ring-[#d4af37]/10
+          shadow-[0_14px_55px_rgba(0,0,0,0.35)]
           backdrop-blur-xl
           transition-all duration-300
-          hover:bg-black/55 hover:border-[#d4af37]/70
-          hover:shadow-[0_0_40px_rgba(212,175,55,0.45)]
+          hover:bg-white/14 hover:border-white/20 hover:ring-[#d4af37]/18
+          hover:shadow-[0_18px_70px_rgba(0,0,0,0.45)]
           cursor-pointer
           flex flex-row gap-3 sm:gap-5 items-center
         "
       >
-        <div className="w-[96px] h-[96px] sm:w-[160px] sm:h-[160px] rounded-xl overflow-hidden flex-none bg-black/40 flex items-center justify-center">
+        <div className="w-[96px] h-[96px] sm:w-[160px] sm:h-[160px] rounded-xl overflow-hidden flex-none bg-white/7 border border-white/10 flex items-center justify-center">
           {img ? (
             <img src={img} alt={safeTitle} className="w-full h-full object-contain" />
           ) : (
@@ -1255,42 +1242,8 @@ export default function Vitrin() {
               }}
             />
           ) : (
-            <div className="rounded-2xl border border-dashed border-white/15 p-5 sm:p-6 flex items-center justify-center h-full min-h-[180px] bg-[rgba(16,12,32,0.35)] backdrop-blur">
-              <div className="max-w-[720px]">
-                <p className="text-white/85 text-sm sm:text-base font-medium text-center">
-                  {t("showcase.emptyInfoLine", { defaultValue: "Bu site, aradığın ürün veya hizmeti hızlıca bulup fiyatları karşılaştırır." })}
-                </p>
-
-                <div className="mt-4">
-                  <div className="text-white/80 font-semibold text-sm sm:text-base" style={{ textAlign: "start" }}>
-                    {t("showcase.emptyBenefitsTitle", { defaultValue: "Sana faydası:" })}
-                  </div>
-
-                  <ul
-                    className="mt-2 space-y-1.5 text-[12px] sm:text-[13px] text-white/70"
-                    style={{ textAlign: "start", paddingInlineStart: "1.1rem" }}
-                  >
-                    <li>
-                      <span className="text-white/85 font-semibold">
-                        {t("showcase.benefitTimeTitle", { defaultValue: "Zaman kazandırır" })}
-                      </span>
-                      : {t("showcase.benefitTimeDesc", { defaultValue: "Tek tek site gezmeden sonuçları tek yerde görürsün." })}
-                    </li>
-                    <li>
-                      <span className="text-white/85 font-semibold">
-                        {t("showcase.benefitMoneyTitle", { defaultValue: "Para kazandırır" })}
-                      </span>
-                      : {t("showcase.benefitMoneyDesc", { defaultValue: "En uygun/ekonomik seçenekleri öne çıkarır, gereksiz pahalıya kaçmanı engeller." })}
-                    </li>
-                    <li>
-                      <span className="text-white/85 font-semibold">
-                        {t("showcase.benefitPeaceTitle", { defaultValue: "Kafa rahatlatır" })}
-                      </span>
-                      : {t("showcase.benefitPeaceDesc", { defaultValue: "Alakasız “çer çöp” sonuçları ayıklayıp daha güvenilir kaynaklara öncelik verir." })}
-                    </li>
-                  </ul>
-                </div>
-              </div>
+            <div className="rounded-2xl border border-dashed border-white/15 text-xs text-white/40 p-4 flex items-center justify-center h-full min-h-[160px]">
+              {t("trigger.customShowcase", { defaultValue: "Kişisel vitrinini hazırlıyorum..." })}
             </div>
           )}
         </div>
