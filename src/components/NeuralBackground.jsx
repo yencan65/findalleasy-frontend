@@ -1,12 +1,12 @@
 import React, { useEffect, useRef } from "react";
 
 /**
- * NeuralBackground — calm "AI neural web" that is NOT random scribbles on mobile.
+ * Calm, stable neural-web background (responsive density + subtle rotation).
  *
- * ✅ Mobile: structured short links (meaningful mesh), not meaningless long lines
- * ✅ Every page entry: starts from a corner and spreads across the page (soft reveal wave)
- * ✅ Corner rotates sequentially across 4 corners (session-based)
- * ✅ Stable over time: no lightning / no accumulation (full clear, dt clamp, pause on hidden)
+ * Updates (per request):
+ *  - Mobile: NOT dense, but LINK lines are a bit more visible (nodes stay subtle)
+ *  - Tablet/PC: can move a bit faster (still calm)
+ *  - Safe over time: dt clamp + visibility pause + full clear (no lightning)
  */
 export default function NeuralBackground({
   className = "",
@@ -16,33 +16,18 @@ export default function NeuralBackground({
   const canvasRef = useRef(null);
   const rafRef = useRef(0);
   const lastTRef = useRef(0);
-
   const nodesRef = useRef([]);
-  const linksRef = useRef([]); // [i, j]
-  const metaRef = useRef({ w: 0, h: 0, tier: "desktop" });
-
-  const introRef = useRef({
-    startAt: 0,
-    duration: 2200,
-    active: true,
-    cornerIdx: 0,
-    origin: { x: 0, y: 0 },
-  });
-
   const runningRef = useRef(true);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const ctx = canvas.getContext("2d", { alpha: true });
     if (!ctx) return;
 
     const prefersReduced =
       window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
 
-    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-    const smooth01 = (t) => t * t * (3 - 2 * t);
     const rand = (a, b) => a + Math.random() * (b - a);
 
     function getTier(w) {
@@ -51,107 +36,37 @@ export default function NeuralBackground({
       return "desktop";
     }
 
-    function pickNextCorner() {
-      const key = "fae_neural_corner_idx";
-      const raw = sessionStorage.getItem(key);
-      let idx;
-      if (raw == null) idx = Math.floor(Math.random() * 4);
-      else idx = (parseInt(raw, 10) + 1) % 4;
-      sessionStorage.setItem(key, String(idx));
-      return idx;
-    }
-
-    function cornerOrigin(idx, w, h) {
-      if (idx === 0) return { x: 0, y: 0 };       // TL
-      if (idx === 1) return { x: w, y: 0 };       // TR
-      if (idx === 2) return { x: w, y: h };       // BR
-      return { x: 0, y: h };                      // BL
-    }
-
-    function patchHistoryOnce() {
-      if (window.__faeHistoryPatched) return;
-      window.__faeHistoryPatched = true;
-
-      const fire = () => window.dispatchEvent(new Event("fae:navigation"));
-
-      const wrap = (fn) =>
-        function (...args) {
-          const ret = fn.apply(this, args);
-          try { fire(); } catch {}
-          return ret;
-        };
-
-      try {
-        history.pushState = wrap(history.pushState);
-        history.replaceState = wrap(history.replaceState);
-      } catch {}
-    }
-
-    function resetIntro(now = performance.now()) {
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-
-      const idx = pickNextCorner();
-      introRef.current.cornerIdx = idx;
-      introRef.current.origin = cornerOrigin(idx, w, h);
-      introRef.current.startAt = now;
-      introRef.current.active = true;
-      introRef.current.duration = prefersReduced ? 900 : 2200;
-    }
-
-    function buildMesh(w, h) {
+    function getParams(w, h) {
       const tier = getTier(w);
-      metaRef.current = { w, h, tier };
+      const area = w * h;
 
-      const spacing = tier === "mobile" ? 92 : tier === "tablet" ? 80 : 72;
-      const jitter = spacing * 0.26;
+      let nMin, nMax, divisor, maxLinksPerNode, maxDist;
 
-      const cols = Math.max(3, Math.floor(w / spacing) + 2);
-      const rows = Math.max(3, Math.floor(h / spacing) + 2);
-      const idx = (cx, cy) => cy * cols + cx;
-
-      const nodes = [];
-      for (let cy = 0; cy < rows; cy++) {
-        for (let cx = 0; cx < cols; cx++) {
-          const baseX = cx * spacing + rand(-jitter, jitter);
-          const baseY = cy * spacing + rand(-jitter, jitter);
-          nodes.push({
-            bx: clamp(baseX, -40, w + 40),
-            by: clamp(baseY, -40, h + 40),
-            ph1: rand(0, Math.PI * 2),
-            ph2: rand(0, Math.PI * 2),
-            amp: tier === "mobile" ? 5.5 : 7.0,
-            x: 0,
-            y: 0,
-          });
-        }
+      if (tier === "mobile") {
+        nMin = 26;
+        nMax = 64;
+        divisor = 56000;
+        maxLinksPerNode = 2;
+        maxDist = 125;
+      } else if (tier === "tablet") {
+        nMin = 45;
+        nMax = 120;
+        divisor = 36000;
+        maxLinksPerNode = 3;
+        maxDist = 165;
+      } else {
+        nMin = 70;
+        nMax = 185;
+        divisor = 28000;
+        maxLinksPerNode = 4;
+        maxDist = 185;
       }
 
-      const links = [];
-      const add = (a, b) => {
-        if (a < 0 || b < 0 || a >= nodes.length || b >= nodes.length) return;
-        links.push([a, b]);
-      };
-
-      const diagLinks = tier === "mobile" ? 1 : 2;
-
-      for (let cy = 0; cy < rows; cy++) {
-        for (let cx = 0; cx < cols; cx++) {
-          const i = idx(cx, cy);
-
-          if (cx + 1 < cols) add(i, idx(cx + 1, cy));
-          if (cy + 1 < rows) add(i, idx(cx, cy + 1));
-
-          if (diagLinks >= 1 && cx + 1 < cols && cy + 1 < rows) add(i, idx(cx + 1, cy + 1));
-          if (diagLinks >= 2 && cx - 1 >= 0 && cy + 1 < rows) add(i, idx(cx - 1, cy + 1));
-        }
-      }
-
-      nodesRef.current = nodes;
-      linksRef.current = links;
+      const n = Math.max(nMin, Math.min(nMax, Math.round(area / divisor)));
+      return { tier, n, maxLinksPerNode, maxDist };
     }
 
-    function resizeAll() {
+    function resizeAndSeed() {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = Math.max(1, window.innerWidth);
       const h = Math.max(1, window.innerHeight);
@@ -162,8 +77,18 @@ export default function NeuralBackground({
       canvas.style.height = h + "px";
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      buildMesh(w, h);
-      resetIntro(performance.now());
+      const { n } = getParams(w, h);
+
+      const nodes = [];
+      for (let i = 0; i < n; i++) {
+        nodes.push({
+          x: rand(0, w),
+          y: rand(0, h),
+          vx: rand(-0.12, 0.12),
+          vy: rand(-0.12, 0.12),
+        });
+      }
+      nodesRef.current = nodes;
     }
 
     function stop() {
@@ -195,125 +120,149 @@ export default function NeuralBackground({
       if (!Number.isFinite(dt) || dt <= 0) dt = 0.016;
       dt = Math.min(dt, 0.033);
 
-      const { w, h, tier } = metaRef.current;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+
       ctx.clearRect(0, 0, w, h);
 
       const nodes = nodesRef.current;
-      const links = linksRef.current;
-      if (!nodes.length || !links.length) {
+      if (!nodes || nodes.length === 0) {
         rafRef.current = requestAnimationFrame(tick);
         return;
       }
 
-      const driftSpeed = prefersReduced ? 0.25 : tier === "mobile" ? 0.55 : tier === "tablet" ? 0.75 : 0.85;
-      const tt = t / 1000;
+      const { tier, maxLinksPerNode, maxDist } = getParams(w, h);
+      const maxDist2 = maxDist * maxDist;
+
+      let speed;
+      if (prefersReduced) speed = 0.25;
+      else if (tier === "mobile") speed = 0.58;
+      else if (tier === "tablet") speed = 0.82;
+      else speed = 0.92;
 
       for (let i = 0; i < nodes.length; i++) {
         const p = nodes[i];
-        const ax = Math.sin((tt * driftSpeed) + p.ph1) * p.amp;
-        const ay = Math.cos((tt * driftSpeed * 0.92) + p.ph2) * p.amp;
-        p.x = p.bx + ax;
-        p.y = p.by + ay;
+        p.x += p.vx * speed * (dt * 60);
+        p.y += p.vy * speed * (dt * 60);
+
+        if (p.x < -20) p.x = w + 20;
+        if (p.x > w + 20) p.x = -20;
+        if (p.y < -20) p.y = h + 20;
+        if (p.y > h + 20) p.y = -20;
       }
 
-      const intro = introRef.current;
-      const elapsed = t - intro.startAt;
-      const dur = intro.duration;
+      const repelRadius = tier === "mobile" ? 62 : 55;
+      const repelRadius2 = repelRadius * repelRadius;
+      const repelStrength = tier === "mobile" ? 0.22 : 0.18;
 
-      let revealK = 1;
-      if (intro.active) {
-        revealK = clamp(elapsed / dur, 0, 1);
-        if (revealK >= 1) intro.active = false;
+      for (let i = 0; i < nodes.length; i++) {
+        const a = nodes[i];
+        for (let j = i + 1; j < nodes.length; j++) {
+          const b = nodes[j];
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 > 0 && d2 < repelRadius2) {
+            const d = Math.sqrt(d2);
+            const push = (repelRadius - d) / repelRadius;
+            const ux = dx / d;
+            const uy = dy / d;
+            a.x -= ux * push * repelStrength;
+            a.y -= uy * push * repelStrength;
+            b.x += ux * push * repelStrength;
+            b.y += uy * push * repelStrength;
+          }
+        }
       }
 
-      const diag = Math.hypot(w, h) * 1.15;
-      const revealR = smooth01(revealK) * diag;
-      const edge = tier === "mobile" ? 150 : 180;
-
-      const ox = intro.origin.x;
-      const oy = intro.origin.y;
+      const angle =
+        tier === "mobile" && !prefersReduced ? Math.sin(t / 17000) * 0.03 : 0;
 
       ctx.save();
-      ctx.strokeStyle = color;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-
-      const baseLine = tier === "mobile" ? 1.35 : 1.25;
-      ctx.lineWidth = baseLine;
-
-      // LINKS
-      for (let k = 0; k < links.length; k++) {
-        const pair = links[k];
-        const a = nodes[pair[0]];
-        const b = nodes[pair[1]];
-
-        const mx = (a.x + b.x) * 0.5;
-        const my = (a.y + b.y) * 0.5;
-        const d = Math.hypot(mx - ox, my - oy);
-
-        const v = clamp((revealR - d) / edge, 0, 1);
-        if (v <= 0) continue;
-
-        const linkAlpha = tier === "mobile"
-          ? opacity * (0.12 + 0.22 * v)
-          : opacity * (0.08 + 0.18 * v);
-
-        ctx.globalAlpha = linkAlpha;
-
-        ctx.beginPath();
-        ctx.moveTo(a.x, a.y);
-        ctx.lineTo(b.x, b.y);
-        ctx.stroke();
+      if (angle) {
+        ctx.translate(w / 2, h / 2);
+        ctx.rotate(angle);
+        ctx.translate(-w / 2, -h / 2);
       }
 
-      // NODES
+      ctx.save();
+      ctx.globalAlpha = opacity;
+      ctx.lineWidth = tier === "mobile" ? 1.32 : 1.25;
+      ctx.strokeStyle = color;
       ctx.fillStyle = color;
-      const nodeR = tier === "mobile" ? 1.15 : 1.45;
+
+      for (let i = 0; i < nodes.length; i++) {
+        const a = nodes[i];
+        let links = 0;
+
+        for (let j = 0; j < nodes.length; j++) {
+          if (i === j) continue;
+          const b = nodes[j];
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const d2 = dx * dx + dy * dy;
+
+          if (d2 < maxDist2) {
+            const strength = 1 - d2 / maxDist2;
+
+            let baseAlpha, boost, cap;
+            if (tier === "mobile") {
+              baseAlpha = 0.095;
+              boost = 0.34;
+              cap = 0.46;
+            } else if (tier === "tablet") {
+              baseAlpha = 0.06;
+              boost = 0.24;
+              cap = 0.38;
+            } else {
+              baseAlpha = 0.06;
+              boost = 0.22;
+              cap = 0.36;
+            }
+
+            const alpha = Math.min(cap, baseAlpha + boost * strength);
+
+            ctx.globalAlpha = opacity * alpha;
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.stroke();
+
+            links++;
+            if (links >= maxLinksPerNode) break;
+          }
+        }
+      }
+
+      const nodeAlpha = tier === "mobile" ? 0.18 : 0.35;
+      const r = tier === "mobile" ? 1.15 : 1.6;
+      ctx.globalAlpha = opacity * nodeAlpha;
 
       for (let i = 0; i < nodes.length; i++) {
         const p = nodes[i];
-        const d = Math.hypot(p.x - ox, p.y - oy);
-        const v = clamp((revealR - d) / edge, 0, 1);
-        if (v <= 0) continue;
-
-        const nodeAlpha = tier === "mobile"
-          ? opacity * (0.10 + 0.12 * v)
-          : opacity * (0.14 + 0.14 * v);
-
-        ctx.globalAlpha = nodeAlpha;
-
         ctx.beginPath();
-        ctx.arc(p.x, p.y, nodeR, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
         ctx.fill();
       }
 
+      ctx.restore();
       ctx.restore();
 
       rafRef.current = requestAnimationFrame(tick);
     }
 
-    patchHistoryOnce();
-    resizeAll();
-    start();
+    const onResize = () => resizeAndSeed();
 
-    const onResize = () => resizeAll();
-    const onNav = () => resetIntro(performance.now());
+    resizeAndSeed();
+    start();
 
     window.addEventListener("resize", onResize, { passive: true });
     document.addEventListener("visibilitychange", onVisibility);
-    window.addEventListener("fae:navigation", onNav);
-    window.addEventListener("popstate", onNav);
-    window.addEventListener("hashchange", onNav);
-    window.addEventListener("pageshow", onNav);
 
     return () => {
       stop();
       window.removeEventListener("resize", onResize);
       document.removeEventListener("visibilitychange", onVisibility);
-      window.removeEventListener("fae:navigation", onNav);
-      window.removeEventListener("popstate", onNav);
-      window.removeEventListener("hashchange", onNav);
-      window.removeEventListener("pageshow", onNav);
     };
   }, [opacity, color]);
 
