@@ -121,6 +121,7 @@ export async function runUnifiedSearch(
     meta = null,
 
     skipVitrin = false,
+    userInitiated = false,
     skipAI = true,
   } = {}
 ) {
@@ -129,7 +130,7 @@ export async function runUnifiedSearch(
 
   // 1) Vitrine query gönder (mevcut davranış KORUNUYOR)
   if (!skipVitrin) {
-    pushQueryToVitrine(clean, source);
+    pushQueryToVitrine(clean, source, { userInitiated });
   }
 
   // Sadece vitrin tetiklemek için kullanılıyorsa
@@ -221,7 +222,7 @@ export async function runUnifiedSearch(
 // ------------------------------------------------------------
 //  Vitrin tarafı — event köprüsü
 // ------------------------------------------------------------
-export function pushQueryToVitrine(query, source = "unknown") {
+export function pushQueryToVitrine(query, source = "unknown", meta = {}) {
   const clean = normalizeQuery(query);
   if (!clean) return;
   if (typeof window === "undefined") return;
@@ -231,7 +232,7 @@ export function pushQueryToVitrine(query, source = "unknown") {
 
   setLastQuery(clean, source);
 
-  const detail = { query: clean, source };
+  const detail = { query: clean, source, ...(meta || {}) };
 
   try {
     window.dispatchEvent(new CustomEvent("fae.vitrine.search", { detail }));
