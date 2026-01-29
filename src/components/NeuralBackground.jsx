@@ -1,12 +1,12 @@
 import React, { useEffect, useRef } from "react";
 
 /**
- * Calm, stable neural-web background (responsive density + subtle mobile rotation).
+ * Calm, stable neural-web background (responsive density + subtle rotation).
  *
- * Mobile goal (your request):
- *  - NOT crowded
- *  - links a bit more visible (nodes still subtle)
- *  - gentle movement + very light rotation
+ * Updates (per request):
+ *  - Mobile: NOT dense, but LINK lines are a bit more visible (nodes stay subtle)
+ *  - Tablet/PC: can move a bit faster (still calm)
+ *  - Safe over time: dt clamp + visibility pause + full clear (no lightning)
  */
 export default function NeuralBackground({
   className = "",
@@ -43,7 +43,6 @@ export default function NeuralBackground({
       let nMin, nMax, divisor, maxLinksPerNode, maxDist;
 
       if (tier === "mobile") {
-        // lighter density, but links slightly more visible
         nMin = 26;
         nMax = 64;
         divisor = 56000;
@@ -107,7 +106,7 @@ export default function NeuralBackground({
     function onVisibility() {
       if (document.hidden) stop();
       else {
-        lastTRef.current = 0; // avoid dt jump
+        lastTRef.current = 0;
         start();
       }
     }
@@ -124,7 +123,6 @@ export default function NeuralBackground({
       const w = window.innerWidth;
       const h = window.innerHeight;
 
-      // no trails
       ctx.clearRect(0, 0, w, h);
 
       const nodes = nodesRef.current;
@@ -136,7 +134,11 @@ export default function NeuralBackground({
       const { tier, maxLinksPerNode, maxDist } = getParams(w, h);
       const maxDist2 = maxDist * maxDist;
 
-      const speed = prefersReduced ? 0.25 : 0.65;
+      let speed;
+      if (prefersReduced) speed = 0.25;
+      else if (tier === "mobile") speed = 0.58;
+      else if (tier === "tablet") speed = 0.82;
+      else speed = 0.92;
 
       for (let i = 0; i < nodes.length; i++) {
         const p = nodes[i];
@@ -149,7 +151,6 @@ export default function NeuralBackground({
         if (p.y > h + 20) p.y = -20;
       }
 
-      // repulsion (mobile slightly stronger)
       const repelRadius = tier === "mobile" ? 62 : 55;
       const repelRadius2 = repelRadius * repelRadius;
       const repelStrength = tier === "mobile" ? 0.22 : 0.18;
@@ -174,9 +175,8 @@ export default function NeuralBackground({
         }
       }
 
-      // tiny mobile rotation: makes it feel alive without clutter
       const angle =
-        tier === "mobile" && !prefersReduced ? Math.sin(t / 17000) * 0.03 : 0; // ~±1.7°
+        tier === "mobile" && !prefersReduced ? Math.sin(t / 17000) * 0.03 : 0;
 
       ctx.save();
       if (angle) {
@@ -187,11 +187,10 @@ export default function NeuralBackground({
 
       ctx.save();
       ctx.globalAlpha = opacity;
-      ctx.lineWidth = tier === "mobile" ? 1.18 : 1.25;
+      ctx.lineWidth = tier === "mobile" ? 1.32 : 1.25;
       ctx.strokeStyle = color;
       ctx.fillStyle = color;
 
-      // links: mobile more visible but fewer links
       for (let i = 0; i < nodes.length; i++) {
         const a = nodes[i];
         let links = 0;
@@ -206,10 +205,22 @@ export default function NeuralBackground({
           if (d2 < maxDist2) {
             const strength = 1 - d2 / maxDist2;
 
-            // tuned alphas
-            const baseAlpha = tier === "mobile" ? 0.075 : 0.06;
-            const boost = tier === "mobile" ? 0.28 : 0.22;
-            const alpha = Math.min(0.38, baseAlpha + boost * strength);
+            let baseAlpha, boost, cap;
+            if (tier === "mobile") {
+              baseAlpha = 0.095;
+              boost = 0.34;
+              cap = 0.46;
+            } else if (tier === "tablet") {
+              baseAlpha = 0.06;
+              boost = 0.24;
+              cap = 0.38;
+            } else {
+              baseAlpha = 0.06;
+              boost = 0.22;
+              cap = 0.36;
+            }
+
+            const alpha = Math.min(cap, baseAlpha + boost * strength);
 
             ctx.globalAlpha = opacity * alpha;
             ctx.beginPath();
@@ -223,9 +234,8 @@ export default function NeuralBackground({
         }
       }
 
-      // nodes stay subtle (links are the hero on mobile)
-      const nodeAlpha = tier === "mobile" ? 0.22 : 0.35;
-      const r = tier === "mobile" ? 1.2 : 1.6;
+      const nodeAlpha = tier === "mobile" ? 0.18 : 0.35;
+      const r = tier === "mobile" ? 1.15 : 1.6;
       ctx.globalAlpha = opacity * nodeAlpha;
 
       for (let i = 0; i < nodes.length; i++) {
