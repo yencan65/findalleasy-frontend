@@ -1,13 +1,13 @@
 import React, { useEffect, useRef } from "react";
 
 /**
- * Calm, stable neural-web background.
+ * Calm, stable neural-web background (responsive density + subtle mobile rotation).
  *
- * Fixes the common "screen disappeared" issue by ensuring:
- *  - canvas is fixed + behind everything (zIndex: -1)
- *  - pointerEvents: none
- *  - no trail accumulation (full clear each frame)
- *  - animation pauses when tab is hidden (no dt jump)
+ * Goals:
+ *  - Never "goes lightning" over time: dt clamp + pause on tab hidden + full clear each frame
+ *  - Mobile is NOT crowded (fewer nodes + fewer links + shorter radius)
+ *  - Tablet/PC slightly denser
+ *  - Subtle rotation ONLY on mobile (gentle breathing wobble), respects prefers-reduced-motion
  */
 export default function NeuralBackground({
   className = "",
@@ -26,24 +26,61 @@ export default function NeuralBackground({
     const ctx = canvas.getContext("2d", { alpha: true });
     if (!ctx) return;
 
-    const prefersReduced = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    const prefersReduced =
+      window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
 
     const rand = (a, b) => a + Math.random() * (b - a);
+
+    function getTier(w) {
+      if (w < 640) return "mobile";
+      if (w < 1024) return "tablet";
+      return "desktop";
+    }
+
+    function getParams(w, h) {
+      const tier = getTier(w);
+      const area = w * h;
+
+      // Density + links tuned per tier (mobile lighter)
+      let nMin, nMax, divisor, maxLinksPerNode, maxDist;
+
+      if (tier === "mobile") {
+        nMin = 28;
+        nMax = 70;
+        divisor = 52000;
+        maxLinksPerNode = 2;
+        maxDist = 135;
+      } else if (tier === "tablet") {
+        nMin = 45;
+        nMax = 120;
+        divisor = 36000;
+        maxLinksPerNode = 3;
+        maxDist = 165;
+      } else {
+        nMin = 70;
+        nMax = 185;
+        divisor = 28000;
+        maxLinksPerNode = 4;
+        maxDist = 185;
+      }
+
+      const n = Math.max(nMin, Math.min(nMax, Math.round(area / divisor)));
+
+      return { tier, n, maxLinksPerNode, maxDist };
+    }
 
     function resizeAndSeed() {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = Math.max(1, window.innerWidth);
       const h = Math.max(1, window.innerHeight);
+
       canvas.width = Math.floor(w * dpr);
       canvas.height = Math.floor(h * dpr);
       canvas.style.width = w + "px";
       canvas.style.height = h + "px";
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      // Density based on area; cap to keep perf stable.
-      const area = w * h;
-      const base = Math.round(area / 26000);
-      const n = Math.max(60, Math.min(180, base));
+      const { n } = getParams(w, h);
 
       const nodes = [];
       for (let i = 0; i < n; i++) {
@@ -79,10 +116,6 @@ export default function NeuralBackground({
       }
     }
 
-    const maxDist = 170; // connection radius
-    const maxDist2 = maxDist * maxDist;
-    const maxLinksPerNode = 4; // prevents overdraw bursts
-
     function tick(t) {
       if (!runningRef.current) return;
 
@@ -105,10 +138,13 @@ export default function NeuralBackground({
         return;
       }
 
+      const { tier, maxLinksPerNode, maxDist } = getParams(w, h);
+      const maxDist2 = maxDist * maxDist;
+
       // Slow, calm speed
       const speed = prefersReduced ? 0.25 : 0.65;
 
-      // Move + wrap + mild repulsion to avoid clustering
+      // Move + wrap
       for (let i = 0; i < nodes.length; i++) {
         const p = nodes[i];
         p.x += p.vx * speed * (dt * 60);
@@ -121,7 +157,11 @@ export default function NeuralBackground({
         if (p.y > h + 20) p.y = -20;
       }
 
-      // Repulsion pass (cheap)
+      // Mild repulsion to avoid clustering (mobile a bit stronger)
+      const repelRadius = tier === "mobile" ? 62 : 55;
+      const repelRadius2 = repelRadius * repelRadius;
+      const repelStrength = tier === "mobile" ? 0.22 : 0.18;
+
       for (let i = 0; i < nodes.length; i++) {
         const a = nodes[i];
         for (let j = i + 1; j < nodes.length; j++) {
@@ -129,29 +169,38 @@ export default function NeuralBackground({
           const dx = b.x - a.x;
           const dy = b.y - a.y;
           const d2 = dx * dx + dy * dy;
-          if (d2 > 0 && d2 < 55 * 55) {
+          if (d2 > 0 && d2 < repelRadius2) {
             const d = Math.sqrt(d2);
-            const push = (55 - d) / 55;
+            const push = (repelRadius - d) / repelRadius;
             const ux = dx / d;
             const uy = dy / d;
-            a.x -= ux * push * 0.18;
-            a.y -= uy * push * 0.18;
-            b.x += ux * push * 0.18;
-            b.y += uy * push * 0.18;
+            a.x -= ux * push * repelStrength;
+            a.y -= uy * push * repelStrength;
+            b.x += ux * push * repelStrength;
+            b.y += uy * push * repelStrength;
           }
         }
       }
 
+      // Subtle mobile rotation (gentle wobble), respects reduced motion
+      const angle =
+        tier === "mobile" && !prefersReduced ? Math.sin(t / 16000) * 0.035 : 0; // ~±2°
+      ctx.save();
+      if (angle) {
+        ctx.translate(w / 2, h / 2);
+        ctx.rotate(angle);
+        ctx.translate(-w / 2, -h / 2);
+      }
+
       ctx.save();
       ctx.globalAlpha = opacity;
-      ctx.lineWidth = 1.25; // thicker but still premium
+      ctx.lineWidth = tier === "mobile" ? 1.05 : 1.25;
       ctx.strokeStyle = color;
       ctx.fillStyle = color;
 
-      // Draw links with limit per node
+      // Draw links (limit per node to avoid overdraw bursts)
       for (let i = 0; i < nodes.length; i++) {
         const a = nodes[i];
-        // Find nearest neighbors (simple partial selection)
         let links = 0;
         for (let j = 0; j < nodes.length; j++) {
           if (i === j) continue;
@@ -160,10 +209,10 @@ export default function NeuralBackground({
           const dy = b.y - a.y;
           const d2 = dx * dx + dy * dy;
           if (d2 < maxDist2) {
-            // draw closer first by quick thresholding
             const strength = 1 - d2 / maxDist2;
-            // keep very faint far links
-            const alpha = 0.06 + 0.22 * strength;
+            const baseAlpha = tier === "mobile" ? 0.05 : 0.06;
+            const boost = tier === "mobile" ? 0.18 : 0.22;
+            const alpha = baseAlpha + boost * strength;
             ctx.globalAlpha = opacity * alpha;
             ctx.beginPath();
             ctx.moveTo(a.x, a.y);
@@ -176,14 +225,16 @@ export default function NeuralBackground({
       }
 
       // Draw nodes (subtle)
-      ctx.globalAlpha = opacity * 0.35;
+      ctx.globalAlpha = opacity * (tier === "mobile" ? 0.28 : 0.35);
+      const r = tier === "mobile" ? 1.35 : 1.6;
       for (let i = 0; i < nodes.length; i++) {
         const p = nodes[i];
         ctx.beginPath();
-        ctx.arc(p.x, p.y, 1.6, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
         ctx.fill();
       }
 
+      ctx.restore();
       ctx.restore();
 
       rafRef.current = requestAnimationFrame(tick);
@@ -216,7 +267,7 @@ export default function NeuralBackground({
         height: "100%",
         pointerEvents: "none",
         mixBlendMode: "multiply",
-        zIndex: 0, // show behind UI; content should render above by DOM order
+        zIndex: 0, // background layer; ensure your main content wrapper has z-index > 0 if needed
       }}
     />
   );
