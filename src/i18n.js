@@ -210,15 +210,7 @@ const resources = {
         aiCumulative: "SonoAI Önerileri",
         personalizing: "Kişiselleştiriliyor…",
         others: "Diğerleri",
-        noResults: "Henüz sonuç bulunamadı.",
-        emptyInfoLine: "Bu site, aradığın ürün veya hizmeti hızlıca bulup fiyatları karşılaştırır.",
-        emptyBenefitsTitle: "Sana faydası:",
-        benefitTimeTitle: "Zaman kazandırır",
-        benefitTimeDesc: "Tek tek site gezmeden sonuçları tek yerde görürsün.",
-        benefitMoneyTitle: "Para kazandırır",
-        benefitMoneyDesc: "En uygun/ekonomik seçenekleri öne çıkarır, gereksiz pahalıya kaçmanı engeller.",
-        benefitPeaceTitle: "Kafa rahatlatır",
-        benefitPeaceDesc: "Alakasız “çer çöp” sonuçları ayıklayıp daha güvenilir kaynaklara öncelik verir."
+        noResults: "Henüz sonuç bulunamadı."
       },
 
       common: {
@@ -297,6 +289,14 @@ const resources = {
         resultsReady: "Sonuçlar vitrinde hazır. Teşekkürler.",
         noResults: "Üzgünüm, sonuç bulunamadı. Başka bir şey deneyin.",
         resultsError: "Arama sırasında hata oluştu. Lütfen tekrar deneyin.",
+        introTitle: "Bu site, aradığın ürün veya hizmeti hızlıca bulup fiyatları karşılaştırır.",
+        introBenefitsTitle: "Sana faydası:",
+        introTimeLabel: "Zaman kazandırır:",
+        introTimeDesc: "Tek tek site gezmeden sonuçları tek yerde görürsün.",
+        introMoneyLabel: "Para kazandırır:",
+        introMoneyDesc: "En uygun/ekonomik seçenekleri öne çıkarır, gereksiz pahalıya kaçmanı engeller.",
+        introCalmLabel: "Kafa rahatlatır:",
+        introCalmDesc: "Alakasız “çer çöp” sonuçları ayıklayıp daha güvenilir kaynaklara öncelik verir.",
       },
 
 
@@ -611,15 +611,7 @@ const resources = {
         aiCumulative: "SonoAI Suggestions",
         personalizing: "Personalizing…",
         others: "Others",
-        noResults: "No results yet.",
-        emptyInfoLine: "This site helps you quickly find the product or service you’re looking for and compare prices.",
-        emptyBenefitsTitle: "Benefits for you:",
-        benefitTimeTitle: "Saves time",
-        benefitTimeDesc: "See results in one place instead of browsing site by site.",
-        benefitMoneyTitle: "Saves money",
-        benefitMoneyDesc: "Highlights budget-friendly options so you don’t overpay.",
-        benefitPeaceTitle: "Peace of mind",
-        benefitPeaceDesc: "Filters out irrelevant junk and prioritizes more reliable sources."
+        noResults: "No results yet."
       },
 
       common: {
@@ -698,6 +690,14 @@ const resources = {
         resultsReady: "Results are ready in the showcase. Thank you.",
         noResults: "Sorry, no results found. Try something else.",
         resultsError: "An error occurred during the search. Please try again.",
+        introTitle: "This site quickly finds the product or service you want and compares prices.",
+        introBenefitsTitle: "What you get:",
+        introTimeLabel: "Saves time:",
+        introTimeDesc: "See results in one place without hopping between sites.",
+        introMoneyLabel: "Saves money:",
+        introMoneyDesc: "Highlights the best/value options and helps you avoid overpaying.",
+        introCalmLabel: "Peace of mind:",
+        introCalmDesc: "Filters out irrelevant junk and prioritizes more trustworthy sources.",
       },
 
 
@@ -1019,15 +1019,7 @@ const resources = {
         aiCumulative: "Suggestions SonoAI",
         personalizing: "Personnalisation…",
         others: "Autres",
-        noResults: "Aucun résultat.",
-        emptyInfoLine: "Ce site t’aide à trouver rapidement le produit ou le service que tu cherches et à comparer les prix.",
-        emptyBenefitsTitle: "Tes avantages :",
-        benefitTimeTitle: "Gagne du temps",
-        benefitTimeDesc: "Tu vois les résultats au même endroit, sans visiter chaque site.",
-        benefitMoneyTitle: "Économise de l’argent",
-        benefitMoneyDesc: "Met en avant les options les plus économiques pour éviter de payer trop cher.",
-        benefitPeaceTitle: "Tranquillité d’esprit",
-        benefitPeaceDesc: "Filtre le contenu hors sujet et privilégie des sources plus fiables."
+        noResults: "Aucun résultat."
       },
 
       common: {
@@ -1107,6 +1099,14 @@ const resources = {
         resultsReady: "Les résultats sont prêts dans la vitrine. Merci.",
         noResults: "Désolé, aucun résultat. Essayez autre chose.",
         resultsError: "Une erreur est survenue pendant la recherche. Réessayez.",
+        introTitle: "Ce site trouve rapidement le produit ou service que tu cherches et compare les prix.",
+        introBenefitsTitle: "Tes avantages :",
+        introTimeLabel: "Gain de temps :",
+        introTimeDesc: "Tu vois les résultats au même endroit sans passer de site en site.",
+        introMoneyLabel: "Économies :",
+        introMoneyDesc: "Met en avant les options les plus avantageuses et t’aide à éviter de payer trop cher.",
+        introCalmLabel: "Tranquillité :",
+        introCalmDesc: "Filtre le “bruit” et priorise des sources plus fiables.",
       },
 
 
@@ -1424,15 +1424,7 @@ const resources = {
         aiCumulative: "Рекомендации SonoAI",
         personalizing: "Персонализация…",
         others: "Другие",
-        noResults: "Нет результатов.",
-        emptyInfoLine: "Этот сайт помогает быстро найти нужный товар или услугу и сравнить цены.",
-        emptyBenefitsTitle: "Твоя выгода:",
-        benefitTimeTitle: "Экономит время",
-        benefitTimeDesc: "Результаты в одном месте — без обхода множества сайтов.",
-        benefitMoneyTitle: "Экономит деньги",
-        benefitMoneyDesc: "Выдвигает бюджетные варианты, чтобы не переплачивать.",
-        benefitPeaceTitle: "Спокойствие",
-        benefitPeaceDesc: "Отсекает нерелевантный мусор и отдаёт приоритет более надёжным источникам."
+        noResults: "Нет результатов."
       },
 
       common: {
@@ -1511,6 +1503,14 @@ const resources = {
         resultsReady: "Результаты готовы на витрине. Спасибо.",
         noResults: "Извините, ничего не найдено. Попробуйте ещё раз.",
         resultsError: "Во время поиска произошла ошибка. Попробуйте снова.",
+        introTitle: "Этот сайт быстро находит нужный товар или услугу и сравнивает цены.",
+        introBenefitsTitle: "Твоя выгода:",
+        introTimeLabel: "Экономия времени:",
+        introTimeDesc: "Результаты в одном месте — без прыжков по сайтам.",
+        introMoneyLabel: "Экономия денег:",
+        introMoneyDesc: "Выделяет лучшие/выгодные варианты и помогает не переплачивать.",
+        introCalmLabel: "Спокойствие:",
+        introCalmDesc: "Отсекает нерелевантный мусор и отдаёт приоритет более надёжным источникам.",
       },
 
 
@@ -1827,15 +1827,7 @@ const resources = {
         aiCumulative: "اقتراحات SonoAI",
         personalizing: "جارٍ التخصيص…",
         others: "آخرون",
-        noResults: "لا توجد نتائج.",
-        emptyInfoLine: "يساعدك هذا الموقع على العثور بسرعة على المنتج أو الخدمة التي تبحث عنها ومقارنة الأسعار.",
-        emptyBenefitsTitle: "الفائدة لك:",
-        benefitTimeTitle: "يوفر الوقت",
-        benefitTimeDesc: "ترى النتائج في مكان واحد بدلًا من زيارة مواقع متعددة.",
-        benefitMoneyTitle: "يوفر المال",
-        benefitMoneyDesc: "يبرز الخيارات الاقتصادية حتى لا تدفع أكثر من اللازم.",
-        benefitPeaceTitle: "راحة البال",
-        benefitPeaceDesc: "يصفّي النتائج غير ذات الصلة ويعطي أولوية للمصادر الأكثر موثوقية."
+        noResults: "لا توجد نتائج."
       },
 
       common: {
@@ -1914,6 +1906,14 @@ const resources = {
         resultsReady: "النتائج جاهزة في الواجهة. شكرًا لك.",
         noResults: "عذرًا، لم يتم العثور على نتائج. جرّب شيئًا آخر.",
         resultsError: "حدث خطأ أثناء البحث. حاول مرة أخرى.",
+        introTitle: "هذا الموقع يعثر بسرعة على المنتج أو الخدمة التي تبحث عنها ويقارن الأسعار.",
+        introBenefitsTitle: "الفائدة لك:",
+        introTimeLabel: "يوفّر الوقت:",
+        introTimeDesc: "تشاهد النتائج في مكان واحد دون التنقّل بين المواقع.",
+        introMoneyLabel: "يوفّر المال:",
+        introMoneyDesc: "يبرز الخيارات الأكثر ملاءمة/قيمة ويساعدك على تجنّب الدفع الزائد.",
+        introCalmLabel: "راحة بال:",
+        introCalmDesc: "يصفّي النتائج غير ذات الصلة ويعطي أولوية لمصادر أكثر موثوقية.",
       },
 
 
