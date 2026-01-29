@@ -1,5 +1,5 @@
 // src/components/Vitrin.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { getProviderIconFinal } from "../utils/providerIcons";
 import { sendClick } from "../api/click";
@@ -319,6 +319,27 @@ export default function Vitrin() {
   const [cursor, setCursor] = useState(0);
   const [loading, setLoading] = useState(false);
 
+  // ============================================================
+  // 🔒 "Has the user searched?" flag (prevents auto-trigger on page load)
+  // ============================================================
+  const getHasSearchedFlag = () => {
+    try {
+      if (typeof window === "undefined" || !window.sessionStorage) return false;
+      return window.sessionStorage.getItem("fae.hasSearched") === "1";
+    } catch {
+      return false;
+    }
+  };
+
+  const markHasSearched = () => {
+    try {
+      if (typeof window === "undefined" || !window.sessionStorage) return;
+      window.sessionStorage.setItem("fae.hasSearched", "1");
+    } catch {}
+  };
+
+  const [hasSearchedOnce, setHasSearchedOnce] = useState(() => getHasSearchedFlag());
+
   const initialLastQuery =
     getLastQuery() ||
     ((typeof window !== "undefined" &&
@@ -541,8 +562,14 @@ export default function Vitrin() {
       const q = e.detail?.query?.trim();
       if (!q) return;
 
-      // ✅ Bu oturumda kullanıcı arama yaptı (auto-load değil)
-      try { if (typeof window !== "undefined") window.__faeUserSearched = true; } catch {}
+      // ✅ Page-load guard: ignore auto refresh/search until user actually triggers a search
+      const userInitiated = !!e?.detail?.userInitiated;
+      const sessionSearched = getHasSearchedFlag();
+      if (!userInitiated && !sessionSearched) return;
+
+      // Mark session as searched (so language refresh can work later)
+      if (!sessionSearched) markHasSearched();
+      setHasSearchedOnce(true);
 
       // 🔒 Dedupe: aynı sorgu üst üste gelirse (çift event / çift tetik) tek sefer çalışsın
       const now = Date.now();
@@ -585,9 +612,17 @@ export default function Vitrin() {
     }
 
     const refreshHandler = () => {
+      // Ignore initial page-load refreshes until the user has actually searched
+      if (!getHasSearchedFlag()) return;
+
+      // Dedupe: çok kısa aralıkla gelen refresh event'lerini tekle
       try {
-        if (typeof window !== "undefined" && window.__faeUserSearched !== true) return;
+        const now = Date.now();
+        const lastAt = Number(window.__fae_lastVitrineRefreshAt || 0);
+        if (now - lastAt < 800) return;
+        window.__fae_lastVitrineRefreshAt = now;
       } catch {}
+
       loadVitrine(true);
     };
 
@@ -602,13 +637,14 @@ export default function Vitrin() {
       setLoading(false);
       setLastQuery(q);
 
-      // ✅ Inject de bir aramadır (barcode/vision akışları)
-      try { window.__faeUserSearched = true; } catch {}
-
       // Inject ile gelenleri "best" olarak göster (tek liste)
       setBest(injectedItems);
       setSmart([]);
       setOthers([]);
+
+      // Mark session as searched (barcode/camera etc.)
+      markHasSearched();
+      setHasSearchedOnce(true);
 
       // App.jsx dinlediği event: TTS + status için
       window.dispatchEvent(
@@ -781,40 +817,22 @@ export default function Vitrin() {
   //   🔥 VİTRİN MOTORU — stabil dinamik vitrin
   // ============================================================
   async function loadVitrine(reset = false) {
-    const queryForBody = String(getLastQuery() || lastQuery || "").trim();
-
-    // 🚫 Kullanıcı arama yapmadan vitrin tetiklenmesin (localStorage lastQuery olsa bile)
-    try {
-      if (typeof window !== "undefined" && window.__faeUserSearched !== true) {
-        return;
-      }
-    } catch {}
-
     if (typeof window !== "undefined") {
       if (window.__vitrineLoading) {
-        const loadingQ = String(window.__vitrineLoadingQuery || "").trim();
-        if (loadingQ && loadingQ === queryForBody) {
-          return; // aynı sorgu için çift tetik → yok say
-        }
         // Yükleme devam ederken gelen yeni sorguyu kaybetme.
         // Bitince bir kez daha tazeleyeceğiz.
         window.__vitrinePending = true;
-        window.__vitrinePendingQuery = queryForBody;
         return;
       }
       window.__vitrineLoading = true;
-      window.__vitrineLoadingQuery = queryForBody;
     }
 
     const OTHERS_ENABLED = false; // HARD
 
     try {
-      // 🚫 query boşsa backend çağrısı yapma; "sonuç bulunamadı" UX'ini de doğurma.
-      if (!queryForBody) {
-        return;
-      }
-
       setLoading(true);
+
+      const queryForBody = getLastQuery() || lastQuery || "";
 
       const sourceHint = (() => {
         try {
@@ -1089,10 +1107,8 @@ export default function Vitrin() {
     } finally {
       if (typeof window !== "undefined") {
         window.__vitrineLoading = false;
-        window.__vitrineLoadingQuery = "";
         if (window.__vitrinePending) {
           window.__vitrinePending = false;
-          window.__vitrinePendingQuery = "";
           // Yeni sorgu load sırasında geldiyse, bir tick sonra tekrar yükle.
           setTimeout(() => {
             try {
@@ -1166,20 +1182,18 @@ export default function Vitrin() {
           w-full
           max-w-[670px]
           mx-auto
-          rounded-2xl p-3 sm:p-5
-          bg-white/10
-          border border-white/15
-          ring-1 ring-[#d4af37]/10
-          shadow-[0_14px_55px_rgba(0,0,0,0.35)]
+          bg-black/40 rounded-2xl p-3 sm:p-5
+          border border-[#d4af37]/35
+          shadow-[0_0_22px_rgba(212,175,55,0.25)]
           backdrop-blur-xl
           transition-all duration-300
-          hover:bg-white/14 hover:border-white/20 hover:ring-[#d4af37]/18
-          hover:shadow-[0_18px_70px_rgba(0,0,0,0.45)]
+          hover:bg-black/55 hover:border-[#d4af37]/70
+          hover:shadow-[0_0_40px_rgba(212,175,55,0.45)]
           cursor-pointer
           flex flex-row gap-3 sm:gap-5 items-center
         "
       >
-        <div className="w-[96px] h-[96px] sm:w-[160px] sm:h-[160px] rounded-xl overflow-hidden flex-none bg-white/7 border border-white/10 flex items-center justify-center">
+        <div className="w-[96px] h-[96px] sm:w-[160px] sm:h-[160px] rounded-xl overflow-hidden flex-none bg-black/40 flex items-center justify-center">
           {img ? (
             <img src={img} alt={safeTitle} className="w-full h-full object-contain" />
           ) : (
@@ -1266,9 +1280,57 @@ export default function Vitrin() {
               }}
             />
           ) : (
-            <div className="rounded-2xl border border-dashed border-white/15 text-xs text-white/40 p-4 flex items-center justify-center h-full min-h-[160px]">
-              {t("trigger.customShowcase", { defaultValue: "Kişisel vitrinini hazırlıyorum..." })}
-            </div>
+            {!hasSearchedOnce ? (
+              <div className="rounded-2xl border border-white/10 bg-black/25 backdrop-blur-sm p-6 sm:p-7 text-white/80">
+                <div className="text-sm sm:text-base font-semibold text-white/90 mb-3">
+                  {t("home.vitrineIntro.title", {
+                    defaultValue:
+                      "Bu site, aradığın ürün veya hizmeti hızlıca bulup fiyatları karşılaştırır.",
+                  })}
+                </div>
+
+                <div className="text-xs sm:text-sm text-white/70 mb-2">
+                  {t("home.vitrineIntro.subtitle", { defaultValue: "Sana faydası:" })}
+                </div>
+
+                <div className="space-y-2 text-xs sm:text-sm text-white/75 leading-relaxed">
+                  <div>
+                    <span className="font-semibold text-white/90">
+                      {t("home.vitrineIntro.b1h", { defaultValue: "Zaman kazandırır:" })}
+                    </span>{" "}
+                    {t("home.vitrineIntro.b1", {
+                      defaultValue: "Tek tek site gezmeden sonuçları tek yerde görürsün.",
+                    })}
+                  </div>
+
+                  <div>
+                    <span className="font-semibold text-white/90">
+                      {t("home.vitrineIntro.b2h", { defaultValue: "Para kazandırır:" })}
+                    </span>{" "}
+                    {t("home.vitrineIntro.b2", {
+                      defaultValue:
+                        "En uygun/ekonomik seçenekleri öne çıkarır, gereksiz pahalıya kaçmanı engeller.",
+                    })}
+                  </div>
+
+                  <div>
+                    <span className="font-semibold text-white/90">
+                      {t("home.vitrineIntro.b3h", { defaultValue: "Kafa rahatlatır:" })}
+                    </span>{" "}
+                    {t("home.vitrineIntro.b3", {
+                      defaultValue:
+                        "Alakasız “çer çöp” sonuçları ayıklayıp daha güvenilir kaynaklara öncelik verir.",
+                    })}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-white/15 text-xs text-white/60 p-4 flex items-center justify-center h-full min-h-[160px]">
+                {loading
+                  ? t("vitrine.loading", { defaultValue: "Vitrin hazırlanıyor…" })
+                  : t("vitrine.noResults", { defaultValue: "Sonuç bulunamadı." })}
+              </div>
+            )}
           )}
         </div>
       </div>
